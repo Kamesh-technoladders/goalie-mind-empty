@@ -17,20 +17,20 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
   onTabChange,
 }) => {
   return (
-    <div className="flex w-[573px] max-w-full items-stretch text-black flex-wrap">
+    <div className="flex w-full max-w-full items-stretch text-black border-b border-gray-200 mb-6">
       {tabs.map((tab) => (
         <div
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={`cursor-pointer ${
+          className={`cursor-pointer relative ${
             tab.isActive
-              ? "text-[rgba(221,1,1,1)] font-bold relative"
-              : "text-black"
+              ? "text-[rgba(221,1,1,1)] font-bold"
+              : "text-black hover:text-gray-600"
           }`}
         >
           <div className="gap-2.5 p-4">{tab.label}</div>
           {tab.isActive && (
-            <div className="bg-[rgba(221,1,1,1)] border z-10 flex shrink-0 h-[3px] rounded-[8px_8px_0px_0px] border-[rgba(221,1,1,1)] border-solid" />
+            <div className="bg-[rgba(221,1,1,1)] absolute bottom-0 left-0 right-0 h-[3px] rounded-t" />
           )}
         </div>
       ))}
