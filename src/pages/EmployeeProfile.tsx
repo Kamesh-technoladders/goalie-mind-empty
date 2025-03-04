@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/employee/layout/DashboardLayout";
@@ -116,6 +115,7 @@ const EmployeeProfile = () => {
           />
 
           <BankInfoSection
+            employeeId={employeeData.employee_id}
             onEdit={() => handleEdit("bank")}
           />
 

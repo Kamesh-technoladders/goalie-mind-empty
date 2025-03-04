@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -11,7 +12,7 @@ import { personalDetailsSchema, PersonalDetailsFormSchema } from "./personal-det
 import { useFormValidation } from "./personal-details/hooks/useFormValidation";
 import { useFormInitialization } from "./personal-details/hooks/useFormInitialization";
 import { toast } from "sonner";
-import { employeeService } from "@/services/employee/employee.service"; // Import service function
+import { employeeService } from "@/services/employee/employee.service";
 
 export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({ 
   onComplete, 
@@ -31,21 +32,21 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     setDocuments
   } = useFormInitialization(initialData);
 
+  // Process initialData to ensure gender is the correct enum type
+  const processedInitialData = initialData ? {
+    ...initialData,
+    gender: initialData.gender as "male" | "female" | "other",
+    dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
+    sameAsPresent: initialData?.sameAsPresent || false
+  } : {
+    sameAsPresent: false,
+    documents: [] as any[]
+  };
+
   const form = useForm<PersonalDetailsFormSchema>({
-    defaultValues: {
-      ...initialData,
-      dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
-      sameAsPresent: false
-    },
+    defaultValues: processedInitialData,
     resolver: zodResolver(personalDetailsSchema)
   });
-
-  // console.log("EmergencyContacts", emergencyContacts)
-  // console.log("initialData", form.watch())
-  // console.log("familyDetails", familyDetails)
-  // console.log("documents", documents)
-
-
 
   const handleSubmit = form.handleSubmit(async (data) => {
     const isValid = validateForm(emergencyContacts, familyDetails, setEmergencyContacts, setFamilyDetails);
@@ -59,11 +60,11 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     const formData: PersonalDetailsData = {
       ...data,
       dateOfBirth: data.dateOfBirth?.toISOString(),
-      emergencyContacts,
-      familyDetails,
+      emergencyContacts: emergencyContacts as any,
+      familyDetails: familyDetails as any,
       documents,
     };
-console.log("formData",formData)
+    
     try {
       await employeeService.createEmployee(formData);
       onComplete(true, formData);
@@ -77,19 +78,33 @@ console.log("formData",formData)
   });
 
   return (
-  <Form {...form}>
-    <form ref={formRef} id="personalDetailsForm" onSubmit={handleSubmit} className="space-y-6">
-      <BasicInfoSection register={form} errors={form.formState.errors} isCheckingEmail={isCheckingEmail} emailError={emailError} 
-        profilePictureUrl={form.watch("profilePictureUrl")}
-        onProfilePictureChange={(url) => form.setValue("profilePictureUrl", url)}
-        onProfilePictureDelete={() => form.setValue("profilePictureUrl", "")}
-        documents={documents} onDocumentsChange={setDocuments} setValue={form.setValue} watch={form.watch} 
-      />
-      <AddressSection form={form} />
-      <EmergencyContactsSection contacts={emergencyContacts} onContactsChange={setEmergencyContacts} maritalStatus={form.watch("maritalStatus")} />
-      <FamilyDetailsSection familyMembers={familyDetails} onFamilyMembersChange={setFamilyDetails} maritalStatus={form.watch("maritalStatus")} />
-    </form>
-  </Form>
-);
-
+    <Form {...form}>
+      <form ref={formRef} id="personalDetailsForm" onSubmit={handleSubmit} className="space-y-6">
+        <BasicInfoSection 
+          register={form} 
+          errors={form.formState.errors} 
+          isCheckingEmail={isCheckingEmail} 
+          emailError={emailError} 
+          profilePictureUrl={form.watch("profilePictureUrl")}
+          onProfilePictureChange={(url) => form.setValue("profilePictureUrl", url)}
+          onProfilePictureDelete={() => form.setValue("profilePictureUrl", "")}
+          documents={documents} 
+          onDocumentsChange={setDocuments} 
+          setValue={form.setValue} 
+          watch={form.watch} 
+        />
+        <AddressSection form={form} />
+        <EmergencyContactsSection 
+          contacts={emergencyContacts} 
+          onContactsChange={setEmergencyContacts} 
+          maritalStatus={form.watch("maritalStatus")} 
+        />
+        <FamilyDetailsSection 
+          familyMembers={familyDetails} 
+          onFamilyMembersChange={setFamilyDetails} 
+          maritalStatus={form.watch("maritalStatus")} 
+        />
+      </form>
+    </Form>
+  );
 };

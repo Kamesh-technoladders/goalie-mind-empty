@@ -11,7 +11,7 @@ interface FormContainerProps {
   activeTab: string;
   isSubmitting?: boolean;
   formRef: RefObject<HTMLFormElement>;
-  formData: Record<string, any>;
+  formData?: Record<string, any>;
 }
 
 export const FormContainer: React.FC<FormContainerProps> = ({

@@ -5,19 +5,31 @@ import type {
   Education as EmployeeEducation,
   BankDetails,
   Address,
-  EmergencyContact,
-  FamilyMember,
+  EmergencyContact as ApiEmergencyContact,
+  FamilyMember as ApiFamilyMember,
   PersonalInfo
 } from "@/services/types/employee.types";
 import { RefObject } from "react";
 
 export type { 
   Address,
-  EmergencyContact,
-  FamilyMember,
   BankDetails as BankAccountData,
   EmployeeEducation as EducationData
 };
+
+// Extend API types to ensure required properties
+export interface EmergencyContact extends ApiEmergencyContact {
+  relationship: string;
+  name: string;
+  phone: string;
+}
+
+export interface FamilyMember extends ApiFamilyMember {
+  relationship: string;
+  name: string;
+  occupation: string;
+  phone: string;
+}
 
 export interface Experience extends EmployeeExperience {}
 
@@ -42,7 +54,7 @@ export interface FormComponentProps<T = any> {
 export interface PersonalDetailsFormProps extends FormComponentProps<PersonalDetailsData> {
   isCheckingEmail?: boolean;
   emailError?: string | null;
-   formRef: RefObject<HTMLFormElement>
+  formRef: RefObject<HTMLFormElement>;
 }
 
 export interface EducationFormProps extends FormComponentProps<EmployeeEducation> {}

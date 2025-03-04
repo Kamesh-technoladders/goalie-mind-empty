@@ -14,6 +14,9 @@ const Index = () => {
     formProgress,
     formData,
     isFormCompleted,
+    isSubmitting,
+    isCheckingEmail,
+    emailError,
     updateSectionProgress,
     updateFormData,
     handleTabChange,
@@ -38,10 +41,6 @@ const Index = () => {
     setShowForm(false);
   };
 
-  const handleFormComplete = () => {
-    setShowForm(false);
-  };
-
   return (
     <>
       {showForm ? (
@@ -60,7 +59,8 @@ const Index = () => {
             onTabChange={handleTabChange}
             onSaveAndNext={handleSaveAndNext}
             activeTab={activeTab}
-            formRef = {formRef}
+            formRef={formRef}
+            formData={formData}
           >
             <FormContent
               activeTab={activeTab}
@@ -68,7 +68,10 @@ const Index = () => {
               updateSectionProgress={updateSectionProgress}
               updateFormData={updateFormData}
               handleSaveAndNext={handleSaveAndNext}
-              formRef = {formRef}
+              formRef={formRef}
+              isCheckingEmail={isCheckingEmail}
+              emailError={emailError}
+              isSubmitting={isSubmitting}
             />
           </FormContainer>
         </>
