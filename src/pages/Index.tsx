@@ -30,20 +30,16 @@ const Index = () => {
     { id: "bank", label: "Bank Account Details", isActive: activeTab === "bank" },
   ];
 
-  // Use formData for progress calculation instead of formProgress
-  const progress = calculateProgress({
-    personal: !!formData.personal,
-    education: !!formData.education,
+  // Create a compatible object for progress calculation
+  const progressData = {
+    personal: formData.personal,
+    education: formData.education,
     experience: formData.experience && formData.experience.length > 0,
-    bank: !!formData.bank
-  });
+    bank: formData.bank
+  };
   
-  const progressMessage = getProgressMessage({
-    personal: !!formData.personal,
-    education: !!formData.education,
-    experience: formData.experience && formData.experience.length > 0,
-    bank: !!formData.bank
-  });
+  const progress = calculateProgress(progressData);
+  const progressMessage = getProgressMessage(progressData);
 
   const handleAddEmployee = () => {
     setShowForm(true);
@@ -72,7 +68,12 @@ const Index = () => {
             onSaveAndNext={handleSaveAndNext}
             activeTab={activeTab}
             formRef={formRef}
-            formData={formData}
+            formData={formData || {
+              personal: null,
+              education: null,
+              experience: [],
+              bank: null
+            }}
             isSubmitting={isSubmitting}
           >
             <FormContent

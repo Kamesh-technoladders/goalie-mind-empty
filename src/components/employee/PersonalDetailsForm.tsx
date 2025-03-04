@@ -32,7 +32,7 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     setDocuments
   } = useFormInitialization(initialData);
 
-  // Ensure that initialData is properly cast to match the schema
+  // Ensure that initialData is properly typed
   const processedInitialData = initialData ? {
     ...initialData,
     gender: (initialData.gender || "male") as "male" | "female" | "other",
@@ -59,7 +59,7 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     if (!isValid) {
       toast.error("Please add at least one emergency contact and one family member");
       onComplete(false);
-      return;
+      return Promise.reject(new Error("Validation failed"));
     }
   
     const formData: PersonalDetailsData = {

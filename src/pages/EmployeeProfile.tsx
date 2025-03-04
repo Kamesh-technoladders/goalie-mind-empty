@@ -15,8 +15,8 @@ const EmployeeProfile = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const { 
     employeeData, 
-    isLoading, 
-    handleEdit, 
+    isLoading,
+    handleEdit,
     isEmploymentModalOpen, 
     setIsEmploymentModalOpen,
     isPersonalModalOpen, 
@@ -24,13 +24,11 @@ const EmployeeProfile = () => {
     handleUpdateEmployment,
     handleUpdatePersonal,
     calculateYearsOfExperience,
-    totalExperience
+    totalExperience,
+    handleEditPersonalInfo,
+    handleEditEducation,
+    handleEditBankInfo
   } = useEmployeeProfile(employeeId);
-  
-  // Create handler functions to match expected API
-  const handleEditPersonalInfo = () => handleEdit('personal');
-  const handleEditEducation = () => handleEdit('education');
-  const handleEditBankInfo = () => handleEdit('bank');
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -48,6 +46,7 @@ const EmployeeProfile = () => {
             lastName={employeeData.lastName}
             email={employeeData.email}
             onEdit={handleEditPersonalInfo}
+            profilePictureUrl={employeeData.profilePictureUrl}
           />
           
           <div className="container mx-auto px-4 py-6">

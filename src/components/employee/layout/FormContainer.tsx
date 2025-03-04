@@ -11,7 +11,7 @@ export interface FormContainerProps {
   onSaveAndNext: (completedData?: any) => Promise<void>;
   activeTab: string;
   formRef: RefObject<HTMLFormElement>;
-  formData?: FormData | Record<string, any>;
+  formData: FormData;
   isSubmitting?: boolean;
   children: React.ReactNode;
 }
@@ -22,7 +22,7 @@ export const FormContainer: React.FC<FormContainerProps> = ({
   onSaveAndNext,
   activeTab,
   formRef,
-  formData = {},
+  formData,
   isSubmitting,
   children,
 }) => {

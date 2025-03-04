@@ -1,5 +1,5 @@
 
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 
 declare module 'jspdf' {
   interface jsPDF {

@@ -16,6 +16,7 @@ interface ProfileHeaderProps {
   lastName: string;
   email: string;
   profilePictureUrl?: string;
+  onEdit?: () => void;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -24,6 +25,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   lastName,
   email,
   profilePictureUrl,
+  onEdit,
 }) => {
   const fullName = `${firstName} ${lastName}`;
 

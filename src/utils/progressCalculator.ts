@@ -20,10 +20,17 @@ export interface FormData {
   bank: BankAccountData | null;
 }
 
-export const calculateProgress = (formData: FormData): FormProgress => {
+export const calculateProgress = (formData: {
+  personal: PersonalDetailsData | null | boolean;
+  education: EducationData | null | boolean;
+  experience: Experience[] | boolean;
+  bank: BankAccountData | null | boolean;
+}): FormProgress => {
   const hasPersonalData = !!formData.personal;
   const hasEducationData = !!formData.education;
-  const hasExperienceData = formData.experience && formData.experience.length > 0;
+  const hasExperienceData = Array.isArray(formData.experience) 
+    ? formData.experience.length > 0 
+    : !!formData.experience;
   const hasBankData = !!formData.bank;
 
   return {
@@ -34,7 +41,12 @@ export const calculateProgress = (formData: FormData): FormProgress => {
   };
 };
 
-export const getProgressMessage = (formData: FormData): string => {
+export const getProgressMessage = (formData: {
+  personal: PersonalDetailsData | null | boolean;
+  education: EducationData | null | boolean;
+  experience: Experience[] | boolean;
+  bank: BankAccountData | null | boolean;
+}): string => {
   const progress = calculateProgress(formData);
   const completedSections = Object.values(progress).filter(Boolean).length;
   const totalSections = Object.keys(progress).length;
