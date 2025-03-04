@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 60 100% 99%;
+    --foreground: 240 10% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+     --primary1: #7B43F1;
+    --primary2: #602EEF;
+    --secondary: #F30CBF;
+    --greylg: #878787;
+    --greydk: #505050;
+    --bglight: #FCFBFE;
+    --bgdark: black;
+    --sidebar: #F6F6FC;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 48 100% 61%;
+    --accent-foreground: 240 5.9% 10%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 142 71% 45%;
+
+    --radius: 0.75rem;
+    
+    --theme-green: rgb(155, 135, 245);
+    --theme-gray: rgb(217, 217, 217);
+    --theme-text-primary: #333;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-[--background] text-[--foreground] font-[Readex_Pro] antialiased;
+  }
+}
+
+@layer utilities {
+  .scrollbar-elegant {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(203, 213, 225, 0.4) transparent;
+  }
+  .scrollbar-elegant::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-elegant::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-elegant::-webkit-scrollbar-thumb {
+    background-color: rgba(203, 213, 225, 0.4);
+    border-radius: 20px;
+    transition: all 0.2s ease-in-out;
+  }
+  .scrollbar-elegant::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(148, 163, 184, 0.6);
+  }
+  .card-container-elegant {
+    @apply bg-white/80 backdrop-blur-sm shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-gray-100/80 rounded-lg;
+  }
+}
+
+@layer components {
+  .alert-message {
+    @apply text-[10px] p-1.5;
+  }
+  .help-text {
+    @apply text-[10px] text-gray-500 mt-0.5;
+  }
+  .error-message {
+    @apply text-[10px] text-red-500 mt-0.5;
+  }
+  .input-modern {
+    @apply px-1 py-0.5 rounded border border-gray-200 focus:border-brand-accent focus:ring-1 focus:ring-brand-accent text-[10px] h-5 max-w-[100px];
+  }
+  .button-modern {
+    @apply px-1 py-0.5 rounded text-[10px] font-medium transition-colors h-4 max-w-[80px];
+  }
+  .button-primary {
+    @apply bg-brand-primary text-white hover:bg-brand-primary/90;
+  }
+  .button-secondary {
+    @apply bg-gray-100 text-brand-secondary hover:bg-gray-200;
+  }
+  .progress-bar {
+    @apply h-0.5 rounded-full bg-gray-100 overflow-hidden;
+  }
+  .progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-300;
+  }
+  .form-group-compact {
+    @apply space-y-0.5;
+  }
+  .card-compact {
+    @apply p-2 space-y-0.5 h-[280px] overflow-hidden;
+  }
+  .modal-header {
+    @apply text-[10px] font-semibold mb-1;
+  }
+  .modal-content {
+    @apply space-y-1;
+  }
+  .nav-link {
+    @apply text-[10px] py-0.5 px-1;
+  }
+  .status-pill {
+    @apply px-1.5 py-0.5 rounded text-[10px] font-medium;
+  }
+  .status-pill-active {
+    @apply bg-green-100 text-green-700;
+  }
+  .status-pill-inactive {
+    @apply bg-gray-100 text-gray-700;
+  }
+  .status-pill-terminated {
+    @apply bg-red-100 text-red-700;
+  }
+  .table-modern {
+    @apply w-full border-collapse text-[10px] bg-[--bglight];
+  }
+  .table-modern th {
+    @apply px-0.5 py-0.5 text-left text-[10px] font-semibold text-[--primary1] bg-[--sidebar] border-b;
+  }
+  .table-modern td {
+    @apply px-0.5 py-0.5 text-[10px] text-[--greydk] border-b;
+  }
+  .table-modern tr:hover {
+    @apply bg-[--primary1]/10;
+  }
+  @media (max-width: 640px) {
+    .table-modern th,
+    .table-modern td {
+      @apply px-0.5 py-0.5 text-[9px];
+    }
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
