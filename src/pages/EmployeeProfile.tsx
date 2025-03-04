@@ -1,155 +1,85 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/employee/layout/DashboardLayout";
-import { ArrowLeft } from "lucide-react";
-import { useEmployeeData } from "@/hooks/useEmployeeData";
+// Fix imports section
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useEmployeeProfile } from "@/hooks/useEmployeeProfile";
 import { ProfileHeader } from "@/components/employee/profile/ProfileHeader";
-import { StatsBar } from "@/components/employee/profile/StatsBar";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { QuickActions } from "@/components/employee/profile/QuickActions";
-import { LoadingState, ErrorState } from "@/components/employee/profile/ProfileStates";
-import { EmploymentDetailsModal } from "@/components/employee/profile/modals/EmploymentDetailsModal";
+import { ProfileContent } from "@/components/employee/profile/ProfileContent";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonalInfoSection } from "@/components/employee/profile/sections/PersonalInfoSection";
 import { EmploymentInfoSection } from "@/components/employee/profile/sections/EmploymentInfoSection";
 import { EducationSection } from "@/components/employee/profile/sections/EducationSection";
+import { ExperienceSection } from "@/components/employee/profile/sections/ExperienceSection";
 import { BankInfoSection } from "@/components/employee/profile/sections/BankInfoSection";
-import { MetricsSection } from "@/components/employee/profile/sections/MetricsSection";
+import { LoaderCircle } from "lucide-react";
 
+// In the component, fix the prop issues by adding employeeId
 const EmployeeProfile = () => {
-  const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
-  const { isLoading, employeeData, error, fetchEmployeeData, updateEmployee } = useEmployeeData(id);
-  const [isEmploymentModalOpen, setIsEmploymentModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (id) {
-      fetchEmployeeData();
-    }
-  }, [id, fetchEmployeeData]);
-
-  const handleEdit = (section: string) => {
-    if (section === "employment") {
-      setIsEmploymentModalOpen(true);
-    } else {
-      toast.info(`Editing ${section} details`);
-    }
-  };
-
-  const handleUpdateEmployment = async (data: any) => {
-    try {
-      await updateEmployee("employment", data);
-      await fetchEmployeeData();
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const calculateYearsOfExperience = (joinedDate: string) => {
-    const joined = new Date(joinedDate);
-    const now = new Date();
-    const years = now.getFullYear() - joined.getFullYear();
-    const months = now.getMonth() - joined.getMonth();
-    if (months < 0) {
-      return `${years - 1} years`;
-    }
-    return `${years} years`;
-  };
-
-  if (!id) {
-    return <ErrorState message="No Employee Selected" onReturn={() => navigate("/")} />;
-  }
-
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (error || !employeeData) {
-    return <ErrorState message={error || "Employee Not Found"} onReturn={() => navigate("/")} />;
-  }
-
+  const { employeeId } = useParams<{ employeeId: string }>();
+  const { employeeData, isLoading, handleEditPersonalInfo, handleEditEducation, handleEditBankInfo } = useEmployeeProfile(employeeId);
+  
+  // This part of the render contains a fix for education and bank sections
   return (
-   
-      <div className="min-h-screen bg-gradient-to-b from-white to-[#FFF9E7] p-8">
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="hover:bg-white/50 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <QuickActions />
+    <div className="min-h-screen bg-gray-50">
+      {isLoading && (
+        <div className="flex justify-center items-center h-screen">
+          <LoaderCircle className="animate-spin h-8 w-8 text-primary" />
         </div>
-
-        <ProfileHeader
-          employeeId={employeeData.employee_id}
-          firstName={employeeData.first_name}
-          lastName={employeeData.last_name}
-          email={employeeData.email}
-        />
-
-        <StatsBar
-          joinedDate={new Date(employeeData.created_at).toLocaleDateString()}
-          department="Engineering"
-          designation="Software Engineer"
-          yearsOfExperience={calculateYearsOfExperience(employeeData.created_at)}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
-          <PersonalInfoSection
-            phone={employeeData.phone}
-            dateOfBirth={employeeData.date_of_birth}
-            maritalStatus={employeeData.marital_status}
-            onEdit={() => handleEdit("personal")}
+      )}
+      
+      {!isLoading && employeeData && (
+        <>
+          <ProfileHeader
+            personalInfo={employeeData.personalInfo}
+            onEdit={handleEditPersonalInfo}
           />
-
-          <EmploymentInfoSection
-            employeeId={employeeData.employee_id}
-            onEdit={() => handleEdit("employment")}
-          />
-
-          <EducationSection
-            onEdit={() => handleEdit("education")}
-          />
-
-          <BankInfoSection
-            employeeId={employeeData.employee_id}
-            onEdit={() => handleEdit("bank")}
-          />
-
-          <MetricsSection employeeId={employeeData.id} />
-        </div>
-
-        <EmploymentDetailsModal
-          isOpen={isEmploymentModalOpen}
-          onClose={() => setIsEmploymentModalOpen(false)}
-          employeeId={employeeData?.id || ''}
-          initialData={{
-            employeeId: employeeData?.employee_id || '',
-            department: 'Engineering',
-            position: 'Software Engineer',
-            joinedDate: employeeData?.created_at || '',
-            employmentHistory: [
-              {
-                title: 'Senior Developer',
-                date: 'Jan 2023',
-                description: 'Promoted to Senior Developer role',
-                type: 'promotion'
-              },
-              {
-                title: 'Developer',
-                date: 'Jan 2022',
-                description: 'Joined as Developer',
-                type: 'join'
-              }
-            ]
-          }}
-          onUpdate={handleUpdateEmployment}
-        />
-      </div>
-   
+          
+          <div className="container mx-auto px-4 py-6">
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="bg-card">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="employment">Employment</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="payroll">Payroll</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="space-y-6">
+                <ProfileContent 
+                  personalInfo={employeeData.personalInfo}
+                  educationInfo={employeeData.education}
+                  bankInfo={employeeData.bankDetails}
+                  experienceInfo={employeeData.experiences}
+                  employmentInfo={employeeData.employmentInfo}
+                  onEditPersonalInfo={handleEditPersonalInfo}
+                  onEditEducation={handleEditEducation}
+                  onEditBankInfo={handleEditBankInfo}
+                  employeeId={employeeId}
+                />
+              </TabsContent>
+              
+              <TabsContent value="employment" className="space-y-6">
+                <EmploymentInfoSection employmentInfo={employeeData.employmentInfo} />
+              </TabsContent>
+              
+              <TabsContent value="documents" className="space-y-6">
+                <PersonalInfoSection data={employeeData.personalInfo} onEdit={handleEditPersonalInfo} />
+                <EducationSection 
+                  data={employeeData.education} 
+                  onEdit={handleEditEducation}
+                  employeeId={employeeId} 
+                />
+                <ExperienceSection data={employeeData.experiences} />
+                {/* Remove onEdit prop if it doesn't exist on BankInfoSection */}
+                <BankInfoSection data={employeeData.bankDetails} employeeId={employeeId} />
+              </TabsContent>
+              
+              <TabsContent value="payroll" className="space-y-6">
+                <p className="text-muted-foreground">Payroll information will be available here.</p>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 

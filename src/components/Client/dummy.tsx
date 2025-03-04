@@ -15,6 +15,10 @@ import supabase from "../../config/supabaseClient";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
+// Define constants for Supabase URL and Storage Bucket
+const SUPABASE_URL = "https://rjofefcmhtvrlhfwzvgr.supabase.co";
+const SUPABASE_STORAGE_BUCKET = "your-bucket-name";
+
 interface AssignEmployeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -123,7 +127,7 @@ const AssignEmployeeDialog = ({ open, onOpenChange, projectId, clientId }: Assig
               .from("hr_project_files")
               .upload(fileName, employee.sowFile);
             if (error) throw error;
-            sowUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/hr_project_files/${fileName}`;
+            sowUrl = `${SUPABASE_URL}/storage/v1/object/public/hr_project_files/${fileName}`;
           }
 
           return {

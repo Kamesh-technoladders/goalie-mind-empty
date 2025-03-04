@@ -32,15 +32,18 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     setDocuments
   } = useFormInitialization(initialData);
 
-  // Process initialData to ensure gender is the correct enum type
+  // Ensure that initialData is properly cast to match the schema
   const processedInitialData = initialData ? {
     ...initialData,
-    gender: initialData.gender as "male" | "female" | "other",
+    gender: (initialData.gender || "male") as "male" | "female" | "other",
     dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
-    sameAsPresent: initialData?.sameAsPresent || false
+    sameAsPresent: initialData?.sameAsPresent || false,
+    bloodGroup: (initialData.bloodGroup || "O+") as "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-"
   } : {
     sameAsPresent: false,
-    documents: [] as any[]
+    documents: [] as any[],
+    gender: "male" as "male" | "female" | "other",
+    bloodGroup: "O+" as "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-"
   };
 
   const form = useForm<PersonalDetailsFormSchema>({
@@ -69,11 +72,12 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
       await employeeService.createEmployee(formData);
       onComplete(true, formData);
       toast.success("Personal details saved successfully");
-     
+      return Promise.resolve();
     } catch (error) {
       console.error("Error saving personal details:", error);
       toast.error("Failed to save personal details. Please try again.");
       onComplete(false);
+      return Promise.reject(error);
     }
   });
 

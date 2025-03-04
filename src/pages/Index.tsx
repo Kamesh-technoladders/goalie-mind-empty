@@ -41,6 +41,7 @@ const Index = () => {
     setShowForm(false);
   };
 
+  // Modify the component to use initialData for forms instead of formProgress
   return (
     <>
       {showForm ? (
@@ -60,11 +61,12 @@ const Index = () => {
             onSaveAndNext={handleSaveAndNext}
             activeTab={activeTab}
             formRef={formRef}
-            formData={formData}
+            formData={formData || {}}
+            isSubmitting={isSubmitting}
           >
             <FormContent
               activeTab={activeTab}
-              formData={formData}
+              formData={formData || {}}
               updateSectionProgress={updateSectionProgress}
               updateFormData={updateFormData}
               handleSaveAndNext={handleSaveAndNext}

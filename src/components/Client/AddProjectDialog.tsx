@@ -13,6 +13,11 @@ import { useSelector } from "react-redux";
 import supabase from "../../config/supabaseClient";
 import { toast } from "sonner";
 
+// At the top of the file, replace any import.meta.env references with constants
+// For example:
+const SUPABASE_URL = "https://rjofefcmhtvrlhfwzvgr.supabase.co";
+const SUPABASE_STORAGE_BUCKET = "your-bucket-name";
+
 interface AddProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,7 +75,7 @@ const AddProjectDialog = ({ open, onOpenChange, clientId }: AddProjectDialogProp
         const fileName = `projects/${Date.now()}-${file.name}`; // Unique file name
         const { data, error } = await supabase.storage.from("hr_project_files").upload(fileName, file);
         if (error) throw error;
-        fileUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/hr_project_files/${fileName}`;
+        fileUrl = `${SUPABASE_URL}/storage/v1/object/public/hr_project_files/${fileName}`;
       }
   
       // ✅ 2. Insert project details including the file URL
