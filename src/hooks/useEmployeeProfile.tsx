@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useEmployeeData } from "./useEmployeeData";
 import { toast } from "sonner";
-import { differenceInMonths, parseISO } from "date-fns";
+import { differenceInMonths } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useEmployeeProfile = (id: string | undefined) => {
@@ -127,6 +127,11 @@ export const useEmployeeProfile = (id: string | undefined) => {
     }
   };
 
+  // Create these explicitly to match the expected API in the component
+  const handleEditPersonalInfo = () => handleEdit('personal');
+  const handleEditEducation = () => handleEdit('education');
+  const handleEditBankInfo = () => handleEdit('bank');
+
   const calculateYearsOfExperience = (joinedDate: string) => {
     const joined = new Date(joinedDate);
     const now = new Date();
@@ -151,6 +156,9 @@ export const useEmployeeProfile = (id: string | undefined) => {
     handleUpdatePersonal,
     calculateYearsOfExperience,
     totalExperience,
-    fetchEmployeeData
+    fetchEmployeeData,
+    handleEditPersonalInfo,
+    handleEditEducation,
+    handleEditBankInfo
   };
 };

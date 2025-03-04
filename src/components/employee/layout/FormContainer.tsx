@@ -1,54 +1,62 @@
 
-import React, { RefObject, useEffect } from "react";
+import React, { RefObject } from "react";
 import { TabNavigation } from "../TabNavigation";
-import { LoaderCircle } from "lucide-react";
+import { NavigationHeader } from "../NavigationHeader";
+import { Button } from "@/components/ui/button";
+import { FormData } from "@/utils/progressCalculator";
 
-interface FormContainerProps {
-  children: React.ReactNode;
-  tabs: Array<{ id: string; label: string; isActive?: boolean }>;
+export interface FormContainerProps {
+  tabs: { id: string; label: string; isActive: boolean }[];
   onTabChange: (tabId: string) => void;
-  onSaveAndNext: (data: any) => void;
+  onSaveAndNext: (completedData?: any) => Promise<void>;
   activeTab: string;
-  isSubmitting?: boolean;
   formRef: RefObject<HTMLFormElement>;
-  formData?: Record<string, any>;
+  formData?: FormData | Record<string, any>;
+  isSubmitting?: boolean;
+  children: React.ReactNode;
 }
 
 export const FormContainer: React.FC<FormContainerProps> = ({
-  children,
   tabs,
   onTabChange,
   onSaveAndNext,
   activeTab,
-  isSubmitting = false,
   formRef,
   formData = {},
+  isSubmitting,
+  children,
 }) => {
-  useEffect(() => {
-    console.log("Active Tab:", activeTab);
-    console.log("Data for Active Tab:", formData?.[activeTab]);
-  }, [activeTab, formData]);
-  
+  const handleSaveAndNext = () => {
+    if (formRef.current) {
+      formRef.current.dispatchEvent(
+        new Event("submit", { cancelable: true, bubbles: true })
+      );
+    }
+  };
+
+  const handleTabChange = (tabId: string) => {
+    onTabChange(tabId);
+  };
+
   return (
-    <section className="bg-white shadow-sm rounded-lg mt-6 p-6">
-      <TabNavigation tabs={tabs} onTabChange={onTabChange} />
-      {children}
-      <div className="h-px my-6 bg-gray-200" />
-      <div className="flex justify-end space-x-4">
-        <button
-          onClick={async (e) => {
-            e.preventDefault();
-            if (formRef.current) {
-              await formRef.current.requestSubmit();
-            }
-          }}
-          disabled={isSubmitting}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {isSubmitting && <LoaderCircle className="animate-spin h-4 w-4" />}
-          {activeTab === "bank" ? "Submit" : "Save & Next"}
-        </button>
+    <div className="flex flex-col space-y-6">
+      <NavigationHeader tabs={tabs} activeTabId={activeTab} onTabChange={handleTabChange} />
+      <div className="bg-white p-6 rounded-md shadow">
+        <div className="mb-6">
+          <TabNavigation tabs={tabs} activeTabId={activeTab} onTabChange={handleTabChange} />
+        </div>
+        {children}
+        <div className="flex justify-end mt-6">
+          <Button
+            type="button"
+            onClick={handleSaveAndNext}
+            disabled={isSubmitting}
+            className="bg-[rgba(103,80,164,1)] text-white hover:bg-[rgba(103,80,164,0.9)]"
+          >
+            {isSubmitting ? "Saving..." : "Save & Next"}
+          </Button>
+        </div>
       </div>
-    </section>
+    </div>
   );
 };

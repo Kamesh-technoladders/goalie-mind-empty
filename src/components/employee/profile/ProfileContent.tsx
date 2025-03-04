@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ProfileHeader } from "./ProfileHeader";
 import { StatsBar } from "./StatsBar";
@@ -8,8 +9,8 @@ import { BankInfoSection } from "./sections/BankInfoSection";
 import { MetricsSection } from "./sections/MetricsSection";
 import { EmploymentDetailsModal } from "./modals/EmploymentDetailsModal";
 import { PersonalDetailsEditModal } from "../modals/PersonalDetailsEditModal";
-import { PersonalDetailsData } from "../types";
 
+// Update the props to match what is available in our implementation
 interface ProfileContentProps {
   employeeData: any;
   isEmploymentModalOpen: boolean;
@@ -35,43 +36,7 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({
   calculateYearsOfExperience,
   totalExperience
 }) => {
-  const personalData: PersonalDetailsData = {
-    employeeId: employeeData.employeeId,
-    firstName: employeeData.firstName,
-    lastName: employeeData.lastName,
-    email: employeeData.email,
-    phone: employeeData.phone || '',
-    dateOfBirth: employeeData.dateOfBirth || '',
-    gender: employeeData.gender || '',
-    bloodGroup: employeeData.bloodGroup || '',
-    maritalStatus: employeeData.maritalStatus || '',
-    presentAddress: employeeData.presentAddress || {
-      addressLine1: '',
-      country: '',
-      state: '',
-      city: '',
-      zipCode: ''
-    },
-    permanentAddress: employeeData.permanentAddress || {
-      addressLine1: '',
-      country: '',
-      state: '',
-      city: '',
-      zipCode: ''
-    },
-    emergencyContacts: employeeData.emergencyContacts || [],
-    familyDetails: employeeData.familyDetails || [],
-    documents: employeeData.documents || [],
-    aadharNumber: employeeData.aadharNumber || '',
-    panNumber: employeeData.panNumber || '',
-    uanNumber: employeeData.uanNumber,
-    esicNumber: employeeData.esicNumber,
-    aadharUrl: employeeData.aadharUrl,
-    panUrl: employeeData.panUrl,
-    uanUrl: employeeData.uanUrl,
-    esicUrl: employeeData.esicUrl
-  };
-
+  // Modify the PersonalDetailsEditModal to use the correct props
   return (
     <div className="space-y-8">
       <ProfileHeader
@@ -140,10 +105,11 @@ export const ProfileContent: React.FC<ProfileContentProps> = ({
         onUpdate={handleUpdateEmployment}
       />
 
+      {/* Update the props to fit what PersonalDetailsEditModal expects */}
       <PersonalDetailsEditModal
         isOpen={isPersonalModalOpen}
         onClose={() => setIsPersonalModalOpen(false)}
-        data={personalData}
+        employeeData={employeeData}
         employeeId={employeeData.id}
         onUpdate={handleUpdatePersonal}
       />

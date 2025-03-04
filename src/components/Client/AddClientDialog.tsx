@@ -47,14 +47,25 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
         return;
       }
 
-      // Ensure required fields are present
+      // Ensure all required fields are present and meet the database requirements
       const newClient = {
-        ...values,
+        client_name: values.client_name, // These fields must be non-optional for the database
+        display_name: values.display_name,
+        contact_person_first_name: values.contact_person_first_name,
+        contact_person_last_name: values.contact_person_last_name,
+        email: values.email,
+        phone_number: values.phone_number,
+        address: values.address,
+        country: values.country,
+        state: values.state,
+        city: values.city,
+        postal_code: values.postal_code,
+        currency: values.currency,
         organization_id, 
         created_by: user.id,
         updated_by: user.id,
-        status: "active", // Set a default status
-        active_employees: 0, // Set default values for required fields
+        status: "active", 
+        active_employees: 0,
         completed_projects: 0,
         ongoing_projects: 0,
         total_projects: 0
@@ -64,7 +75,7 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
       if (error) throw error;
 
       toast.success("Client added successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr_clients"] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
       form.reset();
       onOpenChange(false);
     } catch (error) {

@@ -42,9 +42,22 @@ const ClientManagement = () => {
   // ✅ Calculate Revenue & Profit Per Client
   const clientFinancials = clients?.map((client) => {
     const clientProjects = projectEmployees?.filter((pe) => pe.client_id === client.id) || [];
-    // Convert to number before calculations
-    const totalRevenue = clientProjects.reduce((acc, pe) => acc + (parseFloat(pe.client_billing as any) || 0), 0);
-    const totalProfit = totalRevenue - clientProjects.reduce((acc, pe) => acc + (parseFloat(pe.salary as any) || 0), 0);
+    // Convert to number before calculations and handle string conversion
+    const totalRevenue = clientProjects.reduce((acc, pe) => {
+      const billing = typeof pe.client_billing === 'string' 
+        ? parseFloat(pe.client_billing) 
+        : (pe.client_billing || 0);
+      return acc + billing;
+    }, 0);
+    
+    const totalCost = clientProjects.reduce((acc, pe) => {
+      const salary = typeof pe.salary === 'string' 
+        ? parseFloat(pe.salary) 
+        : (pe.salary || 0);
+      return acc + salary;
+    }, 0);
+    
+    const totalProfit = totalRevenue - totalCost;
 
     return {
       ...client,

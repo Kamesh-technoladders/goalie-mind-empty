@@ -8,7 +8,7 @@ import { EmergencyContactsSection } from "./personal-details/EmergencyContactsSe
 import { FamilyDetailsSection } from "./personal-details/FamilyDetailsSection";
 import { PersonalDetailsFormProps, PersonalDetailsData } from "./types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { personalDetailsSchema, PersonalDetailsFormSchema } from "./personal-details/schema/personalDetailsSchema";
+import { personalDetailsSchema, PersonalDetailsFormSchema, MARITAL_STATUS } from "./personal-details/schema/personalDetailsSchema";
 import { useFormValidation } from "./personal-details/hooks/useFormValidation";
 import { useFormInitialization } from "./personal-details/hooks/useFormInitialization";
 import { toast } from "sonner";
@@ -38,12 +38,14 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     gender: (initialData.gender || "male") as "male" | "female" | "other",
     dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
     sameAsPresent: initialData?.sameAsPresent || false,
-    bloodGroup: (initialData.bloodGroup || "O+") as "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-"
+    bloodGroup: (initialData.bloodGroup || "O+") as "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-",
+    maritalStatus: (initialData.maritalStatus || "unmarried") as "married" | "unmarried"
   } : {
     sameAsPresent: false,
     documents: [] as any[],
     gender: "male" as "male" | "female" | "other",
-    bloodGroup: "O+" as "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-"
+    bloodGroup: "O+" as "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-",
+    maritalStatus: "unmarried" as "married" | "unmarried"
   };
 
   const form = useForm<PersonalDetailsFormSchema>({

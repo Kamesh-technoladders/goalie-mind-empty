@@ -1,9 +1,8 @@
-// Fix imports section
-import React, { useState } from "react";
+
+import React from "react";
 import { useParams } from "react-router-dom";
 import { useEmployeeProfile } from "@/hooks/useEmployeeProfile";
 import { ProfileHeader } from "@/components/employee/profile/ProfileHeader";
-import { ProfileContent } from "@/components/employee/profile/ProfileContent";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonalInfoSection } from "@/components/employee/profile/sections/PersonalInfoSection";
 import { EmploymentInfoSection } from "@/components/employee/profile/sections/EmploymentInfoSection";
@@ -12,12 +11,27 @@ import { ExperienceSection } from "@/components/employee/profile/sections/Experi
 import { BankInfoSection } from "@/components/employee/profile/sections/BankInfoSection";
 import { LoaderCircle } from "lucide-react";
 
-// In the component, fix the prop issues by adding employeeId
 const EmployeeProfile = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
-  const { employeeData, isLoading, handleEditPersonalInfo, handleEditEducation, handleEditBankInfo } = useEmployeeProfile(employeeId);
+  const { 
+    employeeData, 
+    isLoading, 
+    handleEdit, 
+    isEmploymentModalOpen, 
+    setIsEmploymentModalOpen,
+    isPersonalModalOpen, 
+    setIsPersonalModalOpen,
+    handleUpdateEmployment,
+    handleUpdatePersonal,
+    calculateYearsOfExperience,
+    totalExperience
+  } = useEmployeeProfile(employeeId);
   
-  // This part of the render contains a fix for education and bank sections
+  // Create handler functions to match expected API
+  const handleEditPersonalInfo = () => handleEdit('personal');
+  const handleEditEducation = () => handleEdit('education');
+  const handleEditBankInfo = () => handleEdit('bank');
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {isLoading && (
@@ -29,7 +43,10 @@ const EmployeeProfile = () => {
       {!isLoading && employeeData && (
         <>
           <ProfileHeader
-            personalInfo={employeeData.personalInfo}
+            employeeId={employeeData.employeeId}
+            firstName={employeeData.firstName}
+            lastName={employeeData.lastName}
+            email={employeeData.email}
             onEdit={handleEditPersonalInfo}
           />
           
@@ -43,33 +60,56 @@ const EmployeeProfile = () => {
               </TabsList>
               
               <TabsContent value="overview" className="space-y-6">
-                <ProfileContent 
-                  personalInfo={employeeData.personalInfo}
-                  educationInfo={employeeData.education}
-                  bankInfo={employeeData.bankDetails}
-                  experienceInfo={employeeData.experiences}
-                  employmentInfo={employeeData.employmentInfo}
-                  onEditPersonalInfo={handleEditPersonalInfo}
-                  onEditEducation={handleEditEducation}
-                  onEditBankInfo={handleEditBankInfo}
-                  employeeId={employeeId}
-                />
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                    <PersonalInfoSection
+                      phone={employeeData.phone}
+                      dateOfBirth={employeeData.dateOfBirth}
+                      maritalStatus={employeeData.maritalStatus}
+                      onEdit={handleEditPersonalInfo}
+                    />
+
+                    <EmploymentInfoSection
+                      employeeId={employeeData.employeeId}
+                      onEdit={() => handleEdit("employment")}
+                    />
+
+                    <EducationSection
+                      employeeId={employeeId || ''}
+                      onEdit={handleEditEducation}
+                    />
+
+                    <BankInfoSection
+                      employeeId={employeeId || ''}
+                    />
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="employment" className="space-y-6">
-                <EmploymentInfoSection employmentInfo={employeeData.employmentInfo} />
+                <EmploymentInfoSection
+                  employeeId={employeeData.employeeId}
+                  onEdit={() => handleEdit("employment")}
+                />
               </TabsContent>
               
               <TabsContent value="documents" className="space-y-6">
-                <PersonalInfoSection data={employeeData.personalInfo} onEdit={handleEditPersonalInfo} />
-                <EducationSection 
-                  data={employeeData.education} 
-                  onEdit={handleEditEducation}
-                  employeeId={employeeId} 
+                <PersonalInfoSection
+                  phone={employeeData.phone}
+                  dateOfBirth={employeeData.dateOfBirth}
+                  maritalStatus={employeeData.maritalStatus}
+                  onEdit={handleEditPersonalInfo}
                 />
-                <ExperienceSection data={employeeData.experiences} />
-                {/* Remove onEdit prop if it doesn't exist on BankInfoSection */}
-                <BankInfoSection data={employeeData.bankDetails} employeeId={employeeId} />
+                <EducationSection 
+                  employeeId={employeeId || ''}
+                  onEdit={handleEditEducation}
+                />
+                <ExperienceSection 
+                  employeeId={employeeId || ''}
+                />
+                <BankInfoSection 
+                  employeeId={employeeId || ''}
+                />
               </TabsContent>
               
               <TabsContent value="payroll" className="space-y-6">
