@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/LoginPage";
 import SignUp from "./pages/GlobalSuperAdmin";
 import PrivateRoutes from "./utils/PrivateRoutes";
@@ -18,8 +19,10 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Redirect from root to dashboard for development */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
         {/* Public Routes */}
-        <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
 

@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -13,6 +14,12 @@ const PrivateRoutes = ({ allowedRoles }) => {
       dispatch(fetchUserSession());
     }
   }, [dispatch, user]);
+
+  // For development - always proceed to dashboard if running in dev mode
+  if (process.env.NODE_ENV === "development") {
+    console.log("✅ DEV MODE: Bypassing authentication checks");
+    return <Outlet />;
+  }
 
   if (loading) {
     return (
