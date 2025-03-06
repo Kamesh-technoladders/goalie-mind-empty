@@ -5,7 +5,7 @@ import { PersonalInfo } from "../types/employee.types";
 export const personalInfoService = {
   async checkEmployeeIdExists(employeeId: string): Promise<boolean> {
     const { data, error } = await supabase
-      .from('employees')
+      .from('hr_employees')
       .select('id')
       .eq('employee_id', employeeId)
       .maybeSingle();
@@ -20,7 +20,7 @@ export const personalInfoService = {
 
   async checkEmailExists(email: string): Promise<boolean> {
     const { data, error } = await supabase
-      .from('employees')
+      .from('hr_employees')
       .select('id')
       .eq('email', email)
       .maybeSingle();
@@ -35,7 +35,7 @@ export const personalInfoService = {
 
   async checkPhoneExists(phone: string): Promise<boolean> {
     const { data, error } = await supabase
-      .from('employees')
+      .from('hr_employees')
       .select('id')
       .eq('phone', phone)
       .maybeSingle();
@@ -50,7 +50,7 @@ export const personalInfoService = {
 
   async checkAadharExists(aadharNumber: string): Promise<boolean> {
     const { data, error } = await supabase
-      .from('employees')
+      .from('hr_employees')
       .select('id')
       .eq('aadhar_number', aadharNumber)
       .maybeSingle();
@@ -65,7 +65,7 @@ export const personalInfoService = {
 
   async checkPanExists(panNumber: string): Promise<boolean> {
     const { data, error } = await supabase
-      .from('employees')
+      .from('hr_employees')
       .select('id')
       .eq('pan_number', panNumber)
       .maybeSingle();
@@ -142,7 +142,7 @@ export const personalInfoService = {
       };
 
       const { data: employee, error: employeeError } = await supabase
-        .from('employees')
+        .from('hr_employees')
         .insert(employeeData)
         .select()
         .single();
@@ -181,7 +181,7 @@ export const personalInfoService = {
       }
 
       const { error: addressError } = await supabase
-        .from('employee_addresses')
+        .from('hr_employee_addresses')
         .insert(addresses);
 
       if (addressError) {
@@ -199,7 +199,7 @@ export const personalInfoService = {
   async updatePersonalInfo(employeeId: string, personalInfo: Partial<PersonalInfo>) {
     try {
       const { error: employeeError } = await supabase
-        .from('employees')
+        .from('hr_employees')
         .update({
           first_name: personalInfo.firstName,
           last_name: personalInfo.lastName,
@@ -220,7 +220,7 @@ export const personalInfoService = {
 
       if (personalInfo.presentAddress) {
         const { error: addressError } = await supabase
-          .from('employee_addresses')
+          .from('hr_employee_addresses')
           .upsert({
             employee_id: employeeId,
             type: 'present',
@@ -236,7 +236,7 @@ export const personalInfoService = {
 
       if (personalInfo.permanentAddress) {
         const { error: addressError } = await supabase
-          .from('employee_addresses')
+          .from('hr_employee_addresses')
           .upsert({
             employee_id: employeeId,
             type: 'permanent',

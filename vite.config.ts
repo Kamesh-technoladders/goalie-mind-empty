@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::", // Allows all IPv6/IPv4 connections
-      port: 8080,
+      port: 8081,
       strictPort: true,
       hmr: {
         protocol: "ws",

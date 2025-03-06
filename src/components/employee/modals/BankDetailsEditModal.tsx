@@ -36,7 +36,7 @@ export const BankDetailsEditModal: React.FC<BankDetailsEditModalProps> = ({
         setIsSubmitting(true);
 
         const { error } = await supabase
-          .from('employee_bank_details')
+          .from('hr_employee_bank_details')
           .upsert({
             employee_id: employeeId,
             account_holder_name: formData.accountHolderName,

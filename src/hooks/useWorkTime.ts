@@ -24,7 +24,7 @@ export const useWorkTime = (employeeId: string) => {
       };
 
       const { data, error } = await supabase
-        .from('employee_work_times')
+        .from('hr_employee_work_times')
         .insert([newSession])
         .select()
         .single();
@@ -58,7 +58,7 @@ export const useWorkTime = (employeeId: string) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('employee_work_times')
+        .from('hr_employee_work_times')
         .update({
           status: 'paused' as WorkTimeSession['status'],
           pause_reason: reason,
@@ -97,7 +97,7 @@ export const useWorkTime = (employeeId: string) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('employee_work_times')
+        .from('hr_employee_work_times')
         .update({
           status: 'running' as WorkTimeSession['status'],
           pause_end_time: new Date().toISOString()
@@ -135,7 +135,7 @@ export const useWorkTime = (employeeId: string) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('employee_work_times')
+        .from('hr_employee_work_times')
         .update({ 
           status: 'completed' as WorkTimeSession['status'], 
           end_time: new Date().toISOString()

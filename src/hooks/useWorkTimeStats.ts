@@ -24,7 +24,7 @@ export const useWorkTimeStats = (employeeId: string) => {
       const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
       const { data: workTimes, error } = await supabase
-        .from('employee_work_times')
+        .from('hr_employee_work_times')
         .select('*')
         .eq('employee_id', employeeId)
         .gte('date', format(weekStart, 'yyyy-MM-dd'))

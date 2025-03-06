@@ -17,7 +17,7 @@ export const useEmployeeProfile = (id: string | undefined) => {
     try {
       // Fetch experiences directly from the database
       const { data: experiences, error } = await supabase
-        .from('employee_experiences')
+        .from('hr_employee_experiences')
         .select('start_date, end_date')
         .eq('employee_id', id)
         .eq('status', 'active');

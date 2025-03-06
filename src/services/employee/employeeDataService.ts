@@ -17,7 +17,7 @@ export const employeeDataService = {
 
   async updateBasicInfo(employeeId: string, data: EmployeeBasicInfo) {
     const { error } = await supabase
-      .from('employees')
+      .from('hr_employees')
       .update({
         first_name: data.firstName,
         last_name: data.lastName,

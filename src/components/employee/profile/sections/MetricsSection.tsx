@@ -13,14 +13,16 @@ interface MetricsSectionProps {
 export const MetricsSection: React.FC<MetricsSectionProps> = ({ employeeId }) => {
   return (
     <>
+
+       <div className="h-[350px]">
+        <TimeTrackerCard employeeId={employeeId} />
+      </div>
+      
       <div className="h-[350px]">
         <WorkTimeCard employeeId={employeeId} />
       </div>
 
-      <div className="h-[350px]">
-        <TimeTrackerCard employeeId={employeeId} />
-      </div>
-
+    
       <div className="h-[350px]">
         <OnboardingTasksCard />
       </div>
@@ -29,7 +31,7 @@ export const MetricsSection: React.FC<MetricsSectionProps> = ({ employeeId }) =>
         <OnboardingProgressCard />
       </div>
 
-      <div className="md:col-span-2 lg:col-span-3 xl:col-span-4 h-[300px]">
+      <div className="md:col-span-1 lg:col-span-1 xl:col-span-2 h-[300px]">
         <CalendarCard />
       </div>
     </>

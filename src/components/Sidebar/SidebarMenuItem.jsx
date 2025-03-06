@@ -2,6 +2,7 @@ import { FiUsers, FiBriefcase, FiCheckSquare, FiSettings, FiLogOut } from "react
 import { IoDiamondOutline } from "react-icons/io5";
 import { SiAwsorganizations } from "react-icons/si";
 import { MdDashboardCustomize, MdOutlineManageAccounts} from "react-icons/md";
+import { ImProfile } from "react-icons/im";
 
 
 const menuItemsByRole = {
@@ -24,6 +25,7 @@ const menuItemsByRole = {
   ],
   employee: [
     { icon: MdDashboardCustomize, label: "Dashboard", path: "/dashboard" },
+    { icon: ImProfile, label: "My Profile", path: "/profile" },
     { icon: FiCheckSquare, label: "My Tasks", path: "/tasks" },
   ],
 };

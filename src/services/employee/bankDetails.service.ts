@@ -5,7 +5,7 @@ import { BankDetails } from "../types/employee.types";
 export const bankDetailsService = {
   async getBankDetails(employeeId: string): Promise<BankDetails | null> {
     const { data, error } = await supabase
-      .from('employee_bank_details')
+      .from('hr_employee_bank_details')
       .select('*')
       .eq('employee_id', employeeId)
       .maybeSingle();
@@ -27,7 +27,7 @@ export const bankDetailsService = {
 
   async createBankDetails(employeeId: string, bankDetails: BankDetails) {
     const { error } = await supabase
-      .from('employee_bank_details')
+      .from('hr_employee_bank_details')
       .insert({
         employee_id: employeeId,
         account_holder_name: bankDetails.accountHolderName,
@@ -44,7 +44,7 @@ export const bankDetailsService = {
 
   async updateBankDetails(employeeId: string, bankDetails: Partial<BankDetails>) {
     const { error } = await supabase
-      .from('employee_bank_details')
+      .from('hr_employee_bank_details')
       .update({
         account_holder_name: bankDetails.accountHolderName,
         account_number: bankDetails.accountNumber,

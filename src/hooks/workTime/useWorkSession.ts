@@ -11,7 +11,7 @@ export const useWorkSession = (employeeId: string) => {
   const checkActiveSession = async () => {
     try {
       const { data, error } = await supabase
-        .from('employee_work_times')
+        .from('hr_employee_work_times')
         .select('*')
         .eq('employee_id', employeeId)
         .or('status.eq.running,status.eq.paused')

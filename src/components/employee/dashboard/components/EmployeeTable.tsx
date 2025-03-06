@@ -37,7 +37,7 @@ const StatusCell: React.FC<{
   const updateEmployeeStatus = async (status: string) => {
     try {
       const { error } = await supabase
-        .from('employees')
+        .from('hr_employees')
         .update({ employment_status: status })
         .eq('id', employeeId);
         

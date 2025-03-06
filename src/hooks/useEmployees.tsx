@@ -23,7 +23,7 @@ export const useEmployees = () => {
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
-        .from('employees')
+        .from('hr_employees')
         .select('*')
         .order('created_at', { ascending: false });
 

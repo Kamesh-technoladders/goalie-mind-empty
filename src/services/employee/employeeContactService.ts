@@ -6,7 +6,7 @@ export const employeeContactService = {
   async updateEmergencyContacts(employeeId: string, contacts: EmergencyContact[]) {
     // Delete existing contacts
     await supabase
-      .from('employee_emergency_contacts')
+      .from('hr_employee_emergency_contacts')
       .delete()
       .eq('employee_id', employeeId);
 
@@ -21,7 +21,7 @@ export const employeeContactService = {
     }));
 
     const { error } = await supabase
-      .from('employee_emergency_contacts')
+      .from('hr_employee_emergency_contacts')
       .insert(contactsToInsert);
 
     if (error) throw error;

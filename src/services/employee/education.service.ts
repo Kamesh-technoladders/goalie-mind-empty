@@ -6,7 +6,7 @@ import { uploadDocument } from "@/utils/uploadDocument";
 export const educationService = {
   async fetchEducation(employeeId: string) {
     const { data, error } = await supabase
-      .from('employee_education')
+      .from('hr_employee_education')
       .select('employee_id, type, document_url, institute, year_completed')
       .eq('employee_id', employeeId);
 
@@ -40,7 +40,7 @@ export const educationService = {
     ];
 
     const { error } = await supabase
-      .from('employee_education')
+      .from('hr_employee_education')
       .insert(educationData);
 
     if (error) throw error;
@@ -52,7 +52,7 @@ export const educationService = {
       if (education.ssc instanceof File) {
         const url = await uploadDocument(education.ssc, 'education', employeeId);
         const { error } = await supabase
-          .from('employee_education')
+          .from('hr_employee_education')
           .update({ document_url: url })
           .eq('employee_id', employeeId)
           .eq('type', 'ssc');
@@ -63,7 +63,7 @@ export const educationService = {
       if (education.hsc instanceof File) {
         const url = await uploadDocument(education.hsc, 'education', employeeId);
         const { error } = await supabase
-          .from('employee_education')
+          .from('hr_employee_education')
           .update({ document_url: url })
           .eq('employee_id', employeeId)
           .eq('type', 'hsc');
@@ -74,7 +74,7 @@ export const educationService = {
       if (education.degree instanceof File) {
         const url = await uploadDocument(education.degree, 'education', employeeId);
         const { error } = await supabase
-          .from('employee_education')
+          .from('hr_employee_education')
           .update({ document_url: url })
           .eq('employee_id', employeeId)
           .eq('type', 'degree');
@@ -90,7 +90,7 @@ export const educationService = {
         };
 
         const { error } = await supabase
-          .from('employee_education')
+          .from('hr_employee_education')
           .update(updateData)
           .eq('employee_id', employeeId);
 

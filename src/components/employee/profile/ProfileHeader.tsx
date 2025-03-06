@@ -34,7 +34,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <div className="relative w-full h-[180px] rounded-xl overflow-hidden mb-6 backdrop-blur-sm">
-      <div className="absolute inset-0 bg-gradient-to-r from-[#ee9ca7]/90 to-[#ffdde1]/90" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#7B43F1]/90 to-[#FCFBFE]/90" />
       <div className="absolute inset-0 bg-white/10 backdrop-filter backdrop-blur-[2px]" />
       <div className="relative z-10 flex items-end p-4 h-full">
         <div className="flex items-end gap-4">

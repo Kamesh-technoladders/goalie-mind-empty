@@ -14,6 +14,7 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
     lastName: "",
     email: "",
     password: "",
+    employee_id:"",
     phone: "",
     department_id: "",
     designation_id: "",
@@ -74,6 +75,7 @@ const AddEmployeeModal = ({ isOpen, onClose }) => {
           <Input placeholder="Last Name" name="lastName" value={formData.lastName} onChange={handleChange} mb={2} />
           <Input placeholder="Email" name="email" value={formData.email} onChange={handleChange} mb={2} />
           <Input placeholder="Password" name="password" type="password" value={formData.password} onChange={handleChange} mb={2} />
+          <Input placeholder="Employee ID" name="employee_id" value={formData.employee_id} onChange={handleChange} mb={2} />
           <Input placeholder="Phone" name="phone" value={formData.phone} onChange={handleChange} mb={2} />
 
           {/* ✅ Select Department */}

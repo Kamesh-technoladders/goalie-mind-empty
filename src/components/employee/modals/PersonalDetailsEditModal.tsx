@@ -48,18 +48,18 @@ export const PersonalDetailsEditModal: React.FC<PersonalDetailsEditModalProps> =
 
       // First delete existing emergency contacts and family details
       await supabase
-        .from('employee_emergency_contacts')
+        .from('hr_employee_emergency_contacts')
         .delete()
         .eq('employee_id', employeeId);
 
       await supabase
-        .from('employee_family_details')
+        .from('hr_employee_family_details')
         .delete()
         .eq('employee_id', employeeId);
 
       // Update employee basic info
       const { error: employeeError } = await supabase
-        .from('employees')
+        .from('hr_employees')
         .update({
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -76,7 +76,7 @@ export const PersonalDetailsEditModal: React.FC<PersonalDetailsEditModalProps> =
 
       // Update addresses
       const { error: addressError } = await supabase
-        .from('employee_addresses')
+        .from('hr_employee_addresses')
         .upsert([
           {
             employee_id: employeeId,
@@ -108,7 +108,7 @@ export const PersonalDetailsEditModal: React.FC<PersonalDetailsEditModalProps> =
         
         if (validContacts.length > 0) {
           const { error: contactsError } = await supabase
-            .from('employee_emergency_contacts')
+            .from('hr_employee_emergency_contacts')
             .insert(
               validContacts.map(contact => ({
                 employee_id: employeeId,
@@ -131,7 +131,7 @@ export const PersonalDetailsEditModal: React.FC<PersonalDetailsEditModalProps> =
         
         if (validFamilyMembers.length > 0) {
           const { error: familyError } = await supabase
-            .from('employee_family_details')
+            .from('hr_employee_family_details')
             .insert(
               validFamilyMembers.map(member => ({
                 employee_id: employeeId,

@@ -58,7 +58,7 @@ export const EmploymentDetailsModal: React.FC<EmploymentDetailsModalProps> = ({
       setIsSubmitting(true);
 
       const { error: updateError } = await supabase
-        .from('employees')
+        .from('hr_employees')
         .update({
           department: formData.department,
           position: formData.position,

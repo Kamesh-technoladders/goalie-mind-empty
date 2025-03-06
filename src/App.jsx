@@ -13,6 +13,7 @@ import ClientDashboard from "./components/Client/ClientDashboard";
 import ProjectDashboard from "./components/Client/ProjectDashboard";
 import Index from "./pages/Index";
 import EmployeeProfile from "./pages/EmployeeProfile";
+import ProfilePageEmployee from "./pages/ProfilePageEmployee"
 
 function App() {
   return (
@@ -36,6 +37,13 @@ function App() {
 
           <Route path="/employee" element={<Index />} />
       <Route path="/employee/:id" element={<EmployeeProfile />} />
+
+
+
+      {/* Employee Dashboard Routes */}
+      <Route path="/profile" element={<ProfilePageEmployee />} />
+
+      
 
           </Route>
         </Route>

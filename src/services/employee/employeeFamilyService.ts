@@ -6,7 +6,7 @@ export const employeeFamilyService = {
   async updateFamilyDetails(employeeId: string, familyMembers: FamilyMember[]) {
     // Delete existing family details
     await supabase
-      .from('employee_family_details')
+      .from('hr_employee_family_details')
       .delete()
       .eq('employee_id', employeeId);
 
@@ -22,7 +22,7 @@ export const employeeFamilyService = {
     }));
 
     const { error } = await supabase
-      .from('employee_family_details')
+      .from('hr_employee_family_details')
       .insert(familyDetailsToInsert);
 
     if (error) throw error;

@@ -36,7 +36,7 @@ export const TimeTrackerCard: React.FC<TimeTrackerCardProps> = ({ employeeId }) 
   const fetchWorkTimeEntries = async () => {
     try {
       const { data, error } = await supabase
-        .from('employee_work_times')
+        .from('hr_employee_work_times')
         .select('*')
         .eq('employee_id', employeeId)
         .order('start_time', { ascending: false });

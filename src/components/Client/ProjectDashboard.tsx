@@ -31,7 +31,7 @@ interface AssignEmployee {
   status: string;
   sow: string;
   duration: number;
-  hr_profiles?: {
+  hr_employees?: {
     first_name: string;
     last_name: string;
   } | null;
@@ -100,7 +100,7 @@ const ProjectDashboard = () => {
               client_billing,
               status,
               sow,
-              hr_profiles:hr_profiles!hr_project_employees_assign_employee_fkey (first_name, last_name)
+              hr_employees:hr_employees!hr_project_employees_assign_employee_fkey (first_name, last_name)
             `)
             .eq("project_id", id)
             .eq("organization_id", organization_id);
@@ -180,8 +180,8 @@ const ProjectDashboard = () => {
   <AreaChart
     data={
       assignEmployee?.map((employee) => ({
-        name: employee.hr_profiles
-          ? `${employee.hr_profiles.first_name} ${employee.hr_profiles.last_name}`
+        name: employee.hr_employees
+          ? `${employee.hr_employees.first_name} ${employee.hr_employees.last_name}`
           : "Unknown Employee", // ✅ Fallback for missing names
         client_billing: employee.client_billing || 0, // ✅ Revenue
         salary: employee.salary || 0, // ✅ Salary
@@ -258,7 +258,7 @@ const ProjectDashboard = () => {
                           <td className="px-4 py-2">
                             <Checkbox className="rounded-md" />
                           </td>
-                      <td className="px-4 py-2 font-medium cursor-pointer hover:text-primary">  {project.hr_profiles ? `${project.hr_profiles.first_name} ${project.hr_profiles.last_name}` : "N/A"}</td>
+                      <td className="px-4 py-2 font-medium cursor-pointer hover:text-primary">  {project.hr_employees ? `${project.hr_employees.first_name} ${project.hr_employees.last_name}` : "N/A"}</td>
                       <td className="px-4 py-2">{project.duration} days</td>
                       <td className="px-4 py-2">{new Date(project.start_date).toLocaleDateString()}</td>
                       <td className="px-4 py-2">{new Date(project.end_date).toLocaleDateString()}</td>

@@ -180,8 +180,8 @@ export type Database = {
           updated_by: string | null
           sow: string | null
 
-          ///join hr_profiles
-          hr_profiles?: {
+          ///join hr_employees
+          hr_employees?: {
             first_name: string;
             last_name: string;
           } | null;
@@ -232,7 +232,7 @@ export type Database = {
           },
         ]
       }
-      hr_profiles: {  // ✅ ADD THIS TABLE
+      hr_employees: {  // ✅ ADD THIS TABLE
         Row: {
           id: string;
           first_name: string;
@@ -282,7 +282,7 @@ export type Database = {
               foreignKeyName: "hr_project_employees_assign_employee_fkey", // ✅ Fix reference for assigned employee
               columns: ["assign_employee"],
               isOneToOne: false,
-              referencedRelation: "hr_profiles",
+              referencedRelation: "hr_employees",
               referencedColumns: ["id"]
             },
             {

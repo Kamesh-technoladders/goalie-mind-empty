@@ -5,7 +5,7 @@ import { Experience } from "../types/employee.types";
 export const experienceService = {
   async fetchExperiences(employeeId: string) {
     const { data, error } = await supabase
-      .from('employee_experiences')
+      .from('hr_employee_experiences')
       .select('*')
       .eq('employee_id', employeeId)
       .eq('status', 'active')
@@ -17,7 +17,7 @@ export const experienceService = {
 
   async createExperience(employeeId: string, experience: Experience) {
     const { data, error } = await supabase
-      .from('employee_experiences')
+      .from('hr_employee_experiences')
       .insert({
         employee_id: employeeId,
         job_title: experience.jobTitle,
@@ -43,7 +43,7 @@ export const experienceService = {
 
   async updateExperience(employeeId: string, experienceId: string, experience: Experience) {
     const { error } = await supabase
-      .from('employee_experiences')
+      .from('hr_employee_experiences')
       .update({
         job_title: experience.jobTitle,
         company: experience.company,
@@ -65,7 +65,7 @@ export const experienceService = {
 
   async deleteExperience(employeeId: string, experienceId: string) {
     const { error } = await supabase
-      .from('employee_experiences')
+      .from('hr_employee_experiences')
       .update({ status: 'inactive' })
       .eq('id', experienceId)
       .eq('employee_id', employeeId);

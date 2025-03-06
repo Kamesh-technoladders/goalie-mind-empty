@@ -10,15 +10,15 @@ interface ErrorStateProps {
 }
 
 export const LoadingState = () => (
-  <DashboardLayout>
+  // <DashboardLayout>
     <div className="min-h-screen flex items-center justify-center">
       <Loader2 className="w-8 h-8 animate-spin" />
     </div>
-  </DashboardLayout>
+  // </DashboardLayout>
 );
 
 export const ErrorState: React.FC<ErrorStateProps> = ({ message, onReturn }) => (
-  <DashboardLayout>
+  // <DashboardLayout>
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <div className="text-center">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -29,5 +29,5 @@ export const ErrorState: React.FC<ErrorStateProps> = ({ message, onReturn }) => 
         Return to Dashboard
       </Button>
     </div>
-  </DashboardLayout>
+  // </DashboardLayout>
 );

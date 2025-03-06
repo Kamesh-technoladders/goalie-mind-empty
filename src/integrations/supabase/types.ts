@@ -9,7 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      employee_addresses: {
+      hr_employee_addresses: {
         Row: {
           address_line1: string
           city: string
@@ -48,12 +48,12 @@ export type Database = {
             foreignKeyName: "employee_addresses_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      employee_bank_details: {
+      hr_employee_bank_details: {
         Row: {
           account_holder_name: string
           account_number: string
@@ -95,12 +95,12 @@ export type Database = {
             foreignKeyName: "employee_bank_details_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      employee_documents: {
+      hr_employee_documents: {
         Row: {
           category: string
           created_at: string | null
@@ -148,12 +148,12 @@ export type Database = {
             foreignKeyName: "employee_documents_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      employee_education: {
+      hr_employee_education: {
         Row: {
           created_at: string | null
           document_url: string | null
@@ -186,12 +186,12 @@ export type Database = {
             foreignKeyName: "employee_education_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      employee_emergency_contacts: {
+      hr_employee_emergency_contacts: {
         Row: {
           created_at: string | null
           employee_id: string
@@ -221,19 +221,19 @@ export type Database = {
             foreignKeyName: "employee_emergency_contacts_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fk_employee"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      employee_experiences: {
+      hr_employee_experiences: {
         Row: {
           company: string
           created_at: string | null
@@ -293,12 +293,12 @@ export type Database = {
             foreignKeyName: "employee_experiences_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      employee_family_details: {
+      hr_employee_family_details: {
         Row: {
           created_at: string | null
           employee_id: string
@@ -331,7 +331,7 @@ export type Database = {
             foreignKeyName: "employee_family_details_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
           {
@@ -343,7 +343,7 @@ export type Database = {
           },
         ]
       }
-      employee_work_times: {
+      hr_employee_work_times: {
         Row: {
           auto_stopped: boolean | null
           created_at: string | null
@@ -415,12 +415,12 @@ export type Database = {
             foreignKeyName: "employee_work_times_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
-            referencedRelation: "employees"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
       }
-      employees: {
+      hr_employees: {
         Row: {
           aadhar_number: string | null
           blood_group: string | null

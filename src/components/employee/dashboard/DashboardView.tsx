@@ -3,11 +3,13 @@ import React, { useState, useMemo } from "react";
 import { ProgressStats } from "./components/ProgressStats";
 import { FilterBar } from "./components/FilterBar";
 import { EmployeeTable } from "./components/EmployeeTable";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { UserPlus } from "lucide-react";
 import { useEmployees } from "@/hooks/useEmployees";
 import { Employee } from "@/hooks/useEmployees";
 import { toast } from "sonner";
+import AddEmployeeModal from "../../../components/Employee1/AddEmployeeModal";
+import { Table, Thead, Tbody, Tr, Th, Td, Button, useDisclosure } from "@chakra-ui/react";
 
 interface DashboardViewProps {
   onAddEmployee: () => void;
@@ -17,6 +19,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onAddEmployee }) =
   const { employees, isLoading, error, refetch } = useEmployees();
   const [searchValue, setSearchValue] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const filteredEmployees = useMemo(() => {
     if (!employees) return [];
@@ -53,6 +56,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onAddEmployee }) =
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-brand-primary">People</h1>
+        <Button colorScheme="blue" onClick={onOpen}>+ Add </Button>
+        <AddEmployeeModal isOpen={isOpen} onClose={onClose} />
         <Button onClick={onAddEmployee} className="bg-red-600 hover:bg-red-700">
           <UserPlus className="w-3.5 h-3.5 mr-2" />
           Add Employee

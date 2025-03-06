@@ -6,7 +6,7 @@ export const employeeAddressService = {
   async updateAddresses(employeeId: string, presentAddress: Address, permanentAddress: Address) {
     // Delete existing addresses
     await supabase
-      .from('employee_addresses')
+      .from('hr_employee_addresses')
       .delete()
       .eq('employee_id', employeeId);
 
@@ -33,7 +33,7 @@ export const employeeAddressService = {
     ];
 
     const { error } = await supabase
-      .from('employee_addresses')
+      .from('hr_employee_addresses')
       .insert(addressesToInsert);
 
     if (error) throw error;
