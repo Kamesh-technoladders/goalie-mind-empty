@@ -8,7 +8,7 @@ import { EmergencyContactsSection } from "./personal-details/EmergencyContactsSe
 import { FamilyDetailsSection } from "./personal-details/FamilyDetailsSection";
 import { PersonalDetailsFormProps, PersonalDetailsData } from "./types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { personalDetailsSchema, PersonalDetailsFormSchema, GENDER } from "./personal-details/schema/personalDetailsSchema";
+import { personalDetailsSchema, PersonalDetailsFormSchema, GENDER, BLOOD_GROUPS } from "./personal-details/schema/personalDetailsSchema";
 import { useFormValidation } from "./personal-details/hooks/useFormValidation";
 import { useFormInitialization } from "./personal-details/hooks/useFormInitialization";
 import { toast } from "sonner";
@@ -32,14 +32,23 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     setDocuments
   } = useFormInitialization(initialData);
 
-  // Fix default values type issues, particularly with gender
+  // Ensure gender and bloodGroup are valid enum values
+  const safeGender = initialData?.gender && GENDER.includes(initialData.gender as any) 
+    ? initialData.gender as any 
+    : GENDER[0];
+    
+  const safeBloodGroup = initialData?.bloodGroup && BLOOD_GROUPS.includes(initialData.bloodGroup as any)
+    ? initialData.bloodGroup as any
+    : BLOOD_GROUPS[0];
+
+  // Fix default values type issues
   const form = useForm<PersonalDetailsFormSchema>({
     defaultValues: {
       ...initialData,
-      // Ensure gender is one of the allowed enum values
-      gender: (initialData?.gender as any) || GENDER[0],
+      gender: safeGender, // Ensure it's one of the allowed enum values
+      bloodGroup: safeBloodGroup, // Ensure it's one of the allowed enum values
       dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
-      sameAsPresent: false
+      sameAsPresent: Boolean(initialData?.sameAsPresent) || false
     },
     resolver: zodResolver(personalDetailsSchema)
   });
@@ -56,8 +65,19 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     const formData: PersonalDetailsData = {
       ...data,
       dateOfBirth: data.dateOfBirth?.toISOString(),
-      emergencyContacts,
-      familyDetails,
+      emergencyContacts: emergencyContacts.map(contact => ({
+        ...contact,
+        name: contact.name || "",
+        relationship: contact.relationship || "",
+        phone: contact.phone || ""
+      })),
+      familyDetails: familyDetails.map(member => ({
+        ...member,
+        name: member.name || "",
+        relationship: member.relationship || "",
+        occupation: member.occupation || "",
+        phone: member.phone || ""
+      })),
       documents,
     };
     
@@ -81,7 +101,10 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
         <BasicInfoSection register={form} errors={form.formState.errors} isCheckingEmail={isCheckingEmail} emailError={emailError} 
           profilePictureUrl={form.watch("profilePictureUrl")}
           onProfilePictureChange={(url) => form.setValue("profilePictureUrl", url)}
-          onProfilePictureDelete={() => form.setValue("profilePictureUrl", "")}
+          onProfilePictureDelete={() => {
+            form.setValue("profilePictureUrl", "");
+            return Promise.resolve(); // Return a Promise to fix the TS error
+          }}
           documents={documents} onDocumentsChange={setDocuments} setValue={form.setValue} watch={form.watch} 
         />
         <AddressSection form={form} />

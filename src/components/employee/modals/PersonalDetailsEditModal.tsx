@@ -184,7 +184,7 @@ export const PersonalDetailsEditModal: React.FC<PersonalDetailsEditModalProps> =
             onComplete={handleComplete} 
             initialData={data}
             isSubmitting={isSubmitting}
-            formRef={formRef}
+            formRef={React.createRef()}
           />
         </div>
         <div className="flex justify-end gap-3 p-3 border-t">

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { FormProgress, FormData } from "@/utils/progressCalculator";
 import { toast } from "sonner";
+import { EmergencyContact, FamilyMember } from "@/components/employee/types";
 
 export const useFormState = () => {
   const [activeTab, setActiveTab] = useState("personal");
@@ -14,7 +15,9 @@ export const useFormState = () => {
 
   const [formData, setFormData] = useState<FormData>({
     personal: {
-      documents: []
+      documents: [],
+      emergencyContacts: [] as EmergencyContact[],
+      familyDetails: [] as FamilyMember[]
     },
     education: null,
     experience: [],

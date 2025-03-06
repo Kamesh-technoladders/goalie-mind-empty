@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -106,14 +107,20 @@ const ProfilePageEmployee = () => {
           onEdit={() => handleEdit("employment")}
         />
 
-        <EducationSection onEdit={() => handleEdit("education")} />
+        {/* Add employeeId prop to EducationSection */}
+        <EducationSection
+          employeeId={employeeData.employee_id || ""}
+          onEdit={() => handleEdit("education")}
+        />
 
-        <BankInfoSection onEdit={() => handleEdit("bank")} />
-
-        
+        {/* Modify BankInfoSection to accept onEdit prop */}
+        <div className="col-span-1">
+          <BankInfoSection />
+          <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => handleEdit("bank")}>
+            Edit Bank Details
+          </Button>
+        </div>
       </div>
-
-     
     </div>
   );
 };

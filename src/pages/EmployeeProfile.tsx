@@ -17,6 +17,7 @@ import { EducationSection } from "@/components/employee/profile/sections/Educati
 import { BankInfoSection } from "@/components/employee/profile/sections/BankInfoSection";
 import { MetricsSection } from "@/components/employee/profile/sections/MetricsSection";
 
+// Modify the component to satisfy TypeScript requirements
 const EmployeeProfile = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
@@ -111,13 +112,19 @@ const EmployeeProfile = () => {
             onEdit={() => handleEdit("employment")}
           />
 
+          {/* Add employeeId prop to EducationSection */}
           <EducationSection
+            employeeId={employeeData.employee_id || ""}
             onEdit={() => handleEdit("education")}
           />
 
-          <BankInfoSection
-            onEdit={() => handleEdit("bank")}
-          />
+          {/* Modify BankInfoSection to accept onEdit prop */}
+          <div className="col-span-1">
+            <BankInfoSection />
+            <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => handleEdit("bank")}>
+              Edit Bank Details
+            </Button>
+          </div>
 
           <MetricsSection employeeId={employeeData.id} />
         </div>

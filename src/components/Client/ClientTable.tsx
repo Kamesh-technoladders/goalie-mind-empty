@@ -1,263 +1,332 @@
-import React, { useState } from "react";
-import { Table } from "../../components/ui/table";
-import { Checkbox } from "../../components/ui/checkbox";
-import { cn } from "../../lib/utils";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import supabase from "../../config/supabaseClient";
-import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import React, { useState, useEffect } from "react";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  SortingState,
+  getSortedRowModel,
+} from "@tanstack/react-table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { MoreHorizontal, Edit, Copy, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Button } from "../../components/ui/button";
-import { Download, Plus } from "lucide-react";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-import AddClientDialog from "../Client/AddClientDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { auth } from "@/config/firebase";
+import supabase from "@/config/supabaseClient";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
+interface Client {
+  id: string;
+  client_name: string;
+  display_name: string;
+  email: string;
+  phone_number: string;
+  status: string;
+  total_projects: number;
+  active_employees: number;
+  city: string;
 }
 
-const ClientTable = () => {
-  const navigate = useNavigate();
+interface Props {
+  data: Client[];
+}
+
+const ClientTable: React.FC<Props> = ({ data }) => {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
-  const user = useSelector((state: any) => state.auth.user);
-  const organization_id = useSelector((state: any) => state.auth.organization_id);
-  const [addClientOpen, setAddClientOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-
-  const { data: clients, isLoading: loadingClients } = useQuery({
-    queryKey: ["hr_clients", organization_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_clients")
-        .select("*")
-        .eq("organization_id", organization_id);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!organization_id,
-  });
-
-  const { data: projects, isLoading: loadingProjects } = useQuery({
-    queryKey: ["hr_projects", organization_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_projects")
-        .select("id, client_id, status")
-        .eq("organization_id", organization_id);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!organization_id,
-  });
-
-  const { data: employees, isLoading: loadingEmployees } = useQuery({
-    queryKey: ["hr_project_employees", organization_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_project_employees")
-        .select("client_id, salary, client_billing, status")
-        .eq("organization_id", organization_id);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!organization_id,
-  });
-
-  const clientData = clients?.map((client) => {
-    const clientProjects = projects?.filter((p) => p.client_id === client.id) || [];
-    const totalProjects = clientProjects.length;
-    const ongoingProjects = clientProjects.filter((p) => p.status === "ongoing").length;
-    const completedProjects = clientProjects.filter((p) => p.status === "completed").length;
-
-    const clientEmployees = employees?.filter((e) => e.client_id === client.id) || [];
-    const activeEmployees = clientEmployees.filter((e) => e.status === "Working").length;
-    const totalRevenue = clientEmployees.reduce(
-      (acc, e) => acc + (Number(e.client_billing) || 0),
-      0
-    );
-    
-    const totalProfit =
-      totalRevenue -
-      clientEmployees.reduce((acc, e) => acc + (Number(e.salary) || 0), 0);
-    
-    return {
-      ...client,
-      total_projects: totalProjects,
-      ongoing_projects: ongoingProjects,
-      completed_projects: completedProjects,
-      active_employees: activeEmployees,
-      revenue: totalRevenue,
-      profit: totalProfit,
-    };
-  }) || [];
-
-  const filteredClients = clientData?.filter((client) => {
-    const matchesSearch = client.display_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const exportToCSV = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredClients || []);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Clients");
-    XLSX.writeFile(wb, "clients_data.xlsx");
+  const invalidateQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
   };
 
-  const exportToPDF = () => {
+  const columns: ColumnDef<Client>[] = [
+    {
+      accessorKey: "client_name",
+      header: "Client Name",
+    },
+    {
+      accessorKey: "display_name",
+      header: "Display Name",
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+    },
+    {
+      accessorKey: "phone_number",
+      header: "Phone Number",
+    },
+    {
+      accessorKey: "city",
+      header: "City",
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string;
+        let badgeColor = "secondary";
+        if (status === "active") {
+          badgeColor = "green";
+        } else if (status === "inactive") {
+          badgeColor = "red";
+        }
+        return <Badge variant={badgeColor}>{status}</Badge>;
+      },
+    },
+    {
+      accessorKey: "total_projects",
+      header: "Total Projects",
+    },
+    {
+      accessorKey: "active_employees",
+      header: "Active Employees",
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const client = row.original;
+        const [open, setOpen] = React.useState(false);
+
+        const handleStatusChange = async (newStatus: string) => {
+          try {
+            const user = auth.currentUser;
+            const { error } = await supabase
+              .from("hr_clients")
+              .update({
+                status: newStatus,
+                organization_id: user.organization_id,
+                created_by: user.id, // Add missing required field
+                updated_by: user.id
+              })
+              .eq("id", client.id);
+
+            if (error) throw error;
+            
+            toast.success("Client status updated successfully");
+            invalidateQueries();
+          } catch (error) {
+            console.error("Error updating client status:", error);
+            toast.error("Failed to update client status");
+          }
+        };
+
+        const handleDelete = async () => {
+          try {
+            const { error } = await supabase
+              .from("hr_clients")
+              .delete()
+              .eq("id", client.id);
+
+            if (error) throw error;
+
+            toast.success("Client deleted successfully");
+            invalidateQueries();
+          } catch (error) {
+            console.error("Error deleting client:", error);
+            toast.error("Failed to delete client");
+          } finally {
+            setOpen(false);
+          }
+        };
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigate(`/clients/edit/${client.id}`)}>
+                <Edit className="mr-2 h-4 w-4" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/clients/${client.id}`)}>
+                <Copy className="mr-2 h-4 w-4" /> View
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleStatusChange(client.status === "active" ? "inactive" : "active")}
+              >
+                {client.status === "active" ? "Mark Inactive" : "Mark Active"}
+              </DropdownMenuItem>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the client and
+                      remove all of its data.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
+    state: {
+      sorting,
+    },
+  });
+
+  const handleExportPdf = () => {
     const doc = new jsPDF();
-    doc.text("Client Data", 14, 10);
-  
-    doc.autoTable({
-      head: [["Client Name", "Total Projects", "Ongoing", "Completed", "Active Employees", "Revenue", "Profit", "Status"]],
-      body: filteredClients?.map((client) => [
-        client.display_name,
-        client.total_projects,
-        client.ongoing_projects,
-        client.completed_projects,
-        client.active_employees,
-        `₹ ${client.revenue.toLocaleString()}`,
-        `₹ ${client.profit.toLocaleString()}`,
-        client.status,
-      ]),
-      startY: 20,
+
+    // Define the columns for the table
+    const tableColumns = ["Client Name", "Display Name", "Email", "Phone Number", "City", "Status", "Total Projects", "Active Employees"];
+
+    // Prepare the data for the table
+    const tableData = data.map(client => [
+      client.client_name,
+      client.display_name,
+      client.email,
+      client.phone_number,
+      client.city,
+      client.status,
+      client.total_projects.toString(),
+      client.active_employees.toString()
+    ]);
+
+    // Add the table to the PDF
+    (doc as any).autoTable({
+      head: [tableColumns],
+      body: tableData,
     });
-  
-    doc.save("clients_data.pdf");
+
+    // Save the PDF
+    doc.save("client_data.pdf");
   };
-
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ clientId, newStatus }: { clientId: string; newStatus: string }) => {
-      const { error } = await supabase
-        .from("hr_clients")
-        .update({
-          status: newStatus,
-          organization_id,
-          updated_by: user.id
-        })
-        .eq("id", clientId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["hr_clients"] });
-      toast.success("Client status updated successfully!");
-    },
-    onError: () => {
-      toast.error("Failed to update client status.");
-    },
-  });
-
-  if (loadingClients || loadingProjects || loadingEmployees) return <div>Loading...</div>;
 
   return (
-    <div className="w-full overflow-auto">
-      <div className="flex justify-between mb-4">
-        <div className="flex gap-4">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px] text-sm border rounded-md">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-          <input
+    <div>
+      <div className="flex flex-col md:flex-row justify-between items-center mb-4">
+        <div className="mb-2 md:mb-0">
+          <Label htmlFor="search" className="mr-2">
+            Search:
+          </Label>
+          <Input
+            id="search"
             type="text"
-            placeholder="Search Client..."
-            className="w-64 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search clients..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
           />
         </div>
-        <div className="flex gap-2">
-          <Button
-            size="icon"
-            variant="outline"
-            className="rounded-full"
-            onClick={() => setAddClientOpen(true)}
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToPDF}>
-            <Download className="w-4 h-4 mr-2" />
-            Export PDF
-          </Button>
-        </div>
+        <Button onClick={handleExportPdf}>Export to PDF</Button>
       </div>
-      <Table>
-        <thead className="bg-gray-100">
-          <tr className="border-b border-border/50">
-            <th className="w-12 px-4 py-2">
-              <Checkbox className="rounded-md" />
-            </th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Client Name</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Total Projects</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Ongoing</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Completed</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Active Employees</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Revenue</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Profit</th>
-            <th className="px-4 py-2 text-left text-sm font-medium text-muted-foreground">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredClients?.map((client) => (
-            <tr key={client.id} className="hover:bg-white/50 transition-colors border-b">
-              <td className="px-4 py-2">
-                <Checkbox className="rounded-md" />
-              </td>
-              <td 
-                className="px-4 py-2 font-medium cursor-pointer hover:text-primary !cursor-pointer"
-                onClick={() => navigate(`/client/${client.id}`)}
-              >
-                {client.display_name}
-              </td>
-              <td className="px-4 py-2">{client.total_projects}</td>
-              <td className="px-4 py-2">{client.ongoing_projects}</td>
-              <td className="px-4 py-2">{client.completed_projects}</td>
-              <td className="px-4 py-2">{client.active_employees}</td>
-              <td className="px-4 py-2">₹ {client.revenue.toLocaleString()}</td>
-              <td className="px-4 py-2">₹ {client.profit.toLocaleString()}</td>
-              <td className="px-4 py-2">
-                <Select
-                  defaultValue={client.status ?? undefined}
-                  onValueChange={(newStatus) => updateStatusMutation.mutate({ clientId: client.id, newStatus })}
-                >
-                  <SelectTrigger
-                    className={cn(
-                      "w-[120px] text-xs px-3 py-1 rounded-full border transition",
-                      client.status === "active" ? "bg-green-100 text-green-700 border-green-400" : "bg-red-100 text-red-700 border-red-400"
-                    )}
-                  >
-                    <SelectValue>{client.status === "active" ? "Active" : "Inactive"}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active" className="text-green-700">Active</SelectItem>
-                    <SelectItem value="inactive" className="text-red-700">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-      <AddClientDialog open={addClientOpen} onOpenChange={setAddClientOpen} />
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id} onClick={() => header.column.toggleSorting(header.id)}
+                      className='cursor-pointer'>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                      {{
+                        /* {header.column.getCanSort() ? (
+                            <ArrowDownUp className="ml-2 h-4 w-4" />
+                          ) : null} */
+                      }}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows
+                .filter((row) => {
+                  const values = Object.values(row.original).join(" ").toLowerCase();
+                  return values.includes(search.toLowerCase());
+                })
+                .map((row) => {
+                  return (
+                    <TableRow key={row.id} data-row={JSON.stringify(row.original)}>
+                      {row.getVisibleCells().map((cell) => {
+                        return (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

@@ -4,12 +4,12 @@ import { personalInfoService } from "./personalInfo.service";
 import { bankDetailsService } from "./bankDetails.service";
 import { experienceService } from "./experience.service";
 import { educationService } from "./education.service";
-import { supabase } from "@/integrations/supabase/client";
+import supabase from "@/config/supabaseClient";
 
 export const employeeService = {
   async createEmployee(data: any) {
     try {
-      // 1. Insert into `hr_employees` table (fixed from "employees")
+      // 1. Insert into `hr_employees` table
       const { data: employee, error: employeeError } = await supabase
         .from("hr_employees")
         .insert([
@@ -39,7 +39,7 @@ export const employeeService = {
 
       const employeeId = employee.id;
 
-      // 2. Insert into `hr_employee_family_details` (fixed from "employee_family_details")
+      // 2. Insert into `hr_employee_family_details`
       for (const family of data.familyDetails) {
         await supabase.from("hr_employee_family_details").insert({
           employee_id: employeeId,
@@ -50,7 +50,7 @@ export const employeeService = {
         });
       }
 
-      // 3. Insert into `hr_employee_emergency_contacts` (fixed from "employee_emergency_contacts")
+      // 3. Insert into `hr_employee_emergency_contacts`
       for (const contact of data.emergencyContacts) {
         await supabase.from("hr_employee_emergency_contacts").insert({
           employee_id: employeeId,
@@ -60,7 +60,7 @@ export const employeeService = {
         });
       }
 
-      // 4. Insert into `hr_employee_documents` (fixed from "employee_documents")
+      // 4. Insert into `hr_employee_documents`
       for (const doc of data.documents) {
         await supabase.from("hr_employee_documents").insert({
           employee_id: employeeId,
