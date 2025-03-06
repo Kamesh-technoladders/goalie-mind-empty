@@ -1,10 +1,4 @@
-
-import { defineConfig, loadEnv } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import * as path from "path";
-
 export default defineConfig(({ mode }) => {
-  // Load environment variables based on mode (.env, .env.development, .env.production)
   const env = loadEnv(mode, process.cwd(), "");
 
   return {
@@ -16,20 +10,22 @@ export default defineConfig(({ mode }) => {
         protocol: "ws",
         timeout: 30000, // 30 seconds timeout
       },
+      allowedHosts: [
+        "c8ebe282-7be1-4798-8db8-bb546c17d9c3.lovableproject.com" // Add your blocked host here
+      ],
     },
     plugins: [react()],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"), // Shortens import paths
+        "@": path.resolve(__dirname, "./src"),
       },
     },
     define: {
-      // Ensure Vite uses environment variables in client-side code
-      "process.env": env,
+      "import.meta.env": JSON.stringify(env),
     },
     build: {
       outDir: "dist",
-      sourcemap: mode === "development", // Enable sourcemaps in dev mode
+      sourcemap: mode === "development",
     },
   };
 });
