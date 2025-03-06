@@ -1,3 +1,4 @@
+
 import { EmployeeData } from "../types/employee.types";
 import { personalInfoService } from "./personalInfo.service";
 import { bankDetailsService } from "./bankDetails.service";
@@ -5,13 +6,12 @@ import { experienceService } from "./experience.service";
 import { educationService } from "./education.service";
 import { supabase } from "@/integrations/supabase/client";
 
-
 export const employeeService = {
   async createEmployee(data: any) {
     try {
-      // 1. Insert into `employees` table
+      // 1. Insert into `hr_employees` table (fixed from "employees")
       const { data: employee, error: employeeError } = await supabase
-        .from("employees")
+        .from("hr_employees")
         .insert([
           {
             employee_id: data.employeeId,
@@ -39,30 +39,30 @@ export const employeeService = {
 
       const employeeId = employee.id;
 
-      // 2. Insert into `employee_family_details`
+      // 2. Insert into `hr_employee_family_details` (fixed from "employee_family_details")
       for (const family of data.familyDetails) {
-        await supabase.from("employee_family_details").insert({
+        await supabase.from("hr_employee_family_details").insert({
           employee_id: employeeId,
-          relationship: family.relationship,
+          relationship: family.relationship || "other", // Set a default if missing
           name: family.name,
           occupation: family.occupation,
           phone: family.phone,
         });
       }
 
-      // 3. Insert into `employee_emergency_contacts`
+      // 3. Insert into `hr_employee_emergency_contacts` (fixed from "employee_emergency_contacts")
       for (const contact of data.emergencyContacts) {
-        await supabase.from("employee_emergency_contacts").insert({
+        await supabase.from("hr_employee_emergency_contacts").insert({
           employee_id: employeeId,
-          relationship: contact.relationship,
+          relationship: contact.relationship || "other", // Set a default if missing
           name: contact.name,
           phone: contact.phone,
         });
       }
 
-      // 4. Insert into `employee_documents`
+      // 4. Insert into `hr_employee_documents` (fixed from "employee_documents")
       for (const doc of data.documents) {
-        await supabase.from("employee_documents").insert({
+        await supabase.from("hr_employee_documents").insert({
           employee_id: employeeId,
           document_type: doc.documentType,
           category: "government_id", // Adjust category if needed

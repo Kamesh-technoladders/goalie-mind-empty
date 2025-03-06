@@ -1,3 +1,4 @@
+
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import * as path from "path";
@@ -9,7 +10,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::", // Allows all IPv6/IPv4 connections
-      port: 8081,
+      port: 8080, // Set port to 8080 as required
       strictPort: true,
       hmr: {
         protocol: "ws",
@@ -28,6 +29,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // Ensure Vite uses environment variables in client-side code
       "process.env": env,
+      // Add this for import.meta.env access in TypeScript
+      "import.meta.env": JSON.stringify(env),
     },
     build: {
       outDir: "dist",

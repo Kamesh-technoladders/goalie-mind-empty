@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +29,7 @@ export const PersonalDetailsEditModal: React.FC<PersonalDetailsEditModalProps> =
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<PersonalDetailsData | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleComplete = (completed: boolean, data?: PersonalDetailsData) => {
     if (completed && data) {
@@ -184,6 +184,7 @@ export const PersonalDetailsEditModal: React.FC<PersonalDetailsEditModalProps> =
             onComplete={handleComplete} 
             initialData={data}
             isSubmitting={isSubmitting}
+            formRef={formRef}
           />
         </div>
         <div className="flex justify-end gap-3 p-3 border-t">

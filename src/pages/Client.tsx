@@ -41,8 +41,8 @@ const ClientManagement = () => {
   // ✅ Calculate Revenue & Profit Per Client
   const clientFinancials = clients?.map((client) => {
     const clientProjects = projectEmployees?.filter((pe) => pe.client_id === client.id) || [];
-    const totalRevenue = clientProjects.reduce((acc, pe) => acc + (parseInt(pe.client_billing) || 0), 0);
-    const totalProfit = totalRevenue - clientProjects.reduce((acc, pe) => acc + (parseInt(pe.salary) || 0), 0);
+    const totalRevenue = clientProjects.reduce((acc, pe) => acc + (parseInt(String(pe.client_billing)) || 0), 0);
+    const totalProfit = totalRevenue - clientProjects.reduce((acc, pe) => acc + (parseInt(String(pe.salary)) || 0), 0);
 
     return {
       ...client,
