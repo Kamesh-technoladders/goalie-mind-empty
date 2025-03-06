@@ -34,60 +34,66 @@ export const FormContent: React.FC<FormContentProps> = ({
     case "personal":
       return (
         <PersonalDetailsForm
-        onComplete={(completed: boolean, data?: any) => {
-          console.log("onComplete called - Completed:", completed, "Data:", data);
-          if (completed && data) {
-            updateFormData("personal", data); // ✅ Ensure personal data is updated
-            updateSectionProgress("personal", completed);
-            setTimeout(() => { // 🕒 Delay moving forward to ensure state update
+          onComplete={(completed: boolean, data?: any) => {
+            console.log("onComplete called - Completed:", completed, "Data:", data);
+            if (data) {
+              updateFormData("personal", data);
+              updateSectionProgress("personal", true);
               handleSaveAndNext(data);
-            }, 100);
-          } else {
-            console.warn("⚠️ Warning: No data received from PersonalDetailsForm");
-          }
-        }}
-        
-        initialData={formData.personal} // Ensure initial data is passed
-        isCheckingEmail={isCheckingEmail}
-        emailError={emailError}
-        isSubmitting={isSubmitting}
-        formRef={formRef}
-      />
-      
+            } else {
+              console.warn("⚠️ Warning: No data received from PersonalDetailsForm");
+              // Still try to move forward with what we have
+              handleSaveAndNext(formData.personal || {});
+            }
+          }}
+          initialData={formData.personal}
+          isCheckingEmail={isCheckingEmail}
+          emailError={emailError}
+          isSubmitting={isSubmitting}
+          formRef={formRef}
+        />
       );
-      case "education":
-        return (
-          <>
-            <EducationForm
-              onComplete={(completed: boolean, data?: any) => {
-                if (completed && data) {
-                  updateFormData("education", data);
-                  updateSectionProgress("education", completed);
-                  handleSaveAndNext(data); // ✅ Automatically move to "bank" after saving
-                }
-              }}
-              initialData={formData.education}
-            />
-            <div className="shrink-0 h-px mt-[29px] border-[rgba(239,242,255,1)] border-solid border-2" />
-            <ExperienceForm
-              onComplete={(completed: boolean, data?: Experience[]) => {
-                if (completed && data) {
-                  updateFormData("experience", data);
-                  updateSectionProgress("experience", completed);
-                }
-              }}
-              experiences={formData.experience}
-            />
-          </>
-        );
-      
+    case "education":
+      return (
+        <>
+          <EducationForm
+            onComplete={(completed: boolean, data?: any) => {
+              if (data) {
+                updateFormData("education", data);
+                updateSectionProgress("education", completed);
+                handleSaveAndNext(data);
+              } else {
+                // Still try to move forward
+                updateSectionProgress("education", true);
+                handleSaveAndNext(formData.education || {});
+              }
+            }}
+            initialData={formData.education}
+          />
+          <div className="shrink-0 h-px mt-[29px] border-[rgba(239,242,255,1)] border-solid border-2" />
+          <ExperienceForm
+            onComplete={(completed: boolean, data?: Experience[]) => {
+              if (data) {
+                updateFormData("experience", data);
+                updateSectionProgress("experience", completed);
+              }
+            }}
+            experiences={formData.experience}
+          />
+        </>
+      );
     case "bank":
       return (
         <BankAccountForm
           onComplete={(completed: boolean, data?: any) => {
-            if (completed && data) {
+            if (data) {
               updateFormData("bank", data);
               updateSectionProgress("bank", completed);
+              handleSaveAndNext(data);
+            } else {
+              // Still try to move forward
+              updateSectionProgress("bank", true);
+              handleSaveAndNext(formData.bank || {});
             }
           }}
           initialData={formData.bank}
