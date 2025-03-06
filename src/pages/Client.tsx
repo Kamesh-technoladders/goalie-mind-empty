@@ -1,124 +1,79 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import supabase from "../config/supabaseClient";
+
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import ClientTable from "../components/Client/ClientTable";
-import AddClientDialog from "../components/Client/AddClientDialog";
-import { Button } from "../components/ui/button";
-import { Download, Plus } from "lucide-react";
-import CircularProgressBar from "../components/ui/CiruclarProgressBar";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import RevenueProfitChart from "../components/Client/RevenueProfitChart";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@chakra-ui/react";
+import supabase from "@/config/supabaseClient";
 
-const ClientManagement = () => {
-  const [addClientOpen, setAddClientOpen] = useState(false);
+// Define the Client interface to match the expected format
+interface Client {
+  id: string;
+  client_name: string;
+  email: string;
+  phone_number: string;
+  status: string;
+  client_type: string;
+  created_at: string;
+  display_name: string;
+}
 
-  // ✅ Fetch Clients
-  const { data: clients, isLoading } = useQuery({
-    queryKey: ["clients"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_clients")
-        .select("id, display_name");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // ✅ Fetch Project Employees (To Compute Revenue & Profit)
-  const { data: projectEmployees } = useQuery({
-    queryKey: ["project-employees"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_project_employees")
-        .select("client_id, project_id, salary, client_billing");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // ✅ Calculate Revenue & Profit Per Client
-  const clientFinancials = clients?.map((client) => {
-    const clientProjects = projectEmployees?.filter((pe) => pe.client_id === client.id) || [];
-    const totalRevenue = clientProjects.reduce((acc, pe) => acc + (parseInt(pe.client_billing) || 0), 0);
-    const totalProfit = totalRevenue - clientProjects.reduce((acc, pe) => acc + (parseInt(pe.salary) || 0), 0);
-
-    return {
-      ...client,
-      total_projects: new Set(clientProjects.map((pe) => pe.project_id)).size,
-      revenue: totalRevenue,
-      profit: totalProfit,
+const Client = () => {
+  const { role } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("hr_clients")
+          .select("*");
+          
+        if (error) throw error;
+        
+        // Transform data to match the Client interface
+        const formattedClients: Client[] = (data || []).map((client) => ({
+          id: client.id,
+          client_name: client.client_name || '',
+          email: client.email || '',
+          phone_number: client.phone_number || '',
+          status: client.status || 'active',
+          client_type: client.client_type || '',
+          created_at: client.created_at || '',
+          display_name: client.client_name || client.id,
+        }));
+        
+        setClients(formattedClients);
+      } catch (error) {
+        console.error("Error fetching clients:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-  }) || [];
-
-  // ✅ Calculate Overall Stats
-  const totalProjects = clientFinancials?.reduce((acc, c) => acc + c.total_projects, 0) || 0;
-  const totalRevenue = clientFinancials?.reduce((acc, c) => acc + c.revenue, 0) || 0;
-  const totalProfit = clientFinancials?.reduce((acc, c) => acc + c.profit, 0) || 0;
-
+    
+    fetchClients();
+  }, []);
+  
+  // For development, bypass role checks
+  const hasAccess = true; // In production this would check roles
+  
+  if (!hasAccess) {
+    return <div>Unauthorized Access</div>;
+  }
+  
   return (
-    <div className="min-h-screen">
-      <main className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-semibold mb-6">Project Management</h1>
-
-          {/* ✅ Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="p-6 rounded-xl glass-card">
-              <p className="text-sm text-muted-foreground mb-2">📌 Total Projects</p>
-              <p className="text-2xl font-semibold">{totalProjects}</p>
-            </div>
-            <div className="p-6 rounded-xl glass-card">
-              <p className="text-sm text-muted-foreground mb-2">💰 Total Revenue</p>
-              <p className="text-2xl font-semibold">₹ {totalRevenue.toLocaleString()}</p>
-            </div>
-            <div className="p-6 rounded-xl glass-card">
-              <p className="text-sm text-muted-foreground mb-2">💼 Total Profit</p>
-              <p className="text-2xl font-semibold">₹ {totalProfit.toLocaleString()}</p>
-            </div>
-          </div>
-
-          {/* ✅ Charts Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="glass-card p-6">
-              <h2 className="text-xl font-semibold mb-4">Projects & Revenue per Client</h2>
-              <ResponsiveContainer width="100%" height={250}>
-  <BarChart data={clientFinancials}>
-    <XAxis dataKey="display_name" />
-    <YAxis />
-    <Tooltip />
-
-    {/* ✅ Normal Bar */}
-    <Bar dataKey="total_projects" fill="#4A90E2" name="Projects" radius={[10, 10, 0, 0]} />
-
-    {/* ✅ Apply CSS Gradient via className */}
-    <Bar dataKey="revenue" className="bar-revenue" fill="var(--theme-green)" name="Revenue" radius={[10, 10, 0, 0]} />
-
-    {/* ✅ Apply Normal Color via CSS Variable */}
-    <Bar dataKey="profit" className="bar-profit" name="Profit" fill="var(--theme-gray)" radius={[10, 10, 0, 0]} />
-  </BarChart>
-</ResponsiveContainer>
-
-            </div>
-
-            <div className="glass-card p-6 flex flex-col items-center">
-              {/* <h2 className="text-xl font-semibold mb-4">Total Revenue vs Profit</h2> */}
-              <RevenueProfitChart revenue={totalRevenue} profit={totalProfit} />
-            </div>
-          </div>
-
-          {/* ✅ Table Section */}
-          <div className="glass-card rounded-2xl p-4">
-            <ClientTable />
-          </div>
-        </div>
-      </main>
-
-      {/* ✅ Add Client Dialog */}
-      <AddClientDialog open={addClientOpen} onOpenChange={setAddClientOpen} />
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Client Management</h1>
+        <Button colorScheme="blue" onClick={() => navigate("/add-client")}>
+          + Add Client
+        </Button>
+      </div>
+      <ClientTable data={clients} />
     </div>
   );
 };
 
-export default ClientManagement;
+export default Client;

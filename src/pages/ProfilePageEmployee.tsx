@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -36,7 +37,6 @@ const ProfilePageEmployee = () => {
     }
   }, [employeeData]);
   
-
   const handleEdit = (section: string) => {
     if (section === "employment") {
       setIsEmploymentModalOpen(true);
@@ -74,11 +74,8 @@ const ProfilePageEmployee = () => {
     return <ErrorState message={error || "Employee Not Found"} onReturn={() => navigate("/")} />;
   }
 
-  
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-[#FCFBFE] p-8">
-      
-
       <ProfileHeader
         employeeId={employeeData.employee_id}
         firstName={employeeData.firstName}
@@ -106,14 +103,16 @@ const ProfilePageEmployee = () => {
           onEdit={() => handleEdit("employment")}
         />
 
-        <EducationSection onEdit={() => handleEdit("education")} />
+        <EducationSection 
+          employeeId={employeeData.id} 
+          onEdit={() => handleEdit("education")} 
+        />
 
-        <BankInfoSection onEdit={() => handleEdit("bank")} />
-
-        
+        <BankInfoSection 
+          employeeId={employeeData.id}
+          onEdit={() => handleEdit("bank")} 
+        />
       </div>
-
-     
     </div>
   );
 };

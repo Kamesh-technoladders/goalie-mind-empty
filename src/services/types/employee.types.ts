@@ -1,3 +1,4 @@
+
 export interface Document {
   documentType?: 'aadhar' | 'uan' | 'pan' | 'esic';
   documentNumber?: string;

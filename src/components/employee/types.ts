@@ -5,24 +5,37 @@ import type {
   Education as EmployeeEducation,
   BankDetails,
   Address,
-  EmergencyContact,
-  FamilyMember,
+  EmergencyContact as BaseEmergencyContact,
+  FamilyMember as BaseFamilyMember,
   PersonalInfo
 } from "@/services/types/employee.types";
 import { RefObject } from "react";
 
 export type { 
   Address,
-  EmergencyContact,
-  FamilyMember,
   BankDetails as BankAccountData,
   EmployeeEducation as EducationData
 };
 
+// Make sure EmergencyContact has required fields matching the database
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
+// Make sure FamilyMember has required fields matching the database
+export interface FamilyMember {
+  name: string;
+  relationship: string;
+  occupation: string;
+  phone: string;
+}
+
 export interface Experience extends EmployeeExperience {}
 
 // Make documents required in PersonalDetailsData to match PersonalInfo
-export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents'> {
+export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents' | 'emergencyContacts' | 'familyDetails'> {
   id?: string;
   sameAsPresent?: boolean;
   profilePictureUrl?: string;
@@ -31,6 +44,8 @@ export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents'> {
   uanUrl?: string;
   esicUrl?: string;
   documents: EmployeeDocument[]; // Now required
+  emergencyContacts: EmergencyContact[]; // Using our defined type with required fields
+  familyDetails: FamilyMember[]; // Using our defined type with required fields
 }
 
 export interface FormComponentProps<T = any> {
@@ -42,7 +57,7 @@ export interface FormComponentProps<T = any> {
 export interface PersonalDetailsFormProps extends FormComponentProps<PersonalDetailsData> {
   isCheckingEmail?: boolean;
   emailError?: string | null;
-   formRef: RefObject<HTMLFormElement>
+  formRef: RefObject<HTMLFormElement>
 }
 
 export interface EducationFormProps extends FormComponentProps<EmployeeEducation> {}
@@ -53,3 +68,13 @@ export interface ExperienceFormProps {
 }
 
 export interface BankAccountFormProps extends FormComponentProps<BankDetails> {}
+
+export interface EducationSectionProps {
+  employeeId: string;
+  onEdit: () => void;
+}
+
+export interface BankInfoSectionProps {
+  employeeId: string;
+  onEdit: () => void;
+}
