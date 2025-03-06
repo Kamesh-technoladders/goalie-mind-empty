@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -75,11 +74,11 @@ const ProfilePageEmployee = () => {
     return <ErrorState message={error || "Employee Not Found"} onReturn={() => navigate("/")} />;
   }
 
-  // Determine a safe employeeId to use
-  const employeeId = employeeData.employee_id || employeeData.id || '';
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-[#FCFBFE] p-8">
+      
+
       <ProfileHeader
         employeeId={employeeData.employee_id}
         firstName={employeeData.firstName}
@@ -103,22 +102,18 @@ const ProfilePageEmployee = () => {
         />
 
         <EmploymentInfoSection
-          employeeId={employeeId}
+          employeeId={employeeData.employee_id}
           onEdit={() => handleEdit("employment")}
         />
 
-        <EducationSection
-          employeeId={employeeId}
-          onEdit={() => handleEdit("education")}
-        />
+        <EducationSection onEdit={() => handleEdit("education")} />
 
-        <div className="col-span-1">
-          <BankInfoSection employeeId={employeeId} />
-          <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => handleEdit("bank")}>
-            Edit Bank Details
-          </Button>
-        </div>
+        <BankInfoSection onEdit={() => handleEdit("bank")} />
+
+        
       </div>
+
+     
     </div>
   );
 };

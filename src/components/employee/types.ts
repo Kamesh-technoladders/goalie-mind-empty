@@ -5,28 +5,16 @@ import type {
   Education as EmployeeEducation,
   BankDetails,
   Address,
-  EmergencyContact as EmployeeEmergencyContact,
-  FamilyMember as EmployeeFamilyMember,
+  EmergencyContact,
+  FamilyMember,
   PersonalInfo
 } from "@/services/types/employee.types";
 import { RefObject } from "react";
 
-// Make relationship and name required in our local types
-export interface EmergencyContact {
-  relationship: string;
-  name: string;
-  phone?: string;
-}
-
-export interface FamilyMember {
-  relationship: string;
-  name: string;
-  occupation?: string;
-  phone?: string;
-}
-
 export type { 
   Address,
+  EmergencyContact,
+  FamilyMember,
   BankDetails as BankAccountData,
   EmployeeEducation as EducationData
 };
@@ -34,7 +22,7 @@ export type {
 export interface Experience extends EmployeeExperience {}
 
 // Make documents required in PersonalDetailsData to match PersonalInfo
-export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents' | 'emergencyContacts' | 'familyDetails'> {
+export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents'> {
   id?: string;
   sameAsPresent?: boolean;
   profilePictureUrl?: string;
@@ -43,9 +31,6 @@ export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents' | 'e
   uanUrl?: string;
   esicUrl?: string;
   documents: EmployeeDocument[]; // Now required
-  // Make these EmergencyContact and FamilyMember arrays with required fields
-  emergencyContacts: EmergencyContact[];
-  familyDetails: FamilyMember[];
 }
 
 export interface FormComponentProps<T = any> {
@@ -57,7 +42,7 @@ export interface FormComponentProps<T = any> {
 export interface PersonalDetailsFormProps extends FormComponentProps<PersonalDetailsData> {
   isCheckingEmail?: boolean;
   emailError?: string | null;
-  formRef: RefObject<HTMLFormElement>
+   formRef: RefObject<HTMLFormElement>
 }
 
 export interface EducationFormProps extends FormComponentProps<EmployeeEducation> {}
