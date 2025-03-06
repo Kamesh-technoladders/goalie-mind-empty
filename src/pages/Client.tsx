@@ -110,7 +110,11 @@ const ClientManagement = () => {
 
           {/* ✅ Table Section */}
           <div className="glass-card rounded-2xl p-4">
-            <ClientTable />
+            {clients && clients.length > 0 ? (
+              <ClientTable data={clients} />
+            ) : (
+              <div>No clients found.</div>
+            )}
           </div>
         </div>
       </main>

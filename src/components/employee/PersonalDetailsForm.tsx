@@ -6,7 +6,7 @@ import { BasicInfoSection } from "./personal-details/BasicInfoSection";
 import { AddressSection } from "./personal-details/AddressSection";
 import { EmergencyContactsSection } from "./personal-details/EmergencyContactsSection";
 import { FamilyDetailsSection } from "./personal-details/FamilyDetailsSection";
-import { PersonalDetailsFormProps, PersonalDetailsData } from "./types";
+import { PersonalDetailsFormProps, PersonalDetailsData, EmergencyContact, FamilyMember } from "./types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { personalDetailsSchema, PersonalDetailsFormSchema, GENDER, BLOOD_GROUPS, MARITAL_STATUS } from "./personal-details/schema/personalDetailsSchema";
 import { useFormValidation } from "./personal-details/hooks/useFormValidation";
@@ -71,18 +71,16 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
       ...data,
       dateOfBirth: data.dateOfBirth?.toISOString(),
       emergencyContacts: emergencyContacts.map(contact => ({
-        ...contact,
         name: contact.name || "",
         relationship: contact.relationship || "",
         phone: contact.phone || ""
-      })),
+      })) as EmergencyContact[],
       familyDetails: familyDetails.map(member => ({
-        ...member,
         name: member.name || "",
         relationship: member.relationship || "",
         occupation: member.occupation || "",
         phone: member.phone || ""
-      })),
+      })) as FamilyMember[],
       documents,
     };
     

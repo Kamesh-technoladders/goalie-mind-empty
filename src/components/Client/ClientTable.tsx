@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   ColumnDef,
@@ -28,7 +29,6 @@ import {
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { auth } from "@/config/firebase";
 import supabase from "@/config/supabaseClient";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,7 @@ const ClientTable: React.FC<Props> = ({ data }) => {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const user = { id: 'user123', organization_id: 'org123' }; // Default mock user data
 
   const invalidateQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["clients"] });
@@ -99,13 +100,14 @@ const ClientTable: React.FC<Props> = ({ data }) => {
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
-        let badgeColor = "secondary";
+        // Map string values to valid variant types
+        let badgeVariant: "default" | "destructive" | "outline" | "secondary" = "secondary";
         if (status === "active") {
-          badgeColor = "green";
+          badgeVariant = "default"; // using "default" instead of "green"
         } else if (status === "inactive") {
-          badgeColor = "red";
+          badgeVariant = "destructive"; // using "destructive" instead of "red"
         }
-        return <Badge variant={badgeColor}>{status}</Badge>;
+        return <Badge variant={badgeVariant}>{status}</Badge>;
       },
     },
     {
@@ -124,7 +126,6 @@ const ClientTable: React.FC<Props> = ({ data }) => {
 
         const handleStatusChange = async (newStatus: string) => {
           try {
-            const user = auth.currentUser;
             const { error } = await supabase
               .from("hr_clients")
               .update({
@@ -243,7 +244,7 @@ const ClientTable: React.FC<Props> = ({ data }) => {
     ]);
 
     // Add the table to the PDF
-    (doc as any).autoTable({
+    doc.autoTable({
       head: [tableColumns],
       body: tableData,
     });

@@ -11,13 +11,18 @@ import type {
 } from "@/services/types/employee.types";
 import { RefObject } from "react";
 
-// Make relationship required in our local types
-export interface EmergencyContact extends Omit<EmployeeEmergencyContact, 'relationship'> {
+// Make relationship and name required in our local types
+export interface EmergencyContact {
   relationship: string;
+  name: string;
+  phone?: string;
 }
 
-export interface FamilyMember extends Omit<EmployeeFamilyMember, 'relationship'> {
+export interface FamilyMember {
   relationship: string;
+  name: string;
+  occupation?: string;
+  phone?: string;
 }
 
 export type { 
@@ -29,7 +34,7 @@ export type {
 export interface Experience extends EmployeeExperience {}
 
 // Make documents required in PersonalDetailsData to match PersonalInfo
-export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents'> {
+export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents' | 'emergencyContacts' | 'familyDetails'> {
   id?: string;
   sameAsPresent?: boolean;
   profilePictureUrl?: string;
@@ -38,7 +43,7 @@ export interface PersonalDetailsData extends Omit<PersonalInfo, 'documents'> {
   uanUrl?: string;
   esicUrl?: string;
   documents: EmployeeDocument[]; // Now required
-  // Make these EmergencyContact and FamilyMember arrays with required relationship field
+  // Make these EmergencyContact and FamilyMember arrays with required fields
   emergencyContacts: EmergencyContact[];
   familyDetails: FamilyMember[];
 }

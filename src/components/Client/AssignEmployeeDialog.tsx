@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "../../components/ui/button";
 import {
@@ -11,7 +12,7 @@ import { Label } from "../../components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "../../components/ui/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
-import supabase from "../../config/supabaseClient";
+import supabase, { SUPABASE_URL } from "../../config/supabaseClient";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -120,7 +121,7 @@ const AssignEmployeeDialog = ({ open, onOpenChange, projectId, clientId }: Assig
               .from("hr_project_files")
               .upload(fileName, employee.sowFile);
             if (error) throw error;
-            sowUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/hr_project_files/${fileName}`;
+            sowUrl = `${SUPABASE_URL}/storage/v1/object/public/hr_project_files/${fileName}`;
           }
 
           return {
