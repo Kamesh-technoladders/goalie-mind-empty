@@ -17,7 +17,6 @@ import { EducationSection } from "@/components/employee/profile/sections/Educati
 import { BankInfoSection } from "@/components/employee/profile/sections/BankInfoSection";
 import { MetricsSection } from "@/components/employee/profile/sections/MetricsSection";
 
-// Modify the component to satisfy TypeScript requirements
 const EmployeeProfile = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
@@ -70,93 +69,92 @@ const EmployeeProfile = () => {
     return <ErrorState message={error || "Employee Not Found"} onReturn={() => navigate("/")} />;
   }
 
+  // Determine a safe employeeId to use
+  const safeEmployeeId = employeeData.employee_id || employeeData.id || '';
+
   return (
-   
-      <div className="min-h-screen bg-gradient-to-b from-white to-[#FFF9E7] p-8">
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="hover:bg-white/50 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <QuickActions />
-        </div>
-
-        <ProfileHeader
-          employeeId={employeeData.employee_id}
-          firstName={employeeData.first_name}
-          lastName={employeeData.last_name}
-          email={employeeData.email}
-        />
-
-        <StatsBar
-          joinedDate={new Date(employeeData.created_at).toLocaleDateString()}
-          department="Engineering"
-          designation="Software Engineer"
-          yearsOfExperience={calculateYearsOfExperience(employeeData.created_at)}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
-          <PersonalInfoSection
-            phone={employeeData.phone}
-            dateOfBirth={employeeData.date_of_birth}
-            maritalStatus={employeeData.marital_status}
-            onEdit={() => handleEdit("personal")}
-          />
-
-          <EmploymentInfoSection
-            employeeId={employeeData.employee_id}
-            onEdit={() => handleEdit("employment")}
-          />
-
-          {/* Add employeeId prop to EducationSection */}
-          <EducationSection
-            employeeId={employeeData.employee_id || ""}
-            onEdit={() => handleEdit("education")}
-          />
-
-          {/* Modify BankInfoSection to accept onEdit prop */}
-          <div className="col-span-1">
-            <BankInfoSection />
-            <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => handleEdit("bank")}>
-              Edit Bank Details
-            </Button>
-          </div>
-
-          <MetricsSection employeeId={employeeData.id} />
-        </div>
-
-        <EmploymentDetailsModal
-          isOpen={isEmploymentModalOpen}
-          onClose={() => setIsEmploymentModalOpen(false)}
-          employeeId={employeeData?.id || ''}
-          initialData={{
-            employeeId: employeeData?.employee_id || '',
-            department: 'Engineering',
-            position: 'Software Engineer',
-            joinedDate: employeeData?.created_at || '',
-            employmentHistory: [
-              {
-                title: 'Senior Developer',
-                date: 'Jan 2023',
-                description: 'Promoted to Senior Developer role',
-                type: 'promotion'
-              },
-              {
-                title: 'Developer',
-                date: 'Jan 2022',
-                description: 'Joined as Developer',
-                type: 'join'
-              }
-            ]
-          }}
-          onUpdate={handleUpdateEmployment}
-        />
+    <div className="min-h-screen bg-gradient-to-b from-white to-[#FFF9E7] p-8">
+      <div className="flex justify-between items-center mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="hover:bg-white/50 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Button>
+        <QuickActions />
       </div>
-   
+
+      <ProfileHeader
+        employeeId={employeeData.employee_id}
+        firstName={employeeData.first_name}
+        lastName={employeeData.last_name}
+        email={employeeData.email}
+      />
+
+      <StatsBar
+        joinedDate={new Date(employeeData.created_at).toLocaleDateString()}
+        department="Engineering"
+        designation="Software Engineer"
+        yearsOfExperience={calculateYearsOfExperience(employeeData.created_at)}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+        <PersonalInfoSection
+          phone={employeeData.phone}
+          dateOfBirth={employeeData.date_of_birth}
+          maritalStatus={employeeData.marital_status}
+          onEdit={() => handleEdit("personal")}
+        />
+
+        <EmploymentInfoSection
+          employeeId={employeeData.employee_id}
+          onEdit={() => handleEdit("employment")}
+        />
+
+        <EducationSection
+          employeeId={safeEmployeeId}
+          onEdit={() => handleEdit("education")}
+        />
+
+        <div className="col-span-1">
+          <BankInfoSection employeeId={safeEmployeeId} />
+          <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => handleEdit("bank")}>
+            Edit Bank Details
+          </Button>
+        </div>
+
+        <MetricsSection employeeId={employeeData.id} />
+      </div>
+
+      <EmploymentDetailsModal
+        isOpen={isEmploymentModalOpen}
+        onClose={() => setIsEmploymentModalOpen(false)}
+        employeeId={employeeData?.id || ''}
+        initialData={{
+          employeeId: employeeData?.employee_id || '',
+          department: 'Engineering',
+          position: 'Software Engineer',
+          joinedDate: employeeData?.created_at || '',
+          employmentHistory: [
+            {
+              title: 'Senior Developer',
+              date: 'Jan 2023',
+              description: 'Promoted to Senior Developer role',
+              type: 'promotion'
+            },
+            {
+              title: 'Developer',
+              date: 'Jan 2022',
+              description: 'Joined as Developer',
+              type: 'join'
+            }
+          ]
+        }}
+        onUpdate={handleUpdateEmployment}
+      />
+    </div>
   );
 };
 

@@ -75,11 +75,11 @@ const ProfilePageEmployee = () => {
     return <ErrorState message={error || "Employee Not Found"} onReturn={() => navigate("/")} />;
   }
 
-  
+  // Determine a safe employeeId to use
+  const employeeId = employeeData.employee_id || employeeData.id || '';
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-[#FCFBFE] p-8">
-      
-
       <ProfileHeader
         employeeId={employeeData.employee_id}
         firstName={employeeData.firstName}
@@ -103,19 +103,17 @@ const ProfilePageEmployee = () => {
         />
 
         <EmploymentInfoSection
-          employeeId={employeeData.employee_id}
+          employeeId={employeeId}
           onEdit={() => handleEdit("employment")}
         />
 
-        {/* Add employeeId prop to EducationSection */}
         <EducationSection
-          employeeId={employeeData.employee_id || ""}
+          employeeId={employeeId}
           onEdit={() => handleEdit("education")}
         />
 
-        {/* Modify BankInfoSection to accept onEdit prop */}
         <div className="col-span-1">
-          <BankInfoSection />
+          <BankInfoSection employeeId={employeeId} />
           <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => handleEdit("bank")}>
             Edit Bank Details
           </Button>

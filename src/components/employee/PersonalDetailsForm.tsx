@@ -8,11 +8,11 @@ import { EmergencyContactsSection } from "./personal-details/EmergencyContactsSe
 import { FamilyDetailsSection } from "./personal-details/FamilyDetailsSection";
 import { PersonalDetailsFormProps, PersonalDetailsData } from "./types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { personalDetailsSchema, PersonalDetailsFormSchema, GENDER, BLOOD_GROUPS } from "./personal-details/schema/personalDetailsSchema";
+import { personalDetailsSchema, PersonalDetailsFormSchema, GENDER, BLOOD_GROUPS, MARITAL_STATUS } from "./personal-details/schema/personalDetailsSchema";
 import { useFormValidation } from "./personal-details/hooks/useFormValidation";
 import { useFormInitialization } from "./personal-details/hooks/useFormInitialization";
 import { toast } from "sonner";
-import { employeeService } from "@/services/employee/employee.service"; // Import service function
+import { employeeService } from "@/services/employee/employee.service"; 
 
 export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({ 
   onComplete, 
@@ -32,7 +32,7 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     setDocuments
   } = useFormInitialization(initialData);
 
-  // Ensure gender and bloodGroup are valid enum values
+  // Ensure gender, bloodGroup, and maritalStatus are valid enum values
   const safeGender = initialData?.gender && GENDER.includes(initialData.gender as any) 
     ? initialData.gender as any 
     : GENDER[0];
@@ -40,6 +40,10 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
   const safeBloodGroup = initialData?.bloodGroup && BLOOD_GROUPS.includes(initialData.bloodGroup as any)
     ? initialData.bloodGroup as any
     : BLOOD_GROUPS[0];
+    
+  const safeMaritalStatus = initialData?.maritalStatus && MARITAL_STATUS.includes(initialData.maritalStatus as any)
+    ? initialData.maritalStatus as any
+    : MARITAL_STATUS[0];
 
   // Fix default values type issues
   const form = useForm<PersonalDetailsFormSchema>({
@@ -47,6 +51,7 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
       ...initialData,
       gender: safeGender, // Ensure it's one of the allowed enum values
       bloodGroup: safeBloodGroup, // Ensure it's one of the allowed enum values
+      maritalStatus: safeMaritalStatus, // Ensure it's one of the allowed enum values
       dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
       sameAsPresent: Boolean(initialData?.sameAsPresent) || false
     },
@@ -98,14 +103,22 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
   return (
     <Form {...form}>
       <form ref={formRef} id="personalDetailsForm" onSubmit={handleSubmit} className="space-y-6">
-        <BasicInfoSection register={form} errors={form.formState.errors} isCheckingEmail={isCheckingEmail} emailError={emailError} 
+        <BasicInfoSection 
+          register={form} 
+          errors={form.formState.errors} 
+          isCheckingEmail={isCheckingEmail} 
+          emailError={emailError} 
           profilePictureUrl={form.watch("profilePictureUrl")}
           onProfilePictureChange={(url) => form.setValue("profilePictureUrl", url)}
           onProfilePictureDelete={() => {
             form.setValue("profilePictureUrl", "");
-            return Promise.resolve(); // Return a Promise to fix the TS error
+            // Return a Promise to fix the TS error
+            return Promise.resolve();
           }}
-          documents={documents} onDocumentsChange={setDocuments} setValue={form.setValue} watch={form.watch} 
+          documents={documents} 
+          onDocumentsChange={setDocuments} 
+          setValue={form.setValue} 
+          watch={form.watch} 
         />
         <AddressSection form={form} />
         <EmergencyContactsSection contacts={emergencyContacts} onContactsChange={setEmergencyContacts} maritalStatus={form.watch("maritalStatus")} />

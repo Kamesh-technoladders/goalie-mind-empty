@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, MutableRefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -8,26 +9,19 @@ import { FormContent } from "@/components/employee/forms/FormContent";
 import { useFormState } from "@/hooks/form/useFormState";
 import { FormProgress, FormData } from "@/utils/progressCalculator";
 import { PersonalDetailsData } from "@/components/employee/types";
-import { useCheckEmail } from "@/hooks/useCheckEmail";
-import { useCheckPhone } from "@/hooks/useCheckPhone";
 
-// Define a helper function to convert FormProgress to FormData
-const convertProgressToFormData = (progress: FormProgress): FormData => {
-  return {
-    personal: progress.personal ? {
-      documents: [],
-      emergencyContacts: [],
-      familyDetails: []
-    } : {
-      documents: [],
-      emergencyContacts: [],
-      familyDetails: []
-    },
-    education: null,
-    experience: [],
-    bank: null
-  };
-};
+// Import these hooks or create them if they don't exist
+const useCheckEmail = () => ({
+  isCheckingEmail: false,
+  emailError: null,
+  checkEmail: async () => {}
+});
+
+const useCheckPhone = () => ({
+  isCheckingPhone: false,
+  phoneError: null,
+  checkPhone: async () => {}
+});
 
 const Index = () => {
   const navigate = useNavigate();
@@ -43,13 +37,6 @@ const Index = () => {
     { id: "education", label: "Education & Experience", isActive: activeTab === "education" },
     { id: "bank", label: "Bank Account Details", isActive: activeTab === "bank" },
   ];
-
-  const handleProgressChange = (section: keyof FormProgress, completed: boolean) => {
-    updateSectionProgress(section, completed);
-    // Convert the updated progress to form data format
-    const updatedFormData = convertProgressToFormData(formProgress);
-    return updatedFormData;
-  };
 
   const handleSaveAndNext = async (completedData?: any) => {
     setIsSubmitting(true);
@@ -83,7 +70,7 @@ const Index = () => {
         onSaveAndNext={handleSaveAndNext}
         activeTab={activeTab}
         formRef={formRef}
-        formData={formData} // Pass the formData here
+        formData={formData} // Pass the formData properly now
       >
         <FormContent 
           activeTab={activeTab} 

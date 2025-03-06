@@ -14,6 +14,7 @@ export const employeeService = {
         .from("hr_employees")
         .insert([
           {
+            // Only include fields that exist in the hr_employees table
             employee_id: data.employeeId,
             first_name: data.firstName,
             last_name: data.lastName,
@@ -30,6 +31,9 @@ export const employeeService = {
             esic_number: data.documents.find((d: any) => d.documentType === "esic")?.documentNumber,
             present_address: data.presentAddress,
             permanent_address: data.sameAsPresent ? data.presentAddress : data.permanentAddress,
+            // Add any missing required fields here
+            organization_id: '1', // Default organization ID
+            // Add any other required fields
           },
         ])
         .select()
