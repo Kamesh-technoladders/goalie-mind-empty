@@ -18,6 +18,8 @@ const Index = () => {
     formData,
     isFormCompleted,
     isSubmitting,
+    isCheckingEmail,
+    emailError,
     updateSectionProgress,
     updateFormData,
     handleTabChange,
@@ -32,6 +34,7 @@ const Index = () => {
     { id: "bank", label: "Bank Account Details", isActive: activeTab === "bank" },
   ];
 
+  // Calculate progress using the formProgress object directly
   const progress = calculateProgress(formProgress);
 
   const handleAddEmployee = () => {
@@ -85,6 +88,8 @@ const Index = () => {
               updateSectionProgress={updateSectionProgress}
               updateFormData={updateFormData}
               isSubmitting={isSubmitting}
+              isCheckingEmail={isCheckingEmail}
+              emailError={emailError}
               formRef={formRef}
               handleSaveAndNext={handleSaveAndNext}
             />

@@ -15,15 +15,19 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import AddClientDialog from "../Client/AddClientDialog";
 
-
-
+// Define autoTable for jsPDF
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 const ClientTable = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useSelector((state: any) => state.auth.user);
   const organization_id = useSelector((state: any) => state.auth.organization_id);
-    const [addClientOpen, setAddClientOpen] = useState(false);
+  const [addClientOpen, setAddClientOpen] = useState(false);
 
   // Fetch clients from Supabase
   const [searchQuery, setSearchQuery] = useState(""); // 🔍 Search Query
@@ -147,7 +151,12 @@ const ClientTable = () => {
     mutationFn: async ({ clientId, newStatus }: { clientId: string; newStatus: string }) => {
       const { error } = await supabase
         .from("hr_clients")
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          organization_id,
+          updated_by: user?.id || "",
+          created_by: user?.id || ""
+        })
         .eq("id", clientId);
       if (error) throw error;
     },

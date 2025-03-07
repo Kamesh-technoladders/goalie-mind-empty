@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
@@ -7,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { clientFormSchema, type ClientFormValues } from "../../lib/schemas/client";
 import { toast } from "sonner";
-import  supabase  from "../../config/supabaseClient";
+import supabase from "../../config/supabaseClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 
@@ -46,15 +47,19 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
         return;
       }
 
-      // ✅ Add auth-related fields
+      // Create a new client object with all required fields
       const newClient = {
         ...values,
-        organization_id, // ✅ Store client under correct organization
-        created_by: user.id, // ✅ Assign created_by to the logged-in user
-        updated_by: user.id, // ✅ Assign updated_by to the logged-in user
+        organization_id,
+        created_by: user.id,
+        updated_by: user.id,
+        // Add required fields with default values
+        status: "active", // Default status
       };
 
-      const { error } = await supabase.from("hr_clients").insert([newClient]);
+      // Use a single object for insert
+      const { error } = await supabase.from("hr_clients").insert(newClient);
+      
       if (error) throw error;
 
       toast.success("Client added successfully");

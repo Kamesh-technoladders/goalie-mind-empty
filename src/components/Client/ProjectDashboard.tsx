@@ -1,8 +1,7 @@
 import React from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import  supabase  from "../../config/supabaseClient";
-// import Header from "@/components/Header";
+import supabase from "../../config/supabaseClient";
 import { Table } from "../ui/table";
 import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
@@ -13,11 +12,9 @@ import { useState } from "react";
 import AddProjectDialog from "./AssignEmployeeDialog";
 import { useSelector } from "react-redux";
 import { Checkbox } from "../ui/checkbox";
-import { unknown } from "zod";
 import { FileText } from 'lucide-react';
 import { toast } from "sonner";
 import CircularProgressBar from "../Client/RevenueProfitChart";
-
 
 interface AssignEmployee {
   id: string;
@@ -51,7 +48,6 @@ interface Project {
 }
 
 const ProjectDashboard = () => {
-
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const clientId = searchParams.get("client_id");
@@ -115,7 +111,7 @@ const ProjectDashboard = () => {
                     (1000 * 60 * 60 * 24)
                 )
               : 0,
-          })) as AssignEmployee[];
+          })) as unknown as AssignEmployee[];
         },
         enabled: !!id,
       });
@@ -132,7 +128,12 @@ const ProjectDashboard = () => {
         mutationFn: async ({ employeeId, newStatus }: { employeeId: string; newStatus: string }) => {
           const { error } = await supabase
             .from("hr_project_employees")
-            .update({ status: newStatus })
+            .update({ 
+              status: newStatus,
+              organization_id, 
+              updated_by: user?.id || "",
+              created_by: user?.id || "" 
+            })
             .eq("id", employeeId);
           if (error) throw error;
         },

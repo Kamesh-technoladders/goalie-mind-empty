@@ -8,7 +8,7 @@ import { EmergencyContactsSection } from "./personal-details/EmergencyContactsSe
 import { FamilyDetailsSection } from "./personal-details/FamilyDetailsSection";
 import { PersonalDetailsFormProps, PersonalDetailsData, EmergencyContact, FamilyMember } from "./types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { personalDetailsSchema, PersonalDetailsFormSchema } from "./personal-details/schema/personalDetailsSchema";
+import { personalDetailsSchema, PersonalDetailsFormSchema, GENDER } from "./personal-details/schema/personalDetailsSchema";
 import { useFormValidation } from "./personal-details/hooks/useFormValidation";
 import { useFormInitialization } from "./personal-details/hooks/useFormInitialization";
 import { toast } from "sonner";
@@ -32,12 +32,19 @@ export const PersonalDetailsForm: React.FC<PersonalDetailsFormProps> = ({
     setDocuments
   } = useFormInitialization(initialData);
 
+  // Normalize the initialData to ensure gender is a valid enum value
+  const normalizedInitialData = {
+    ...initialData,
+    dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
+    sameAsPresent: false,
+    // Ensure gender is one of the allowed enum values
+    gender: initialData?.gender && GENDER.includes(initialData.gender as any) 
+      ? initialData.gender as "male" | "female" | "other"
+      : undefined
+  };
+
   const form = useForm<PersonalDetailsFormSchema>({
-    defaultValues: {
-      ...initialData,
-      dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
-      sameAsPresent: false
-    },
+    defaultValues: normalizedInitialData,
     resolver: zodResolver(personalDetailsSchema)
   });
 

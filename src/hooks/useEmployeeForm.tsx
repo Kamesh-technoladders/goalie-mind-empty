@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useEmailValidation } from "./form/useEmailValidation";
 import { useFormState } from "./form/useFormState";
 import { useNavigate } from "react-router-dom";
+import { PersonalDetailsData } from "@/components/employee/types";
 
 export const useEmployeeForm = (employeeId?: string | null) => {
   const navigate = useNavigate();
@@ -20,7 +21,11 @@ export const useEmployeeForm = (employeeId?: string | null) => {
     setActiveTab
   } = useFormState();
 
-  const { isCheckingEmail, emailError } = useEmailValidation(formData.personal?.email);
+  const { isCheckingEmail, emailError } = useEmailValidation(
+    formData.personal && 'email' in formData.personal 
+      ? formData.personal.email as string 
+      : ""
+  );
 
   const handleSaveAndNext = async (completedData?: any) => {
     if (!completedData) {

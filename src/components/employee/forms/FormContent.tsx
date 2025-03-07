@@ -6,6 +6,7 @@ import { ExperienceForm } from "../ExperienceForm";
 import { BankAccountForm } from "../BankAccountForm";
 import { FormProgress, FormData } from "@/utils/progressCalculator";
 import { Experience } from "../types";
+import { TabTypes } from "@/hooks/form/useFormState";
 
 interface FormContentProps {
   activeTab: string;
@@ -67,7 +68,7 @@ export const FormContent: React.FC<FormContentProps> = ({
                 updateSectionProgress("experience", true); // Always mark as complete even if empty
               }
             }}
-            experiences={formData.experience}
+            experiences={formData.experience as Experience[]}
           />
         </>
       );
