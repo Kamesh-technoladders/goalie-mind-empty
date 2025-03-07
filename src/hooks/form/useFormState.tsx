@@ -26,7 +26,7 @@ export const useFormState = () => {
     bank: null,
   });
 
-  // Update functions with proper typing
+  // Update section progress
   const updateSectionProgress = (section: keyof FormProgress, completed: boolean) => {
     setFormProgress(prev => ({
       ...prev,
@@ -34,6 +34,7 @@ export const useFormState = () => {
     }));
   };
 
+  // Update form data for a specific section
   const updateFormData = (section: keyof FormData, data: any) => {
     setFormData(prev => ({
       ...prev,
@@ -41,7 +42,7 @@ export const useFormState = () => {
     }));
   };
 
-  // Tab change with minimal validation
+  // Handle tab change with validation
   const handleTabChange = (tabId: string) => {
     // Only prevent navigation if we're at personal tab and trying to move without data
     if (activeTab === "personal" && !formProgress.personal && tabId !== "personal") {

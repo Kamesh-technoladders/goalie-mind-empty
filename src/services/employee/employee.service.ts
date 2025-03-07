@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Document } from "../types/employee.types";
 import { PostgrestResponse } from "@supabase/supabase-js";
@@ -37,6 +38,24 @@ class EmployeeService {
       return { success: true };
     } catch (error) {
       console.error("Error in createEmployee:", error);
+      throw error;
+    }
+  }
+
+  async updateEmployee(id: string, employeeData: any) {
+    try {
+      const { error } = await supabase
+        .from("hr_employees")
+        .update(employeeData)
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(`Error updating employee: ${error.message}`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error in updateEmployee:", error);
       throw error;
     }
   }

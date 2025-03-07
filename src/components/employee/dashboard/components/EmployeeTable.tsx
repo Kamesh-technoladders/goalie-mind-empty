@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { Employee } from "@/hooks/useEmployees";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -81,6 +81,11 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     navigate(`/employee/${employeeId}`);
   };
 
+  const handleEditClick = (employeeId: string) => {
+    console.log('Navigating to edit employee form:', employeeId);
+    navigate(`/add-employee/${employeeId}`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -112,6 +117,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             <TableHead>Blood Group</TableHead>
             <TableHead>Join Date</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -151,11 +157,21 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     onStatusUpdate={onRefresh}
                   />
                 </TableCell>
+                <TableCell>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleEditClick(employee.id)} 
+                    className="h-8 w-8 p-0"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                 No employees found. Add an employee by clicking the "Add Employee" button.
               </TableCell>
             </TableRow>

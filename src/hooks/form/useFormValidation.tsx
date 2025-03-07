@@ -1,82 +1,58 @@
 
-import { PersonalDetailsData, BankAccountData } from "@/components/employee/types";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { BLOOD_GROUPS, GENDER, MARITAL_STATUS } from "@/components/employee/personal-details/schema/personalDetailsSchema";
 
 export const useFormValidation = () => {
-  const isAddressValid = (address: any) =>
-    address &&
-    address.addressLine1 &&
-    address.country &&
-    address.state &&
-    address.city &&
-    address.zipCode;
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isValid, setIsValid] = useState(false);
 
-  const validatePersonalSection = (data: PersonalDetailsData | null) => {
-    if (!data) return false;
-
-    const {
-      employeeId,
-      firstName,
-      lastName,
-      email,
-      phone,
-      dateOfBirth,
-      gender,
-      bloodGroup,
-      maritalStatus,
-      presentAddress,
-      permanentAddress,
-      documents
-    } = data;
-
-    const isBasicInfoValid =
-      employeeId &&
-      firstName &&
-      lastName &&
-      email &&
-      phone &&
-      dateOfBirth &&
-      gender &&
-      bloodGroup &&
-      maritalStatus;
-
-    // Present address is mandatory
-    const isPresentAddressValid = isAddressValid(presentAddress);
+  const validateForm = (formData: any) => {
+    const newErrors: Record<string, string> = {};
     
-    // Permanent address is optional
-    const isPermanentAddressValid = !permanentAddress || Object.keys(permanentAddress).length === 0 || isAddressValid(permanentAddress);
-
-    return (
-      isBasicInfoValid &&
-      isPresentAddressValid &&
-      isPermanentAddressValid &&
-      Array.isArray(documents)
-    );
-  };
-
-  const validateBankSection = (data: BankAccountData | null) => {
-    if (!data) return false;
-
-    const {
-      accountHolderName,
-      accountNumber,
-      ifscCode,
-      bankName,
-      branchName,
-      accountType,
-    } = data;
-
-    return !!(
-      accountHolderName &&
-      accountNumber &&
-      ifscCode &&
-      bankName &&
-      branchName &&
-      accountType
-    );
+    // Required fields validation
+    if (!formData.firstName) newErrors.firstName = "First name is required";
+    if (!formData.lastName) newErrors.lastName = "Last name is required";
+    if (!formData.email) newErrors.email = "Email is required";
+    if (!formData.phone) newErrors.phone = "Phone number is required";
+    if (!formData.employeeId) newErrors.employeeId = "Employee ID is required";
+    
+    // Email validation
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Email is invalid";
+    }
+    
+    // Phone validation
+    if (formData.phone && formData.phone.length < 10) {
+      newErrors.phone = "Phone number must be at least 10 digits";
+    }
+    
+    // Gender validation
+    if (formData.gender && !GENDER.includes(formData.gender)) {
+      newErrors.gender = "Please select a valid gender";
+    }
+    
+    // Blood group validation
+    if (formData.bloodGroup && !BLOOD_GROUPS.includes(formData.bloodGroup)) {
+      newErrors.bloodGroup = "Please select a valid blood group";
+    }
+    
+    // Marital status validation
+    if (formData.maritalStatus && !MARITAL_STATUS.includes(formData.maritalStatus)) {
+      newErrors.maritalStatus = "Please select a valid marital status";
+    }
+    
+    setErrors(newErrors);
+    setIsValid(Object.keys(newErrors).length === 0);
+    
+    return Object.keys(newErrors).length === 0;
   };
 
   return {
-    validatePersonalSection,
-    validateBankSection,
+    errors,
+    isValid,
+    validateForm
   };
 };
+
+export default useFormValidation;
