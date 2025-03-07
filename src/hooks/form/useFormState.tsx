@@ -40,9 +40,9 @@ export const useFormState = () => {
 
   // Simplified tab change with minimal validation
   const handleTabChange = (tabId: string) => {
-    // Only validate when leaving personal tab which is required
-    if (activeTab === "personal" && !formProgress.personal) {
-      toast.error("Please save the personal details before proceeding");
+    // Only prevent navigation if we're at personal tab and trying to move without data
+    if (activeTab === "personal" && !formProgress.personal && tabId !== "personal") {
+      toast.error("Please complete personal details first");
       return;
     }
     setActiveTab(tabId);

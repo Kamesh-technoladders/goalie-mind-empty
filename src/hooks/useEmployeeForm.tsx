@@ -3,12 +3,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useEmailValidation } from "./form/useEmailValidation";
 import { useFormState } from "./form/useFormState";
+import { useNavigate } from "react-router-dom";
 
-export const useEmployeeForm = () => {
+export const useEmployeeForm = (employeeId?: string | null) => {
+  const navigate = useNavigate();
   const [isFormCompleted, setIsFormCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [employeeId, setEmployeeId] = useState<string | null>(null);
-
+  
   const {
     activeTab,
     formProgress,
@@ -34,7 +35,7 @@ export const useEmployeeForm = () => {
       updateFormData(activeTab as any, completedData);
       updateSectionProgress(activeTab as any, true);
       
-      // Move to next tab
+      // Move to next tab or complete the form
       if (activeTab === "personal") {
         toast.success("Personal details saved successfully!");
         setActiveTab("education");
@@ -44,6 +45,10 @@ export const useEmployeeForm = () => {
       } else if (activeTab === "bank") {
         toast.success("Bank details saved! Employee profile complete.");
         setIsFormCompleted(true);
+        // Navigate back to employee list after form completion
+        setTimeout(() => {
+          navigate("/employee");
+        }, 1500);
       }
     } catch (error) {
       console.error('Error in handleSaveAndNext:', error);
@@ -65,7 +70,6 @@ export const useEmployeeForm = () => {
     updateSectionProgress,
     updateFormData,
     handleTabChange,
-    handleSaveAndNext,
-    setEmployeeId
+    handleSaveAndNext
   };
 };

@@ -5,9 +5,13 @@ import { FormContent } from "@/components/employee/forms/FormContent";
 import { DashboardView } from "@/components/employee/dashboard/DashboardView";
 import { useEmployeeForm } from "@/hooks/useEmployeeForm";
 import { calculateProgress } from "@/utils/progressCalculator";
+import { useParams, useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const [showForm, setShowForm] = useState(false);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [showForm, setShowForm] = useState(!!id);
+  
   const {
     activeTab,
     formProgress,
@@ -18,7 +22,8 @@ const Index = () => {
     updateFormData,
     handleTabChange,
     handleSaveAndNext,
-  } = useEmployeeForm();
+  } = useEmployeeForm(id);
+  
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const tabs = [
@@ -30,26 +35,34 @@ const Index = () => {
   const progress = calculateProgress(formProgress);
 
   const handleAddEmployee = () => {
-    setShowForm(true);
+    // This button is not needed as we're using the modal from Employee page
+    navigate("/employee");
   };
 
   const handleFormClose = () => {
-    setShowForm(false);
+    navigate("/employee");
   };
 
   // Reset form and go back to dashboard when form is completed
   React.useEffect(() => {
     if (isFormCompleted) {
-      setShowForm(false);
+      navigate("/employee");
     }
-  }, [isFormCompleted]);
+  }, [isFormCompleted, navigate]);
+
+  // If we're on the main dashboard view without an ID, redirect to employee page
+  React.useEffect(() => {
+    if (!id && !showForm) {
+      navigate("/employee");
+    }
+  }, [id, showForm, navigate]);
 
   return (
     <>
       {showForm ? (
         <>
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Add New Employee</h1>
+            <h1 className="text-2xl font-bold">{id ? "Edit Employee" : "Add New Employee"}</h1>
             <button
               onClick={handleFormClose}
               className="px-4 py-2 text-gray-600 hover:text-gray-800"
@@ -64,6 +77,7 @@ const Index = () => {
             activeTab={activeTab}
             formRef={formRef}
             isSubmitting={isSubmitting}
+            onCancel={handleFormClose}
           >
             <FormContent
               activeTab={activeTab}

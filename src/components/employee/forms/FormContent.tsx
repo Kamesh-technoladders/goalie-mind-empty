@@ -62,9 +62,9 @@ export const FormContent: React.FC<FormContentProps> = ({
           <div className="shrink-0 h-px mt-[29px] border-[rgba(239,242,255,1)] border-solid border-2" />
           <ExperienceForm
             onComplete={(completed: boolean, data?: Experience[]) => {
-              if (completed && data) {
+              if (data) {
                 updateFormData("experience", data);
-                updateSectionProgress("experience", completed);
+                updateSectionProgress("experience", true); // Always mark as complete even if empty
               }
             }}
             experiences={formData.experience}

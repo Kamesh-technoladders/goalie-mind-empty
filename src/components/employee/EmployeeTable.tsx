@@ -11,21 +11,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Eye } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 interface EmployeeTableProps {
   employees: any[];
   isLoading: boolean;
   onEdit: (employee: any) => void;
+  onView: (employeeId: string) => void;
 }
 
 export const EmployeeTable: React.FC<EmployeeTableProps> = ({ 
   employees, 
   isLoading,
-  onEdit
+  onEdit,
+  onView
 }) => {
-  const navigate = useNavigate();
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -37,10 +36,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  };
-
-  const handleView = (employeeId: string) => {
-    navigate(`/employee/${employeeId}`);
   };
 
   if (isLoading) {
@@ -94,7 +89,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                     variant="outline"
                     size="sm"
                     className="text-green-600 border-green-600 hover:bg-green-50"
-                    onClick={() => handleView(employee.id)}
+                    onClick={() => onView(employee.id)}
                   >
                     <Eye className="h-4 w-4 mr-1" />
                     View

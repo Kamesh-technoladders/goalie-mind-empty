@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { EmployeeDetailsModal } from "@/components/employee/EmployeeDetailsModal";
 import { supabase } from "@/integrations/supabase/client";
+import AddEmployeeModal from "@/components/Employee1/AddEmployeeModal";
+import { useDisclosure } from "@chakra-ui/react";
+import { UserPlus } from "lucide-react";
 
 const Employee = () => {
   const navigate = useNavigate();
@@ -14,6 +17,7 @@ const Employee = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const fetchEmployees = async () => {
     try {
@@ -37,47 +41,24 @@ const Employee = () => {
     fetchEmployees();
   }, []);
 
+  // Handle edit by navigating to the edit form
   const handleEdit = (employee) => {
-    navigate(`/employee/${employee.id}`);
+    navigate(`/employee/${employee.id}/edit`);
   };
 
-  const handleAddEmployee = () => {
-    setSelectedEmployee(null);
-    setIsModalOpen(true);
+  // Handle view by navigating to the employee details page
+  const handleView = (employeeId) => {
+    navigate(`/employee/${employeeId}`);
   };
 
-  const handleCreateEmployee = async (basicData) => {
-    try {
-      setIsLoading(true);
-      
-      // Generate employee ID based on first and last name
-      const empId = `${basicData.firstName.substring(0, 1)}${basicData.lastName.substring(0, 1)}${Date.now().toString().slice(-6)}`;
-      
-      const { data, error } = await supabase
-        .from("hr_employees")
-        .insert({
-          employee_id: empId,
-          first_name: basicData.firstName,
-          last_name: basicData.lastName,
-          email: basicData.email,
-          phone: basicData.phone || null,
-          employment_status: "active"
-        })
-        .select()
-        .single();
+  // Use the existing AddEmployeeModal for adding new employees
+  const handleAddEmployeeFromModal = () => {
+    onOpen(); // Open the AddEmployeeModal
+  };
 
-      if (error) throw error;
-      
-      toast.success("Employee created successfully");
-      setIsModalOpen(false);
-      fetchEmployees();
-      navigate(`/employee/${data.id}`);
-    } catch (error) {
-      console.error("Error creating employee:", error);
-      toast.error(error.message || "Failed to create employee");
-    } finally {
-      setIsLoading(false);
-    }
+  // Use the red button to add employee through the form
+  const handleAddEmployeeThroughForm = () => {
+    navigate('/employee/add');
   };
 
   return (
@@ -85,26 +66,32 @@ const Employee = () => {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Employee Management</h1>
-          <Button 
-            onClick={handleAddEmployee}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            + Add Employee
-          </Button>
+          <div className="flex gap-4">
+            <Button 
+              onClick={handleAddEmployeeFromModal}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              + Add Employee
+            </Button>
+            <Button 
+              onClick={handleAddEmployeeThroughForm} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <UserPlus className="w-3.5 h-3.5 mr-2" />
+              Add Employee
+            </Button>
+          </div>
         </div>
 
         <EmployeeTable
           employees={employees}
           isLoading={isLoading}
           onEdit={handleEdit}
+          onView={handleView}
         />
 
-        <EmployeeDetailsModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSubmit={handleCreateEmployee}
-          isLoading={isLoading}
-        />
+        {/* Use the existing AddEmployeeModal */}
+        <AddEmployeeModal isOpen={isOpen} onClose={onClose} />
       </div>
     </DashboardLayout>
   );
