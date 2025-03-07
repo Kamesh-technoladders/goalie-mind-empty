@@ -1,8 +1,7 @@
 
-import React, { RefObject, useEffect } from "react";
+import React, { RefObject } from "react";
 import { TabNavigation } from "../TabNavigation";
 import { LoaderCircle } from "lucide-react";
-import { toast } from "sonner";
 
 interface FormContainerProps {
   children: React.ReactNode;
@@ -12,7 +11,6 @@ interface FormContainerProps {
   activeTab: string;
   isSubmitting?: boolean;
   formRef: RefObject<HTMLFormElement>;
-  formData: Record<string, any>;
   onCancel?: () => void;
 }
 
@@ -24,15 +22,8 @@ export const FormContainer: React.FC<FormContainerProps> = ({
   activeTab,
   isSubmitting = false,
   formRef,
-  formData = {},
   onCancel
 }) => {
-  useEffect(() => {
-    console.log("🔍 Debug: Full formData: ", formData);
-    console.log("🔍 Debug: Active Tab:", activeTab);
-    console.log("🔍 Debug: Data for Active Tab:", formData?.[activeTab]);
-  }, [activeTab, formData]);
-  
   return (
     <section className="bg-white shadow-sm rounded-lg mt-6 p-6">
       <TabNavigation tabs={tabs} onTabChange={onTabChange} />
@@ -48,33 +39,10 @@ export const FormContainer: React.FC<FormContainerProps> = ({
           </button>
         )}
         <button
-          onClick={async (e) => {
+          onClick={(e) => {
             e.preventDefault();
             if (formRef.current) {
-              try {
-                await formRef.current.requestSubmit();
-                
-                setTimeout(() => {
-                  console.log("🔍 Debug: Active Tab:", activeTab);
-                  console.log("🔍 Debug: Full formData:", formData);
-                  console.log("🔍 Debug: Data for Active Tab:", formData?.[activeTab]);
-                  
-                  const latestData = formData?.[activeTab];
-                  
-                  if (!latestData || Object.keys(latestData).length === 0) {
-                    console.warn("⚠️ Warning: No data found for activeTab:", activeTab);
-                    // Still proceed with save and next even without data
-                    onSaveAndNext({});
-                  } else {
-                    console.log("✅ Submitting with data:", latestData);
-                    onSaveAndNext(latestData);
-                  }
-                }, 100);
-              } catch (error) {
-                console.error("Error submitting form:", error);
-                // Still proceed with save and next even on error
-                onSaveAndNext(formData?.[activeTab] || {});
-              }
+              formRef.current.requestSubmit();
             }
           }}
           disabled={isSubmitting}

@@ -1,11 +1,10 @@
 
 import React, { useState, useRef } from "react";
-import { DashboardLayout } from "@/components/employee/layout/DashboardLayout";
 import { FormContainer } from "@/components/employee/layout/FormContainer";
 import { FormContent } from "@/components/employee/forms/FormContent";
 import { DashboardView } from "@/components/employee/dashboard/DashboardView";
 import { useEmployeeForm } from "@/hooks/useEmployeeForm";
-import { calculateProgress, getProgressMessage } from "@/utils/progressCalculator";
+import { calculateProgress } from "@/utils/progressCalculator";
 
 const Index = () => {
   const [showForm, setShowForm] = useState(false);
@@ -14,6 +13,7 @@ const Index = () => {
     formProgress,
     formData,
     isFormCompleted,
+    isSubmitting,
     updateSectionProgress,
     updateFormData,
     handleTabChange,
@@ -28,7 +28,6 @@ const Index = () => {
   ];
 
   const progress = calculateProgress(formProgress);
-  const progressMessage = getProgressMessage(formProgress);
 
   const handleAddEmployee = () => {
     setShowForm(true);
@@ -38,9 +37,12 @@ const Index = () => {
     setShowForm(false);
   };
 
-  const handleFormComplete = () => {
-    setShowForm(false);
-  };
+  // Reset form and go back to dashboard when form is completed
+  React.useEffect(() => {
+    if (isFormCompleted) {
+      setShowForm(false);
+    }
+  }, [isFormCompleted]);
 
   return (
     <>
@@ -60,15 +62,17 @@ const Index = () => {
             onTabChange={handleTabChange}
             onSaveAndNext={handleSaveAndNext}
             activeTab={activeTab}
-            formRef = {formRef}
+            formRef={formRef}
+            isSubmitting={isSubmitting}
           >
             <FormContent
               activeTab={activeTab}
               formData={formData}
               updateSectionProgress={updateSectionProgress}
               updateFormData={updateFormData}
+              isSubmitting={isSubmitting}
+              formRef={formRef}
               handleSaveAndNext={handleSaveAndNext}
-              formRef = {formRef}
             />
           </FormContainer>
         </>
