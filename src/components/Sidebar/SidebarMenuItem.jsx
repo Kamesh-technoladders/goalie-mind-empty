@@ -1,7 +1,7 @@
 import { FiUsers, FiBriefcase, FiCheckSquare, FiSettings, FiLogOut } from "react-icons/fi";
 import { IoDiamondOutline } from "react-icons/io5";
 import { SiAwsorganizations } from "react-icons/si";
-import { MdDashboardCustomize, MdOutlineManageAccounts} from "react-icons/md";
+import { MdDashboardCustomize, MdOutlineManageAccounts, MdOutlineEmojiPeople} from "react-icons/md";
 import { ImProfile } from "react-icons/im";
 
 
@@ -14,7 +14,9 @@ const menuItemsByRole = {
   organization_superadmin: [
     { icon: MdDashboardCustomize, label: "Dashboard", path: "/dashboard" },
     { icon: FiUsers, label: "Employees", path: "/employee" },
-    { icon: FiBriefcase, label: "Clients", path: "/clients" },
+    { icon: MdOutlineEmojiPeople, label: "Clients", path: "/clients" },
+    { icon: FiBriefcase, label: "Jobs", path: "/jobs" },
+    { icon: FiCheckSquare, label: "Goals", path: "/goals" },
     { icon: MdOutlineManageAccounts, label: "User Management", path: "/user-management" },
     { icon: FiSettings, label: "Settings", path: "/settings" },
   ],

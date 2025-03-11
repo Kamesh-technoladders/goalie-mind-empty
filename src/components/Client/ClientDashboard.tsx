@@ -19,6 +19,8 @@ import "react-circular-progressbar/dist/styles.css";
 import CircularProgressBar from "../Client/RevenueProfitChart";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+
 
 
 interface Project {
@@ -205,26 +207,25 @@ const terminatedCount = assignedEmployees?.filter(emp => emp.status === "Termina
 
   // ✅ Export to PDF
   const exportToPDF = () => {
-    import("jspdf").then((jsPDF) => {
-      const doc = new jsPDF.default();
-      let y = 10;
-      doc.text("Projects Report", 14, y);
-      y += 10;
-
-      filteredProjects?.forEach((project) => {
-        doc.text(`Project: ${project.name}`, 14, y);
-        doc.text(`Duration: ${project.duration} days`, 14, y + 5);
-        doc.text(`Start Date: ${project.start_date}`, 14, y + 10);
-        doc.text(`End Date: ${project.end_date}`, 14, y + 15);
-        doc.text(`Revenue: ₹ ${project.revenue.toLocaleString()}`, 14, y + 20);
-        doc.text(`Profit: ₹ ${project.profit.toLocaleString()}`, 14, y + 25);
-        doc.text(`Status: ${project.status}`, 14, y + 30);
-        y += 40;
-      });
-
-      doc.save("Projects.pdf");
+    const doc = new jsPDF();
+    let y = 10;
+    doc.text("Projects Report", 14, y);
+    y += 10;
+  
+    filteredProjects?.forEach((project) => {
+      doc.text(`Project: ${project.name}`, 14, y);
+      doc.text(`Duration: ${project.duration} days`, 14, y + 5);
+      doc.text(`Start Date: ${project.start_date}`, 14, y + 10);
+      doc.text(`End Date: ${project.end_date}`, 14, y + 15);
+      doc.text(`Revenue: ₹ ${project.revenue.toLocaleString()}`, 14, y + 20);
+      doc.text(`Profit: ₹ ${project.profit.toLocaleString()}`, 14, y + 25);
+      doc.text(`Status: ${project.status}`, 14, y + 30);
+      y += 40;
     });
+  
+    doc.save("Projects.pdf");
   };
+  
 
 
         const updateProjectStatus = useMutation({

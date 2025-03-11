@@ -3,32 +3,43 @@ import react from "@vitejs/plugin-react-swc";
 import * as path from "path";
 
 export default defineConfig(({ mode }) => {
-  // Load environment variables based on mode (.env, .env.development, .env.production)
   const env = loadEnv(mode, process.cwd(), "");
 
   return {
     server: {
-      host: "::", // Allows all IPv6/IPv4 connections
+      host: "::",
       port: 8081,
       strictPort: true,
       hmr: {
         protocol: "ws",
-        timeout: 30000, // 30 seconds timeout
+        timeout: 30000,
       },
     },
     plugins: [react()],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"), // Shortens import paths
+        "@": path.resolve(__dirname, "./src"),
       },
     },
     define: {
-      // Ensure Vite uses environment variables in client-side code
       "process.env": env,
     },
     build: {
       outDir: "dist",
-      sourcemap: mode === "development", // Enable sourcemaps in dev mode
+      sourcemap: mode === "development",
+      chunkSizeWarningLimit: 1000, // Adjust warning limit
+
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "react-vendor": ["react", "react-dom"],
+            "jspdf": ["jspdf"],
+            "html2canvas": ["html2canvas"],
+            "lodash": ["lodash"], // If used, split lodash
+            "chart-libraries": ["recharts", "d3"], // Split chart libraries
+          },
+        },
+      },
     },
   };
 });

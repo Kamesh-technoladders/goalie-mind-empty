@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export const uploadDocument = async (
@@ -8,35 +7,40 @@ export const uploadDocument = async (
 ): Promise<string> => {
   try {
     if (!file || !bucketName || !type) {
-      throw new Error('Missing required fields for upload');
+      throw new Error("Missing required fields for upload");
     }
 
-    console.log('Uploading document:', {
-      fileName: file.name,
-      type,
-      bucket: bucketName
-    });
+    const filePath = `${type}/${Date.now()}_${file.name}`; // Unique file name
+    console.log("Uploading document:", { filePath, bucketName });
 
-    // Create a properly structured FormData object
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-
-    // Call the upload-document edge function
-    const { data, error } = await supabase.functions.invoke('upload-document', {
-      body: formData
-    });
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false, // Prevent overwriting
+      });
 
     if (error) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       throw error;
     }
 
-    console.log('Upload successful:', data);
+    console.log("Upload response:", data);
 
-    return data.url;
+    // Get the public URL of the uploaded file
+    const { data: publicUrlData, error: urlError } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+
+    if (urlError) {
+      console.error("Public URL error:", urlError);
+      throw urlError;
+    }
+
+    console.log("Public file URL:", publicUrlData.publicUrl);
+    return publicUrlData.publicUrl;
   } catch (error) {
-    console.error('Upload document error:', error);
+    console.error("Upload document error:", error);
     throw error;
   }
 };
