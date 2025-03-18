@@ -238,8 +238,14 @@ export type Database = {
           created_at: string | null
           employee_id: string | null
           id: string
+          country: string
+          state: string
+          city: string
+          branch_address: string
           ifsc_code: string
           organization_id: string
+          document_url: string | null
+          zip_code: number
         }
         Insert: {
           account_holder_name: string
@@ -251,8 +257,14 @@ export type Database = {
           created_at?: string | null
           employee_id?: string | null
           id?: string
+          country: string
+          state: string
+          city: string
+          branch_address: string
           ifsc_code: string
           organization_id: string
+          document_url: string | null
+          zip_code: number
         }
         Update: {
           account_holder_name?: string
@@ -264,8 +276,14 @@ export type Database = {
           created_at?: string | null
           employee_id?: string | null
           id?: string
+          country: string
+          state: string
+          city: string
+          branch_address: string
           ifsc_code?: string
           organization_id?: string
+          document_url: string | null
+          zip_code: number
         }
         Relationships: [
           {
@@ -453,9 +471,13 @@ export type Database = {
           job_title: string
           location: string | null
           offer_letter_url: string | null
+          payslip_1_url: string | null
+          payslip_2_url: string | null
+          payslip_3_url: string | null
           organization_id: string
           payslips: string[] | null
           separation_letter_url: string | null
+          hike_letter_url: string | null
           start_date: string
           status: string | null
           upload_date: string | null
@@ -472,9 +494,13 @@ export type Database = {
           job_title: string
           location?: string | null
           offer_letter_url?: string | null
+          payslip_1_url: string | null
+          payslip_2_url: string | null
+          payslip_3_url: string | null
           organization_id: string
           payslips?: string[] | null
           separation_letter_url?: string | null
+          hike_letter_url: string | null
           start_date: string
           status?: string | null
           upload_date?: string | null
@@ -491,9 +517,13 @@ export type Database = {
           job_title?: string
           location?: string | null
           offer_letter_url?: string | null
+          payslip_1_url: string | null
+          payslip_2_url: string | null
+          payslip_3_url: string | null
           organization_id?: string
           payslips?: string[] | null
           separation_letter_url?: string | null
+          hike_letter_url: string | null
           start_date?: string
           status?: string | null
           upload_date?: string | null
@@ -1141,6 +1171,9 @@ export type Database = {
           skills: string[] | null
           status: string
           updated_at: string
+          current_salary: Number | null
+          expected_salary: Number | null
+          applied_from: string
         }
         Insert: {
           applied_date?: string
@@ -1156,6 +1189,9 @@ export type Database = {
           skills?: string[] | null
           status?: string
           updated_at?: string
+          current_salary: Number | null
+          expected_salary: Number | null
+          applied_from: string
         }
         Update: {
           applied_date?: string
@@ -1171,6 +1207,9 @@ export type Database = {
           skills?: string[] | null
           status?: string
           updated_at?: string
+          current_salary: Number | null
+          expected_salary: Number | null
+          applied_from: string
         }
         Relationships: [
           {
@@ -1275,6 +1314,11 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_jobs: {
+        Row: { id: string; job_id: string; shared_at: string };
+        Insert: { job_id: string };
+        Update: Partial<{ job_id: string }>;
+      };
     }
     Views: {
       [_ in never]: never

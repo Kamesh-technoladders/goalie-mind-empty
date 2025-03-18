@@ -27,16 +27,21 @@ export interface FamilyMember {
 }
 
 export interface Experience {
-  id?: string;
-  jobTitle?: string;
-  company?: string;
+  id?: string; // Add this if you're using an ID
+  jobType: "Full Time" | "Part Time" | "Internship"; // Correct type
+  company: string;
+  position: string;
   location?: string;
-  employmentType?: string;
   startDate?: string;
   endDate?: string;
-  offerLetter?: string | File;
-  separationLetter?: string | File;
-  payslips?: (string | File)[];
+  offerLetterUrl?: string;
+  separationLetterUrl?: string;
+  payslip_1_url?: string;
+  payslip_2_url?: string;
+  payslip_3_url?: string;
+  hikeLetterUrl?: string;
+  noSeparationLetterReason?: string;
+  noPayslipReason?: string;
 }
 
 export interface Education {

@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import ProfileImageUpload from "@/components/ProfileImageUpload";
 import { useSelector } from "react-redux";
 import { Country, State, City } from 'country-state-city'; 
-import { ArrowLeft, Save, ArrowRight, Upload, Plus, X, ChevronRight, User, CalendarIcon, File } from "lucide-react";
+import { ArrowLeft, Save, ArrowRight, Upload, Plus, X, ChevronRight, User, CalendarIcon, File, Loader2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -25,6 +25,9 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { uploadDocument } from "@/utils/uploadDocument";
 import { format } from "date-fns";
+import { Experience } from "@/services/types/employee.types";
+import { PostgrestSingleResponse } from "@supabase/supabase-js";
+import { FaRegFilePdf } from "react-icons/fa6";
 
 interface EmployeeFormData {
   firstName: string;
@@ -92,7 +95,9 @@ interface EmployeeFormData {
     endDate?: string;
     offerLetterUrl?: string;
     separationLetterUrl?: string;
-    payslips?: string[];
+    payslip_1_url?: string; // New field
+    payslip_2_url?: string; // New field
+    payslip_3_url?: string; // New field
     hikeLetterUrl?: string;
     noSeparationLetterReason?: string;
     noPayslipReason?: string;
@@ -170,7 +175,9 @@ const initialFormData: EmployeeFormData = {
       location: "",
       startDate: "",
       endDate: "",
-      payslips: [],
+      payslip_1_url: "", // New field
+      payslip_2_url: "", // New field
+      payslip_3_url: "", // New field
     }
   ],
   bankDetails: {
@@ -209,18 +216,31 @@ const EmployeeForm = () => {
       position: "",
       location: "",
       startDate: "",
-      endDate: ""
+      endDate: "",
+      offerLetterUrl: "",
+      separationLetterUrl: "",
+      payslip_1_url: "",
+      payslip_2_url: "",
+      payslip_3_url: "",
+      hikeLetterUrl: "",
+      noSeparationLetterReason: "",
+      noPayslipReason: "",
     });
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [endDate, setEndDate] = useState<Date | undefined>(undefined);
     const [editingExperienceIndex, setEditingExperienceIndex] = useState<number | null>(null);
+    const [uploadingFile, setUploadingFile] = useState<string | null>(null);
     
     // States for missing documents
     const [noSeparationLetter, setNoSeparationLetter] = useState(false);
     const [noPayslip, setNoPayslip] = useState(false);
+    const [departments, setDepartments] = useState([]);
+const [selectedDepartment, setSelectedDepartment] = useState(formData.department || "");
 
 
   console.log("Formdataaa:", formData)
+
+
 
   useEffect(() => {
     if (id) {
@@ -282,7 +302,7 @@ const EmployeeForm = () => {
       
       const { data: employeeData, error: employeeError } = await supabase
         .from('hr_employees')
-        .select('*')
+        .select('*, hr_departments(name)')
         .eq('id', employeeId)
         .single();
       
@@ -334,7 +354,7 @@ const EmployeeForm = () => {
         email: employeeData.email || "",
         phone: employeeData.phone || "",
         employeeId: employeeData.employee_id || "",
-        department: employeeData.department_id || "",
+        department: employeeData.hr_departments?.name || "",
         position: employeeData.position || "",
         dateOfBirth: employeeData.date_of_birth ? new Date(employeeData.date_of_birth).toISOString().split('T')[0] : "",
         gender: employeeData.gender || "",
@@ -397,21 +417,25 @@ const EmployeeForm = () => {
             }))
           : initialFormData.education,
         
-        experiences: experiencesData && experiencesData.length > 0
-          ? experiencesData.map(exp => ({
-              jobType: (exp.employment_type as "Full Time" | "Part Time" | "Internship") || "Full Time",
-              company: exp.company || "",
-              position: exp.job_title || "",
-              location: exp.location || "",
-              startDate: exp.start_date ? new Date(exp.start_date).toISOString().split('T')[0] : "",
-              endDate: exp.end_date ? new Date(exp.end_date).toISOString().split('T')[0] : "",
-              offerLetterUrl: exp.offer_letter_url || "",
-              separationLetterUrl: exp.separation_letter_url || "",
-              payslips: exp.payslips || [],
-              hikeLetterUrl: exp.hike_letter_url || ""
-            }))
-          : initialFormData.experiences,
-        
+          experiences:
+          experiencesData && experiencesData.length > 0
+            ? experiencesData.map((exp) => ({
+                jobType: (exp.employment_type as "Full Time" | "Part Time" | "Internship") || "Full Time",
+                company: exp.company || "",
+                position: exp.job_title || "",
+                location: exp.location || "",
+                startDate: exp.start_date ? new Date(exp.start_date).toISOString().split('T')[0] : "",
+                endDate: exp.end_date ? new Date(exp.end_date).toISOString().split('T')[0] : "",
+                offerLetterUrl: exp.offer_letter_url || "",
+                separationLetterUrl: exp.separation_letter_url || "",
+                payslip_1_url: exp.payslip_1_url || "", // Map individual payslip URLs
+                payslip_2_url: exp.payslip_2_url || "",
+                payslip_3_url: exp.payslip_3_url || "",
+                hikeLetterUrl: exp.hike_letter_url || "",
+                noSeparationLetterReason: exp.no_separation_letter_reason || "",
+                noPayslipReason: exp.no_payslip_reason || "",
+              }))
+            : initialFormData.experiences,
         bankDetails: bankDetailsData ? {
           accountHolderName: bankDetailsData.account_holder_name || "",
           accountNumber: bankDetailsData.account_number || "",
@@ -420,10 +444,10 @@ const EmployeeForm = () => {
           ifscCode: bankDetailsData.ifsc_code || "",
           accountType: bankDetailsData.account_type || "Savings",
           branchAddress: bankDetailsData.branch_address || "",
-          country: "India",
-          state: "",
-          city: "",
-          zipCode: ""
+          country: bankDetailsData.country,
+          state: bankDetailsData.state,
+          city: bankDetailsData.city,
+          zipCode: bankDetailsData.zip_code,
         } : initialFormData.bankDetails
       };
       
@@ -437,6 +461,27 @@ const EmployeeForm = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      const { data, error } = await supabase.from("hr_departments").select("id, name");
+      if (error) {
+        console.error("Error fetching departments:", error);
+      } else {
+        setDepartments(data || []);
+  
+        // Ensure the saved department ID is set as the default
+        if (formData.department) {
+          const defaultDept = data.find((dept) => dept.id === formData.department);
+          if (defaultDept) {
+            setSelectedDepartment(defaultDept.id);
+          }
+        }
+      }
+    };
+  
+    fetchDepartments();
+  }, [formData.department]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -674,7 +719,7 @@ const EmployeeForm = () => {
             .eq('employee_id', employeeId);
         }
         
-        const experiencesData = formData.experiences.map(exp => ({
+        const experiencesData = formData.experiences.map((exp) => ({
           employee_id: employeeId,
           company: exp.company,
           job_title: exp.position,
@@ -684,11 +729,13 @@ const EmployeeForm = () => {
           employment_type: exp.jobType,
           offer_letter_url: exp.offerLetterUrl,
           separation_letter_url: exp.separationLetterUrl,
-          payslips: exp.payslips,
-          hike_letter_url: exp.hikeLetterUrl, // Newly added field
-          no_separation_letter_reason: exp.noSeparationLetterReason, // Newly added field
-          no_payslip_reason: exp.noPayslipReason, // Newly added field
-          organization_id: organizationId
+          payslip_1_url: exp.payslip_1_url || "", // Map individual payslip URLs
+          payslip_2_url: exp.payslip_2_url || "",
+          payslip_3_url: exp.payslip_3_url || "",
+          hike_letter_url: exp.hikeLetterUrl,
+          no_separation_letter_reason: exp.noSeparationLetterReason,
+          no_payslip_reason: exp.noPayslipReason,
+          organization_id: organizationId,
         }));
         
         
@@ -704,9 +751,15 @@ const EmployeeForm = () => {
           account_number: formData.bankDetails.accountNumber,
           bank_name: formData.bankDetails.bankName,
           branch_name: formData.bankDetails.branchName,
+          country: formData.bankDetails.country,
+          state: formData.bankDetails.state,
+          city: formData.bankDetails.city,
+          branch_address: formData.bankDetails.branchAddress,
           ifsc_code: formData.bankDetails.ifscCode,
           account_type: formData.bankDetails.accountType,
-          organization_id: organizationId
+          document_url: formData.bankDetails.documentUrl,
+          organization_id: organizationId,
+          zip_code: formData.bankDetails.zipCode,
         };
         
         const { data: existingBankDetails } = await supabase
@@ -805,17 +858,73 @@ const EmployeeForm = () => {
     }
   };
 
-  const saveExperience = () => {
+  const saveExperience = async () => {
     const updatedExperiences = [...(formData.experiences || [])];
-    
+  
     if (editingExperienceIndex !== null) {
       updatedExperiences[editingExperienceIndex] = currentExperience;
     } else {
       updatedExperiences.push(currentExperience);
     }
-    
-    setFormData(prev => ({ ...prev, experiences: updatedExperiences }));
+  
+    // Update formData with the updated experiences
+    setFormData((prev) => ({ ...prev, experiences: updatedExperiences }));
     setShowExperienceModal(false);
+  
+    try {
+      if (!id) {
+        toast.error("Employee ID is missing!");
+        return;
+      }
+  
+      const experienceData = {
+        employee_id: id,
+        company: currentExperience.company,
+        job_title: currentExperience.position,
+        location: currentExperience.location,
+        start_date: currentExperience.startDate,
+        end_date: currentExperience.endDate,
+        employment_type: currentExperience.jobType,
+        offer_letter_url: currentExperience.offerLetterUrl,
+        separation_letter_url: currentExperience.separationLetterUrl,
+        payslip_1_url: currentExperience.payslip_1_url,
+        payslip_2_url: currentExperience.payslip_2_url,
+        payslip_3_url: currentExperience.payslip_3_url,
+        hike_letter_url: currentExperience.hikeLetterUrl,
+        no_separation_letter_reason: currentExperience.noSeparationLetterReason,
+        no_payslip_reason: currentExperience.noPayslipReason,
+        organization_id: organizationId,
+      };
+  
+      let supabaseResponse;
+  
+      if (editingExperienceIndex !== null) {
+        if (!id) {
+          toast.error("Experience ID is missing for update!");
+          console.error("Experience ID is undefined:", currentExperience);
+          return;
+        }
+  
+        console.log("Updating Experience with ID:", id);
+        supabaseResponse = await supabase
+          .from("hr_employee_experiences")
+          .update(experienceData)
+          .eq("id", id);
+      } else {
+        supabaseResponse = await supabase
+          .from("hr_employee_experiences")
+          .insert(experienceData);
+      }
+  
+      if (supabaseResponse.error) {
+        throw supabaseResponse.error;
+      }
+  
+      toast.success("Experience saved successfully!");
+    } catch (error) {
+      console.error("Error saving experience:", error);
+      toast.error("Failed to save experience!");
+    }
   };
 
   const removeExperience = (index: number) => {
@@ -935,27 +1044,34 @@ const EmployeeForm = () => {
   
   const handleExpUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
-    category: 'offerLetter' | 'separationLetter' | 'hikeLetter' | 'payslip',
-    index: number // To update the correct experience entry
+    category: 'offerLetter' | 'separationLetter' | 'hikeLetter' | 'payslip1' | 'payslip2' | 'payslip3',
+    experienceId: string
   ) => {
     const file = event.target.files?.[0];
+    setUploadingFile(category);
     if (!file) return;
   
     try {
       const bucketName = 'employee-documents';
-      const type = category; // Match category to the file type
+      const type = category;
       const fileUrl = await uploadDocument(file, bucketName, type);
   
-      setFormData((prevFormData) => ({
-        ...prevFormData,
-        experiences: prevFormData.experiences.map((exp, expIndex) =>
-          expIndex === index ? { ...exp, [`${category}Url`]: fileUrl } : exp
-        ),
+      // Update currentExperience state
+      setCurrentExperience((prev) => ({
+        ...prev,
+        ...(category === 'payslip1' && { payslip_1_url: fileUrl }),
+        ...(category === 'payslip2' && { payslip_2_url: fileUrl }),
+        ...(category === 'payslip3' && { payslip_3_url: fileUrl }),
+        ...(category === 'offerLetter' && { offerLetterUrl: fileUrl }),
+        ...(category === 'separationLetter' && { separationLetterUrl: fileUrl }),
+        ...(category === 'hikeLetter' && { hikeLetterUrl: fileUrl }),
       }));
   
       console.log(`${category} uploaded successfully:`, fileUrl);
     } catch (error) {
       console.error(`${category} upload failed:`, error);
+    } finally {
+      setUploadingFile(null); // Hide loader
     }
   };
   
@@ -983,169 +1099,197 @@ const EmployeeForm = () => {
               </TabsList>
 
               <form onSubmit={handleSubmit}>
-                <TabsContent value="personal" className="space-y-4">
-                  <ProfileImageUpload
-                    value={formData.profilePictureUrl}
-                    onChange={handleProfilePictureChange}
-                    initialLetter={formData.firstName?.[0] || "U"}
-                  />
-                  <Separator className="my-2" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        type="text"
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={(e) => handleInputChange("firstName", e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        type="text"
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={(e) => handleInputChange("lastName", e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        type="email"
-                        id="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        type="tel"
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="employeeId">Employee ID</Label>
-                      <Input
-                        type="text"
-                        id="employeeId"
-                        value={formData.employeeId}
-                        onChange={(e) => handleInputChange("employeeId", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="department">Department</Label>
-                      <Input
-                        type="text"
-                        id="department"
-                        value={formData.department}
-                        onChange={(e) => handleInputChange("department", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="position">Position</Label>
-                      <Input
-                        type="text"
-                        id="position"
-                        value={formData.position}
-                        onChange={(e) => handleInputChange("position", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                      <Input
-                        type="date"
-                        id="dateOfBirth"
-                        value={formData.dateOfBirth}
-                        onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Gender</Label>
-                      <RadioGroup
-                        defaultValue={formData.gender}
-                        onValueChange={(value) => handleInputChange("gender", value)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Male" id="male" />
-                          <Label htmlFor="male">Male</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Female" id="female" />
-                          <Label htmlFor="female">Female</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="Other" id="other" />
-                          <Label htmlFor="other">Other</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    <div>
-                      <Label htmlFor="maritalStatus">Marital Status</Label>
-                      <Select 
-  defaultValue={formData.maritalStatus} 
-  onValueChange={(value) => handleInputChange("maritalStatus", value)}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="Single">Single</SelectItem>
-    <SelectItem value="Married">Married</SelectItem>
-    <SelectItem value="Divorced">Divorced</SelectItem>
-    <SelectItem value="Widowed">Widowed</SelectItem>
-  </SelectContent>
-</Select>
+              <TabsContent value="personal" className="space-y-4">
+  <div className="flex flex-col md:flex-row gap-6 items-start">
+    {/* Profile Upload on the Left */}
+    <div className="flex-shrink-0">
+      <ProfileImageUpload
+        value={formData.profilePictureUrl}
+        onChange={handleProfilePictureChange}
+        initialLetter={formData.firstName?.[0] || "U"}
+      />
+    </div>
 
-                    </div>
-                    <div>
-                      <Label htmlFor="bloodGroup">Blood Group</Label>
-                      <Select 
-  defaultValue={formData.bloodGroup} 
-  onValueChange={(value) => handleInputChange("bloodGroup", value)}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="A+">A+</SelectItem>
-    <SelectItem value="A-">A-</SelectItem>
-    <SelectItem value="B+">B+</SelectItem>
-    <SelectItem value="B-">B-</SelectItem>
-    <SelectItem value="O+">O+</SelectItem>
-    <SelectItem value="O-">O-</SelectItem>
-    <SelectItem value="AB+">AB+</SelectItem>
-    <SelectItem value="AB-">AB-</SelectItem>
-  </SelectContent>
-</Select>
+    {/* Compact Form Fields */}
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-5 w-full">
+      <div className="max-w-xs">
+        <Label htmlFor="firstName">First Name</Label>
+        <Input
+          type="text"
+          id="firstName"
+          value={formData.firstName}
+          onChange={(e) => handleInputChange("firstName", e.target.value)}
+          required
+        />
+      </div>
+      <div className="max-w-xs">
+        <Label htmlFor="lastName">Last Name</Label>
+        <Input
+          type="text"
+          id="lastName"
+          value={formData.lastName}
+          onChange={(e) => handleInputChange("lastName", e.target.value)}
+          required
+        />
+      </div>
+      <div className="max-w-xs">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          type="email"
+          id="email"
+          value={formData.email}
+          onChange={(e) => handleInputChange("email", e.target.value)}
+          required
+        />
+      </div>
+      <div className="max-w-xs">
+        <Label htmlFor="phone">Phone</Label>
+        <Input
+          type="tel"
+          id="phone"
+          value={formData.phone}
+          onChange={(e) => handleInputChange("phone", e.target.value)}
+          required
+        />
+      </div>
+      <div className="max-w-xs">
+        <Label htmlFor="employeeId">Employee ID</Label>
+        <Input
+          type="text"
+          id="employeeId"
+          value={formData.employeeId}
+          onChange={(e) => handleInputChange("employeeId", e.target.value)}
+        />
+      </div>
+      <div className="max-w-xs">
+    <Label htmlFor="department">Department</Label>
+    <Select
+      value={selectedDepartment}
+      onValueChange={(value) => {
+        setSelectedDepartment(value);
+        handleInputChange("department", value); // Send ID to backend
+      }}
+    >
+      <SelectTrigger>
+        <SelectValue>
+          {departments.find((dept) => dept.id === selectedDepartment)?.name || "Select Department"}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {departments.map((dept) => (
+          <SelectItem key={dept.id} value={dept.id}>
+            {dept.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+      <div className="max-w-xs">
+        <Label htmlFor="position">Position</Label>
+        <Input
+          type="text"
+          id="position"
+          value={formData.position}
+          onChange={(e) => handleInputChange("position", e.target.value)}
+        />
+      </div>
+      <div className="max-w-xs">
+        <Label htmlFor="dateOfBirth">Date of Birth</Label>
+        <Input
+          type="date"
+          id="dateOfBirth"
+          value={formData.dateOfBirth}
+          onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+        />
+      </div>
 
-                    </div>
-                    <div>
-                      <Label htmlFor="employmentStatus">Employment Status</Label>
-                      <Select 
-  defaultValue={formData.employmentStatus} 
-  onValueChange={(value) => handleInputChange("employmentStatus", value)}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="Active">Active</SelectItem>
-    <SelectItem value="Inactive">Inactive</SelectItem>
-    <SelectItem value="Terminated">Terminated</SelectItem>
-  </SelectContent>
-</Select>
+      {/* Gender Selection */}
+      <div className="max-w-xs">
+  <Label>Gender</Label>
+  <RadioGroup
+    defaultValue={formData.gender}
+    onValueChange={(value) => handleInputChange("gender", value)}
+    className="flex items-center space-x-4" // Added flex container
+  >
+    <div className="flex items-center space-x-2">
+      <RadioGroupItem value="Male" id="male" />
+      <Label htmlFor="male">Male</Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <RadioGroupItem value="Female" id="female" />
+      <Label htmlFor="female">Female</Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <RadioGroupItem value="Other" id="other" />
+      <Label htmlFor="other">Other</Label>
+    </div>
+  </RadioGroup>
+</div>
 
-                    </div>
-                  </div>
-                </TabsContent>
+
+      {/* Marital Status */}
+      <div className="max-w-xs">
+        <Label htmlFor="maritalStatus">Marital Status</Label>
+        <Select 
+          defaultValue={formData.maritalStatus} 
+          onValueChange={(value) => handleInputChange("maritalStatus", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Single">Single</SelectItem>
+            <SelectItem value="Married">Married</SelectItem>
+            <SelectItem value="Divorced">Divorced</SelectItem>
+            <SelectItem value="Widowed">Widowed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Blood Group */}
+      <div className="max-w-xs">
+        <Label htmlFor="bloodGroup">Blood Group</Label>
+        <Select 
+          defaultValue={formData.bloodGroup} 
+          onValueChange={(value) => handleInputChange("bloodGroup", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="A+">A+</SelectItem>
+            <SelectItem value="A-">A-</SelectItem>
+            <SelectItem value="B+">B+</SelectItem>
+            <SelectItem value="B-">B-</SelectItem>
+            <SelectItem value="O+">O+</SelectItem>
+            <SelectItem value="O-">O-</SelectItem>
+            <SelectItem value="AB+">AB+</SelectItem>
+            <SelectItem value="AB-">AB-</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Employment Status */}
+      <div className="max-w-xs">
+        <Label htmlFor="employmentStatus">Employment Status</Label>
+        <Select 
+          defaultValue={formData.employmentStatus} 
+          onValueChange={(value) => handleInputChange("employmentStatus", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
+            <SelectItem value="Terminated">Terminated</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  </div>
+</TabsContent>
+
 
                 <TabsContent value="address" className="space-y-4">
   <div className="flex flex-col md:flex-row gap-6">
@@ -1350,435 +1494,426 @@ const EmployeeForm = () => {
   </div>
 </TabsContent>
 
-                <TabsContent value="contact" className="space-y-4">
-                  <h2 className="text-lg font-medium">Emergency Contacts</h2>
-                  {formData.emergencyContacts.map((contact, index) => (
-                    <div key={index} className="border p-4 rounded-lg mb-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor={`relationship-${index}`}>Relationship</Label>
-                          <Input
-                            type="text"
-                            id={`relationship-${index}`}
-                            value={contact.relationship}
-                            onChange={(e) => handleArrayInputChange("emergencyContacts", index, "relationship", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`name-${index}`}>Name</Label>
-                          <Input
-                            type="text"
-                            id={`name-${index}`}
-                            value={contact.name}
-                            onChange={(e) => handleArrayInputChange("emergencyContacts", index, "name", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`phone-${index}`}>Phone</Label>
-                          <Input
-                            type="tel"
-                            id={`phone-${index}`}
-                            value={contact.phone}
-                            onChange={(e) => handleArrayInputChange("emergencyContacts", index, "phone", e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      {formData.emergencyContacts.length > 1 && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          className="mt-2" 
-                          onClick={() => handleRemoveArrayItem("emergencyContacts", index)}
-                        >
-                          Remove Contact
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleAddArrayItem("emergencyContacts", { relationship: "", name: "", phone: "" })}
-                  >
-                    Add Emergency Contact
-                  </Button>
+<TabsContent value="contact" className="space-y-4">
+  <h2 className="text-lg font-medium">Emergency Contacts</h2>
+  {formData.emergencyContacts.map((contact, index) => (
+    <div key={index} className="border p-3 rounded-lg mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div>
+          <Label htmlFor={`relationship-${index}`} className="text-sm">Relationship</Label>
+          <Input
+            type="text"
+            id={`relationship-${index}`}
+            value={contact.relationship}
+            onChange={(e) => handleArrayInputChange("emergencyContacts", index, "relationship", e.target.value)}
+            className="h-10 text-sm"
+          />
+        </div>
+        <div>
+          <Label htmlFor={`name-${index}`} className="text-sm">Name</Label>
+          <Input
+            type="text"
+            id={`name-${index}`}
+            value={contact.name}
+            onChange={(e) => handleArrayInputChange("emergencyContacts", index, "name", e.target.value)}
+            className="h-10 text-sm"
+          />
+        </div>
+        <div>
+          <Label htmlFor={`phone-${index}`} className="text-sm">Phone</Label>
+          <Input
+            type="tel"
+            id={`phone-${index}`}
+            value={contact.phone}
+            onChange={(e) => handleArrayInputChange("emergencyContacts", index, "phone", e.target.value)}
+            className="h-10 text-sm"
+          />
+        </div>
+      </div>
+      {formData.emergencyContacts.length > 1 && (
+        <Button type="button" variant="outline" className="mt-2 h-8 text-sm" onClick={() => handleRemoveArrayItem("emergencyContacts", index)}>
+          Remove
+        </Button>
+      )}
+    </div>
+  ))}
+  <Button type="button" variant="outline" onClick={() => handleAddArrayItem("emergencyContacts", { relationship: "", name: "", phone: "" })} className="h-8 text-sm">
+    Add Emergency Contact
+  </Button>
 
-                  <Separator className="my-4" />
+  <Separator className="my-4" />
 
-                  <h2 className="text-lg font-medium">Family Members</h2>
-                  {formData.familyMembers.map((member, index) => (
-                    <div key={index} className="border p-4 rounded-lg mb-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor={`family-relationship-${index}`}>Relationship</Label>
-                          <Input
-                            type="text"
-                            id={`family-relationship-${index}`}
-                            value={member.relationship}
-                            onChange={(e) => handleArrayInputChange("familyMembers", index, "relationship", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`family-name-${index}`}>Name</Label>
-                          <Input
-                            type="text"
-                            id={`family-name-${index}`}
-                            value={member.name}
-                            onChange={(e) => handleArrayInputChange("familyMembers", index, "name", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`occupation-${index}`}>Occupation</Label>
-                          <Input
-                            type="text"
-                            id={`occupation-${index}`}
-                            value={member.occupation}
-                            onChange={(e) => handleArrayInputChange("familyMembers", index, "occupation", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`family-phone-${index}`}>Phone</Label>
-                          <Input
-                            type="tel"
-                            id={`family-phone-${index}`}
-                            value={member.phone}
-                            onChange={(e) => handleArrayInputChange("familyMembers", index, "phone", e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      {formData.familyMembers.length > 1 && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          className="mt-2" 
-                          onClick={() => handleRemoveArrayItem("familyMembers", index)}
-                        >
-                          Remove Family Member
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleAddArrayItem("familyMembers", { relationship: "", name: "", occupation: "", phone: "" })}
-                  >
-                    Add Family Member
-                  </Button>
-                </TabsContent>
+  <h2 className="text-lg font-medium">Family Members</h2>
+  {formData.familyMembers.map((member, index) => (
+    <div key={index} className="border p-3 rounded-lg mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <Label htmlFor={`family-relationship-${index}`} className="text-sm">Relationship</Label>
+          <Input
+            type="text"
+            id={`family-relationship-${index}`}
+            value={member.relationship}
+            onChange={(e) => handleArrayInputChange("familyMembers", index, "relationship", e.target.value)}
+            className="h-10 text-sm"
+          />
+        </div>
+        <div>
+          <Label htmlFor={`family-name-${index}`} className="text-sm">Name</Label>
+          <Input
+            type="text"
+            id={`family-name-${index}`}
+            value={member.name}
+            onChange={(e) => handleArrayInputChange("familyMembers", index, "name", e.target.value)}
+            className="h-10 text-sm"
+          />
+        </div>
+        <div>
+          <Label htmlFor={`occupation-${index}`} className="text-sm">Occupation</Label>
+          <Input
+            type="text"
+            id={`occupation-${index}`}
+            value={member.occupation}
+            onChange={(e) => handleArrayInputChange("familyMembers", index, "occupation", e.target.value)}
+            className="h-10 text-sm"
+          />
+        </div>
+        <div>
+          <Label htmlFor={`family-phone-${index}`} className="text-sm">Phone</Label>
+          <Input
+            type="tel"
+            id={`family-phone-${index}`}
+            value={member.phone}
+            onChange={(e) => handleArrayInputChange("familyMembers", index, "phone", e.target.value)}
+            className="h-10 text-sm"
+          />
+        </div>
+      </div>
+      {formData.familyMembers.length > 1 && (
+        <Button type="button" variant="outline" className="mt-2 h-8 text-sm" onClick={() => handleRemoveArrayItem("familyMembers", index)}>
+          Remove
+        </Button>
+      )}
+    </div>
+  ))}
+  <Button type="button" variant="outline" onClick={() => handleAddArrayItem("familyMembers", { relationship: "", name: "", occupation: "", phone: "" })} className="h-8 text-sm">
+    Add Family Member
+  </Button>
+</TabsContent>
+
 
                 <TabsContent value="education">
               <div className="space-y-8">
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Education</h3>
-                  <p className="text-sm text-gray-500 mb-4">Add your course and certificate here.</p>
-                  
-                  <div className="space-y-6">
-                    {formData.education?.map((edu, index) => (
-  <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-    {/* Course Name */}
-    <div className="space-y-2">
-      <Label>Exam/Course Name*</Label>
-      <Input
-        value={edu.type}
-        readOnly={index < 3} // SSC, HSC, Degree are fixed
-        onChange={(e) => handleEducationChange(index, "type", e.target.value)}
-        placeholder="Enter exam/course name"
-      />
+              <div>
+      <h3 className="text-lg font-medium mb-4">Education</h3>
+      <p className="text-sm text-gray-500 mb-4">Add your course and certificate here.</p>
+
+      <div className="space-y-4">
+        {formData.education?.map((edu, index) => (
+          <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
+            {/* Course Name */}
+            <div className="space-y-1">
+              <Label className="text-xs">Exam/Course*</Label>
+              <Input
+                value={edu.type}
+                readOnly={index < 3}
+                onChange={(e) => handleEducationChange(index, "type", e.target.value)}
+                placeholder="Course name"
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* Institute Name */}
+            <div className="space-y-1">
+              <Label className="text-xs">Institute*</Label>
+              <Input
+                value={edu.institute || ""}
+                onChange={(e) => handleEducationChange(index, "institute", e.target.value)}
+                placeholder="Institute"
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* Completed Year */}
+            <div className="space-y-1">
+              <Label className="text-xs">Year*</Label>
+              <Input
+                type="number"
+                value={edu.year_completed || ""}
+                onChange={(e) => handleEducationChange(index, "year_completed", Number(e.target.value))}
+                placeholder="Year"
+                className="h-8 text-sm"
+              />
+            </div>
+
+            {/* File Upload */}
+            <div className="flex items-center gap-2">
+              <label htmlFor={`edu-upload-${index}`} className="cursor-pointer text-primary text-xs hover:underline">
+                + Upload <span className="text-gray-500">(PDF, PNG, JPG)</span>
+              </label>
+              <input
+                type="file"
+                id={`edu-upload-${index}`}
+                className="sr-only"
+                onChange={(e) => handleFileUpload(e, "education", "education_document", index)}
+                accept=".pdf,.png,.jpg,.jpeg"
+              />
+
+              {edu.documentUrl && (
+                <a href={edu.documentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                  View
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <Button type="button" variant="outline" size="sm" onClick={addEducation} className="mt-2">
+          <Plus className="h-4 w-4 mr-1" /> Add Course
+        </Button>
+      </div>
     </div>
 
-    {/* Institute Name */}
-    <div className="space-y-2">
-      <Label>Institute Name*</Label>
-      <Input
-        value={edu.institute || ""}
-        onChange={(e) => handleEducationChange(index, "institute", e.target.value)}
-        placeholder="Enter institute name"
-      />
-    </div>
+    <div> 
 
-    {/* Completed Year */}
-    <div className="space-y-2">
-      <Label>Completed Year*</Label>
-      <Input
-  type="number"
-  value={edu.year_completed || ""}
-  onChange={(e) => handleEducationChange(index, "year_completed", Number(e.target.value))}
-  placeholder="Enter completed year"
-/>
+<div className="flex items-center justify-between mb-4"> 
 
-    </div>
+  <div> 
 
-    {/* File Upload */}
-    <div className="flex items-end gap-3">
-    <div className="relative flex-1">
-  <input
-    type="file"
-    id={`edu-upload-${index}`}
-    className="sr-only"
-    onChange={(e) => handleFileUpload(e, "education", "education_document", index)} // Pass type
-    accept=".pdf,.png,.jpg,.jpeg"
-  />
-  <Label htmlFor={`edu-upload-${index}`} className="cursor-pointer text-primary hover:underline ml-1">
-    + Upload File <span className="text-xs text-gray-500">(PDF, PNG, JPG)</span>
-  </Label>
-</div>
+    <h3 className="text-lg font-medium">Experience</h3> 
+
+    <p className="text-sm text-gray-500"> 
+
+      Add your previous work experience and internship details. 
+
+    </p> 
+
+  </div> 
+
+  <Button 
+
+    type="button" 
+
+    variant="outline" 
+
+    size="sm" 
+
+    onClick={() => openExperienceModal()} 
+
+  > 
+
+    <Plus className="h-4 w-4 mr-1" /> Add 
+
+  </Button> 
+
+</div> 
 
 
-      {/* Show Document URL if Available */}
-      {edu.documentUrl && (
-        <a href={edu.documentUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-          View Document
-        </a>
-      )}
-    </div>
-  </div>
-))}
 
-                    
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={addEducation}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add Additional Exam/Course
-                    </Button>
-                  </div>
-                </div>
+<div className="space-y-3"> 
 
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-medium">Experience</h3>
-                      <p className="text-sm text-gray-500">Add your previous working experience and internship details.</p>
-                    </div>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => openExperienceModal()}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add Experience
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {formData.experiences && formData.experiences.length > 0 ? (
-                      formData.experiences.map((exp, index) => (
-                        <div key={index} className="border rounded-md p-4 relative">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="flex items-center">
-                                <h4 className="font-medium">{exp.position}</h4>
-                                <span className="mx-2 text-gray-400">-</span>
-                                <span className="text-sm text-gray-600">{exp.jobType}</span>
-                              </div>
-                              <p className="text-sm">{exp.company} - {exp.location}</p>
-                              {exp.startDate && (
-                                <p className="text-sm text-gray-500">
-                                  {new Date(exp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} 
-                                  {exp.endDate && ` - ${new Date(exp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => openExperienceModal(exp, index)}
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                              </Button>
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => removeExperience(index)}
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          <div className="mt-4 grid grid-cols-5 gap-2">
-                            <div className="text-center">
-                              <p className="text-xs text-gray-500">Offer Letter</p>
-                              {exp.offerLetterUrl ? (
-                                <div className="bg-red-100 text-red-600 rounded py-1 px-2 mt-1 text-xs">PDF</div>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic">Not available</p>
-                              )}
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-500">Separation Letter</p>
-                              {exp.separationLetterUrl ? (
-                                <div className="bg-red-100 text-red-600 rounded py-1 px-2 mt-1 text-xs">PDF</div>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic">{exp.noSeparationLetterReason || "Not available"}</p>
-                              )}
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-500">Payslip 1</p>
-                              {exp.payslips && exp.payslips[0] ? (
-                                <div className="bg-red-100 text-red-600 rounded py-1 px-2 mt-1 text-xs">PDF</div>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic">{exp.noPayslipReason || "Not available"}</p>
-                              )}
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-500">Payslip 2</p>
-                              {exp.payslips && exp.payslips[1] ? (
-                                <div className="bg-red-100 text-red-600 rounded py-1 px-2 mt-1 text-xs">PDF</div>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic">Not available</p>
-                              )}
-                            </div>
-                            <div className="text-center">
-                              <p className="text-xs text-gray-500">Payslip 3</p>
-                              {exp.payslips && exp.payslips[2] ? (
-                                <div className="bg-red-100 text-red-600 rounded py-1 px-2 mt-1 text-xs">PDF</div>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic">Not available</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center p-6 border border-dashed rounded-md">
-                        <p className="text-gray-500">No work experience added yet.</p>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          className="mt-2"
-                          onClick={() => openExperienceModal()}
-                        >
-                          <Plus className="h-4 w-4 mr-2" /> Add Experience
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+  {formData.experiences && formData.experiences.length > 0 ? ( 
+
+    formData.experiences.map((exp, index) => ( 
+
+      <div 
+
+        key={index} 
+
+        className="border rounded-lg p-3 bg-gray-50 shadow-sm relative" 
+
+      > 
+
+        {/* Header - Position & Job Type */} 
+
+        <div className="flex justify-between items-start"> 
+
+          <div className="grid grid-cols-[auto_auto] gap-x-2 items-center"> 
+
+            <h4 className="font-medium">{exp.position}</h4> 
+
+            <span className="text-xs text-gray-600 bg-gray-200 px-2 py-1 rounded-md"> 
+
+              {exp.jobType} 
+
+            </span> 
+
+          </div> 
+
+          {/* Edit & Delete Buttons */} 
+
+          <div className="flex gap-2"> 
+
+            <Button 
+
+              type="button" 
+
+              variant="ghost" 
+
+              size="icon" 
+
+              onClick={() => openExperienceModal(exp, index)} 
+
+            > 
+
+              ✏️ 
+
+            </Button> 
+
+            <Button 
+
+              type="button" 
+
+              variant="ghost" 
+
+              size="icon" 
+
+              onClick={() => removeExperience(index)} 
+
+            > 
+
+              🗑️ 
+
+            </Button> 
+
+          </div> 
+
+        </div> 
+
+
+
+        {/* Company & Date */} 
+
+        <p className="text-sm text-gray-700"> 
+
+          {exp.company} - {exp.location} 
+
+        </p> 
+
+        {exp.startDate && ( 
+
+          <p className="text-xs text-gray-500"> 
+
+            {new Date(exp.startDate).toLocaleDateString("en-US", { 
+
+              month: "short", 
+
+              year: "numeric", 
+
+            })}{" "} 
+
+            {exp.endDate && 
+
+              ` - ${new Date(exp.endDate).toLocaleDateString("en-US", { 
+
+                month: "short", 
+
+                year: "numeric", 
+
+              })}`} 
+
+          </p> 
+
+        )} 
+
+
+
+        {/* Documents Section */} 
+
+        <div className="mt-3 grid grid-cols-6 gap-2 text-xs text-center"> 
+
+          {[ 
+
+            { label: "Offer Letter", url: exp.offerLetterUrl }, 
+
+            { label: "Separation Letter", url: exp.separationLetterUrl }, 
+
+            { label: "Payslip 1", url: exp.payslip_1_url }, 
+
+            { label: "Payslip 2", url: exp.payslip_2_url }, 
+
+            { label: "Payslip 3", url: exp.payslip_3_url }, 
+
+            { label: "Hike Letter", url: exp.hikeLetterUrl }, 
+
+          ].map((doc, i) => ( 
+
+            <div key={i} className="border rounded-md p-2 bg-white"> 
+
+              <p className="text-gray-500">{doc.label}</p> 
+
+              {doc.url ? ( 
+
+                <a 
+
+                  href={doc.url} 
+
+                  target="_blank" 
+
+                  rel="noopener noreferrer" 
+
+                  className="text-red-600 inline-block mt-1" 
+
+                > 
+
+                  <FaRegFilePdf size={16}/> 
+
+                </a> 
+
+              ) : ( 
+
+                <p className="text-gray-400 italic">N/A</p> 
+
+              )} 
+
+            </div> 
+
+          ))} 
+
+        </div> 
+
+      </div> 
+
+    )) 
+
+  ) : ( 
+
+    <div className="text-center p-4 border border-dashed rounded-md"> 
+
+      <p className="text-gray-500">No work experience added yet.</p> 
+
+      <Button 
+
+        type="button" 
+
+        variant="outline" 
+
+        size="sm" 
+
+        className="mt-2" 
+
+        onClick={() => openExperienceModal()} 
+
+      > 
+
+        <Plus className="h-4 w-4 mr-1" /> Add Experience 
+
+      </Button> 
+
+    </div> 
+
+  )} 
+
+</div> 
+
+</div> 
+
+
               </div>
 
               
             </TabsContent>
 
-                {/* <TabsContent value="experience" className="space-y-4">
-                  <h2 className="text-lg font-medium">Work Experience</h2>
-                  {formData.experiences.map((exp, index) => (
-                    <div key={index} className="border p-4 rounded-lg mb-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor={`job-type-${index}`}>Job Type</Label>
-                          <Select
-                            value={exp.jobType}
-                            onValueChange={(value) => handleArrayInputChange("experiences", index, "jobType", value)}
-                          >
-                            <SelectTrigger id={`job-type-${index}`}>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Full Time">Full Time</SelectItem>
-                              <SelectItem value="Part Time">Part Time</SelectItem>
-                              <SelectItem value="Internship">Internship</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor={`company-${index}`}>Company</Label>
-                          <Input
-                            type="text"
-                            id={`company-${index}`}
-                            value={exp.company}
-                            onChange={(e) => handleArrayInputChange("experiences", index, "company", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`position-${index}`}>Position</Label>
-                          <Input
-                            type="text"
-                            id={`position-${index}`}
-                            value={exp.position}
-                            onChange={(e) => handleArrayInputChange("experiences", index, "position", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`location-${index}`}>Location</Label>
-                          <Input
-                            type="text"
-                            id={`location-${index}`}
-                            value={exp.location || ""}
-                            onChange={(e) => handleArrayInputChange("experiences", index, "location", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`start-date-${index}`}>Start Date</Label>
-                          <Input
-                            type="date"
-                            id={`start-date-${index}`}
-                            value={exp.startDate || ""}
-                            onChange={(e) => handleArrayInputChange("experiences", index, "startDate", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`end-date-${index}`}>End Date</Label>
-                          <Input
-                            type="date"
-                            id={`end-date-${index}`}
-                            value={exp.endDate || ""}
-                            onChange={(e) => handleArrayInputChange("experiences", index, "endDate", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`offer-letter-${index}`}>Offer Letter URL</Label>
-                          <Input
-                            type="text"
-                            id={`offer-letter-${index}`}
-                            value={exp.offerLetterUrl || ""}
-                            onChange={(e) => handleArrayInputChange("experiences", index, "offerLetterUrl", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`separation-letter-${index}`}>Separation Letter URL</Label>
-                          <Input
-                            type="text"
-                            id={`separation-letter-${index}`}
-                            value={exp.separationLetterUrl || ""}
-                            onChange={(e) => handleArrayInputChange("experiences", index, "separationLetterUrl", e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      {formData.experiences.length > 1 && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          className="mt-2" 
-                          onClick={() => handleRemoveArrayItem("experiences", index)}
-                        >
-                          Remove Experience
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleAddArrayItem("experiences", { 
-                      jobType: "Full Time", 
-                      company: "", 
-                      position: "", 
-                      location: "", 
-                      startDate: "", 
-                      endDate: "",
-                      payslips: []
-                    })}
-                  >
-                    Add Experience
-                  </Button>
-                </TabsContent> */}
+             
 
 <TabsContent value="bank">
               <div className="space-y-6">
@@ -1787,7 +1922,7 @@ const EmployeeForm = () => {
                   <p className="text-sm text-gray-500 mt-1">Add your bank account details here.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="accountHolderName">Name as in Bank</Label>
                     <Input
@@ -2131,21 +2266,35 @@ const EmployeeForm = () => {
                     <Label htmlFor="offerLetter">Offer Letter*</Label>
                     <div className="flex gap-3 items-center">
                       <div className="relative">
-                        <input
-                          type="file"
-                          id="offerLetter"
-                          className="sr-only"
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          onChange={(event) => handleExpUpload(event, 'offerLetter', index)}
-                        />
-                        <Label
-                          htmlFor="offerLetter"
-                          className="cursor-pointer text-primary hover:underline"
-                        >
-                          + Upload File <span className="text-xs text-gray-500">(Supported format: PDF, PNG, JPG)</span>
-                        </Label>
-                      </div>
-                    </div>
+                      <input
+              type="file"
+              id="offerLetter"
+              className="sr-only"
+              accept=".pdf,.png,.jpg,.jpeg"
+              disabled={uploadingFile !== null}
+              onChange={(event) => handleExpUpload(event, "offerLetter", currentExperience.id)}
+            />
+            <Label htmlFor="offerLetter" className={`cursor-pointer text-primary hover:underline ${uploadingFile ? "opacity-50 cursor-not-allowed" : ""}`}>
+              {uploadingFile === "offerLetter" ? (
+                <span className="flex items-center gap-1">
+                  <Loader2 className="animate-spin w-4 h-4" /> Uploading...
+                </span>
+              ) : (
+                "+ Upload File"
+              )}
+            </Label>
+          </div>
+          {currentExperience.offerLetterUrl && (
+            <a
+              href={currentExperience.offerLetterUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              View Document
+            </a>
+          )}
+        </div>
                   </div>
                 </div>
                 
@@ -2160,7 +2309,7 @@ const EmployeeForm = () => {
                           className="sr-only"
                           accept=".pdf,.png,.jpg,.jpeg"
                           disabled={noSeparationLetter}
-                          onChange={(event) => handleExpUpload(event, 'separationLetter', index)}
+                          onChange={(event) => handleExpUpload(event, 'separationLetter', currentExperience.id)}
                         />
                         <Label
                           htmlFor="separationLetter"
@@ -2206,14 +2355,14 @@ const EmployeeForm = () => {
                     <Label htmlFor="payslip1">Payslip 1*</Label>
                     <div className="flex gap-3 items-center">
                       <div className="relative">
-                        <input
-                          type="file"
-                          id="payslip1"
-                          className="sr-only"
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          disabled={noPayslip}
-                          onChange={(event) => handleExpUpload(event, 'payslip', index)}
-                        />
+                      <input
+        type="file"
+        id="payslip1"
+        className="sr-only"
+        accept=".pdf,.png,.jpg,.jpeg"
+        disabled={noPayslip}
+        onChange={(event) => handleExpUpload(event, 'payslip1', currentExperience.id)}
+      />
                         <Label
                           htmlFor="payslip1"
                           className={cn(
@@ -2259,13 +2408,13 @@ const EmployeeForm = () => {
                       <Label htmlFor="payslip2">Payslip 2*</Label>
                       <div className="flex gap-3 items-center">
                         <div className="relative">
-                          <input
-                            type="file"
-                            id="payslip2"
-                            className="sr-only"
-                            accept=".pdf,.png,.jpg,.jpeg"
-                            onChange={(event) => handleExpUpload(event, 'payslip', index)}
-                          />
+                        <input
+        type="file"
+        id="payslip2"
+        className="sr-only"
+        accept=".pdf,.png,.jpg,.jpeg"
+        onChange={(event) => handleExpUpload(event, 'payslip2', currentExperience.id)}
+      />
                           <Label
                             htmlFor="payslip2"
                             className="cursor-pointer text-primary hover:underline"
@@ -2280,13 +2429,13 @@ const EmployeeForm = () => {
                       <Label htmlFor="payslip3">Payslip 3*</Label>
                       <div className="flex gap-3 items-center">
                         <div className="relative">
-                          <input
-                            type="file"
-                            id="payslip3"
-                            className="sr-only"
-                            accept=".pdf,.png,.jpg,.jpeg"
-                            onChange={(event) => handleExpUpload(event, 'payslip', index)}
-                          />
+                        <input
+        type="file"
+        id="payslip3"
+        className="sr-only"
+        accept=".pdf,.png,.jpg,.jpeg"
+        onChange={(event) => handleExpUpload(event, 'payslip3', currentExperience.id)}
+      />
                           <Label
                             htmlFor="payslip3"
                             className="cursor-pointer text-primary hover:underline"
@@ -2308,7 +2457,7 @@ const EmployeeForm = () => {
                         id="hikeLetter"
                         className="sr-only"
                         accept=".pdf,.png,.jpg,.jpeg"
-                        onChange={(event) => handleExpUpload(event, 'hikeLetter', index)}
+                        onChange={(event) => handleExpUpload(event, 'hikeLetter', currentExperience.id)}
                       />
                       <Label
                         htmlFor="hikeLetter"
