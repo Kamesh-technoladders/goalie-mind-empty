@@ -36,9 +36,11 @@ const EmployeeList = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const dispatch = useDispatch();
 
+  const organizationId = useSelector((state: any) => state.auth.organization_id);
+
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [organizationId]);
 
   const fetchEmployees = async () => {
     try {
@@ -55,10 +57,12 @@ const EmployeeList = () => {
           phone, 
           employee_id, 
           department_id,
+           hr_departments(name),
           position, 
           employment_status,
           profile_picture_url
         `)
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
         
       if (error) throw error;
@@ -72,6 +76,7 @@ const EmployeeList = () => {
         phone: emp.phone,
         employee_id: emp.employee_id,
         department_id: emp.department_id,
+        department_name: emp.hr_departments?.name || "N/A",
         position: emp.position || 'N/A',
         employment_status: emp.employment_status || 'Active',
         profile_picture_url: emp.profile_picture_url,
@@ -151,7 +156,7 @@ const EmployeeList = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Position</TableHead>
+                    <TableHead>Department</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -189,7 +194,7 @@ const EmployeeList = () => {
                         </TableCell>
                         <TableCell>{employee.email}</TableCell>
                         <TableCell>{employee.phone}</TableCell>
-                        <TableCell>{employee.position}</TableCell>
+                        <TableCell>{employee.department_name}</TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             employee.employment_status === 'Active' 

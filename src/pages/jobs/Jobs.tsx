@@ -63,6 +63,7 @@ import {
 } from "@/components/jobs/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import AssociateToClientModal from "@/components/jobs/job/AssociateToClientModal";
+import { useSelector } from "react-redux";
 
 
 
@@ -86,6 +87,9 @@ const Jobs = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [associateModalOpen, setAssociateModalOpen] = useState(false);
   const [clientselectedJob, setClientSelectedJob] = useState<JobData | null>(null);
+  const user = useSelector((state: any) => state.auth.user); // Get user from Redux
+  const organization_id = useSelector((state: any) => state.auth.organization_id); // Get organization_id from Redux
+
   
 
   useEffect(() => {
@@ -232,30 +236,30 @@ const Jobs = () => {
     }
   };
 
-  const handleSaveJob = async (jobData: JobData) => {
-    try {
-      setActionLoading(true);
-      let savedJob: JobData;
+  // const handleSaveJob = async (jobData: JobData) => {
+  //   try {
+  //     setActionLoading(true);
+  //     let savedJob: JobData;
       
-      if (mockJobs.some(job => job.id === jobData.id)) {
-        savedJob = await updateJob(jobData.id.toString(), jobData);
-        toast.success("Job updated successfully");
+  //     if (mockJobs.some(job => job.id === jobData.id)) {
+  //       savedJob = await updateJob(jobData.id.toString(), jobData);
+  //       toast.success("Job updated successfully");
         
-        setMockJobs(prev => prev.map(job => job.id === savedJob.id ? savedJob : job));
-      } else {
-        savedJob = await createJob(jobData);
-        toast.success("Job created successfully");
+  //       setMockJobs(prev => prev.map(job => job.id === savedJob.id ? savedJob : job));
+  //     } else {
+  //       savedJob = await createJob(jobData);
+  //       toast.success("Job created successfully");
         
-        setMockJobs(prev => [savedJob, ...prev]);
-      }
-    } catch (error) {
-      console.error("Error saving job:", error);
-      toast.error(editJob ? "Failed to update job" : "Failed to create job");
-    } finally {
-      setActionLoading(false);
-      setEditJob(null);
-    }
-  };
+  //       setMockJobs(prev => [savedJob, ...prev]);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error saving job:", error);
+  //     toast.error(editJob ? "Failed to update job" : "Failed to create job");
+  //   } finally {
+  //     setActionLoading(false);
+  //     setEditJob(null);
+  //   }
+  // };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -269,11 +273,11 @@ const Jobs = () => {
     try {
       if (editJob) {
         // If editing, update the job
-        await updateJob(editJob.id.toString(), newJob);
+        await updateJob(editJob.id.toString(), newJob, user.id);
         toast.success("Job updated successfully");
       } else {
         // If creating, add a new job
-        await createJob(newJob);
+        await createJob(newJob, organization_id, user.id);
         toast.success("Job created successfully");
       }
       await refetch(); // Refetch jobs to update the list
@@ -304,7 +308,7 @@ const Jobs = () => {
   const handleAssociateToClient = async (updatedJob: JobData) => {
     try {
       // Call the update job function with the job ID and updated job data
-      await updateJob(updatedJob.id, updatedJob);
+      await updateJob(updatedJob.id, updatedJob, user.id);
       
       // Refetch jobs to get the updated list
       await refetch();

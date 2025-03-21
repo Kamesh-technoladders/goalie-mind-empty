@@ -86,6 +86,7 @@ export const signUpFirstUser = async (email, password, firstName, lastName, orgN
         phone: phoneNo,
         role: "global_superadmin",
         organization_name: orgName,
+        employee_id: "HR001",
       },
     },
   });
@@ -109,6 +110,8 @@ console.log("orgIDID", orgId)
     last_name: lastName,
     organization_id: orgId,
     phone: phoneNo,
+    employee_id: "HR001",
+    email: email,
   });
   console.log("Inserting into hr_employees:", {
     id: data.user.id,
@@ -117,6 +120,7 @@ console.log("orgIDID", orgId)
     last_name: lastName,
     organization_id: orgId,
     phone: phoneNo,
+    employee_id: "HR001",
   });
   
 
@@ -262,6 +266,8 @@ export const createOrganizationWithSuperadmin = async (
     first_name: firstName,
     last_name: lastName,
     phone:phoneNo,
+    employee_id: "TLS-001",
+    email: email,
   });
 
   if (profileError) throw profileError;

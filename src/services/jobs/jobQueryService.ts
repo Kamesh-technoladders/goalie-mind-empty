@@ -11,6 +11,7 @@ import {
   deleteJobRecord
 } from "./supabaseQueries";
 
+
 // Get all jobs
 export const getAllJobs = async (): Promise<JobData[]> => {
   try {
@@ -53,11 +54,20 @@ export const getJobById = async (id: string): Promise<JobData | null> => {
 };
 
 // Create a new job
-export const createJob = async (job: JobData): Promise<JobData> => {
+// Create a new job
+export const createJob = async (job: JobData, organization_id: string, created_by: string): Promise<JobData> => {
   try {
     // Transform JobData to DB format
     const dbJob = transformToDbJob(job);
-    const { data } = await insertJob(dbJob);
+
+    // Add organization_id and created_by to the dbJob object
+    const jobWithMeta = {
+      ...dbJob,
+      organization_id, // Add organization_id
+      created_by // Use the passed created_by
+    };
+
+    const { data } = await insertJob(jobWithMeta);
     
     return transformToJobData(data);
   } catch (error) {
@@ -67,11 +77,18 @@ export const createJob = async (job: JobData): Promise<JobData> => {
 };
 
 // Update a job
-export const updateJob = async (id: string, job: JobData): Promise<JobData> => {
+export const updateJob = async (id: string, job: JobData, updated_by: string): Promise<JobData> => {
   try {
     // Transform JobData to DB format
     const dbJob = transformToDbJob(job);
-    const { data } = await updateJobRecord(id, dbJob);
+
+    // Add updated_by to the dbJob object
+    const jobWithMeta = {
+      ...dbJob,
+      updated_by // Add updated_by
+    };
+
+    const { data } = await updateJobRecord(id, jobWithMeta);
     
     return transformToJobData(data);
   } catch (error) {
