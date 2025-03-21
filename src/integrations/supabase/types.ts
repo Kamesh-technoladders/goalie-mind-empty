@@ -9,12 +9,113 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      hr_assigned_goals: {
+        Row: {
+          assigned_at: string
+          current_value: number
+          employee_id: string
+          goal_id: string
+          goal_type: string
+          id: string
+          notes: string | null
+          progress: number
+          status: string
+          target_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          current_value?: number
+          employee_id: string
+          goal_id: string
+          goal_type?: string
+          id?: string
+          notes?: string | null
+          progress?: number
+          status?: string
+          target_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          current_value?: number
+          employee_id?: string
+          goal_id?: string
+          goal_type?: string
+          id?: string
+          notes?: string | null
+          progress?: number
+          status?: string
+          target_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_assigned_goals_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_assigned_goals_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "hr_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_client_contacts: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          designation: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "hr_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_clients: {
         Row: {
           active_employees: number | null
           address: string | null
+          billing_address: Json | null
           city: string | null
           client_name: string
+          commission_type: string | null
+          commission_value: number | null
           completed_projects: number | null
           contact_person_first_name: string
           contact_person_last_name: string
@@ -25,12 +126,17 @@ export type Database = {
           display_name: string
           email: string
           id: string
+          internal_contact: string | null
           ongoing_projects: number | null
           organization_id: string | null
+          payment_terms: number | null
+          payment_terms_custom: number | null
           phone_number: string
           postal_code: string | null
           profit: number | null
           revenue: number | null
+          service_type: string[] | null
+          shipping_address: Json | null
           state: string | null
           status: string | null
           total_projects: number | null
@@ -40,8 +146,11 @@ export type Database = {
         Insert: {
           active_employees?: number | null
           address?: string | null
+          billing_address?: Json | null
           city?: string | null
           client_name: string
+          commission_type?: string | null
+          commission_value?: number | null
           completed_projects?: number | null
           contact_person_first_name: string
           contact_person_last_name: string
@@ -52,12 +161,17 @@ export type Database = {
           display_name: string
           email: string
           id?: string
+          internal_contact?: string | null
           ongoing_projects?: number | null
           organization_id?: string | null
+          payment_terms?: number | null
+          payment_terms_custom?: number | null
           phone_number: string
           postal_code?: string | null
           profit?: number | null
           revenue?: number | null
+          service_type?: string[] | null
+          shipping_address?: Json | null
           state?: string | null
           status?: string | null
           total_projects?: number | null
@@ -67,8 +181,11 @@ export type Database = {
         Update: {
           active_employees?: number | null
           address?: string | null
+          billing_address?: Json | null
           city?: string | null
           client_name?: string
+          commission_type?: string | null
+          commission_value?: number | null
           completed_projects?: number | null
           contact_person_first_name?: string
           contact_person_last_name?: string
@@ -79,12 +196,17 @@ export type Database = {
           display_name?: string
           email?: string
           id?: string
+          internal_contact?: string | null
           ongoing_projects?: number | null
           organization_id?: string | null
+          payment_terms?: number | null
+          payment_terms_custom?: number | null
           phone_number?: string
           postal_code?: string | null
           profit?: number | null
           revenue?: number | null
+          service_type?: string[] | null
+          shipping_address?: Json | null
           state?: string | null
           status?: string | null
           total_projects?: number | null
@@ -234,18 +356,18 @@ export type Database = {
           account_type: string
           bank_name: string
           bank_phone: string | null
+          branch_address: string | null
           branch_name: string
+          city: string | null
+          country: string | null
           created_at: string | null
+          document_url: string | null
           employee_id: string | null
           id: string
-          country: string
-          state: string
-          city: string
-          branch_address: string
           ifsc_code: string
           organization_id: string
-          document_url: string | null
-          zip_code: number
+          state: string | null
+          zip_code: string | null
         }
         Insert: {
           account_holder_name: string
@@ -253,18 +375,18 @@ export type Database = {
           account_type: string
           bank_name: string
           bank_phone?: string | null
+          branch_address?: string | null
           branch_name: string
+          city?: string | null
+          country?: string | null
           created_at?: string | null
+          document_url?: string | null
           employee_id?: string | null
           id?: string
-          country: string
-          state: string
-          city: string
-          branch_address: string
           ifsc_code: string
           organization_id: string
-          document_url: string | null
-          zip_code: number
+          state?: string | null
+          zip_code?: string | null
         }
         Update: {
           account_holder_name?: string
@@ -272,18 +394,18 @@ export type Database = {
           account_type?: string
           bank_name?: string
           bank_phone?: string | null
+          branch_address?: string | null
           branch_name?: string
+          city?: string | null
+          country?: string | null
           created_at?: string | null
+          document_url?: string | null
           employee_id?: string | null
           id?: string
-          country: string
-          state: string
-          city: string
-          branch_address: string
           ifsc_code?: string
           organization_id?: string
-          document_url: string | null
-          zip_code: number
+          state?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {
@@ -467,17 +589,20 @@ export type Database = {
           employee_id: string | null
           employment_type: string | null
           end_date: string | null
+          hike_letter_url: string | null
           id: string
           job_title: string
+          job_type: string | null
           location: string | null
+          no_payslip_reason: string | null
+          no_separation_letter_reason: string | null
           offer_letter_url: string | null
+          organization_id: string
           payslip_1_url: string | null
           payslip_2_url: string | null
           payslip_3_url: string | null
-          organization_id: string
           payslips: string[] | null
           separation_letter_url: string | null
-          hike_letter_url: string | null
           start_date: string
           status: string | null
           upload_date: string | null
@@ -490,17 +615,20 @@ export type Database = {
           employee_id?: string | null
           employment_type?: string | null
           end_date?: string | null
+          hike_letter_url?: string | null
           id?: string
           job_title: string
+          job_type?: string | null
           location?: string | null
+          no_payslip_reason?: string | null
+          no_separation_letter_reason?: string | null
           offer_letter_url?: string | null
-          payslip_1_url: string | null
-          payslip_2_url: string | null
-          payslip_3_url: string | null
           organization_id: string
+          payslip_1_url?: string | null
+          payslip_2_url?: string | null
+          payslip_3_url?: string | null
           payslips?: string[] | null
           separation_letter_url?: string | null
-          hike_letter_url: string | null
           start_date: string
           status?: string | null
           upload_date?: string | null
@@ -513,17 +641,20 @@ export type Database = {
           employee_id?: string | null
           employment_type?: string | null
           end_date?: string | null
+          hike_letter_url?: string | null
           id?: string
           job_title?: string
+          job_type?: string | null
           location?: string | null
+          no_payslip_reason?: string | null
+          no_separation_letter_reason?: string | null
           offer_letter_url?: string | null
-          payslip_1_url: string | null
-          payslip_2_url: string | null
-          payslip_3_url: string | null
           organization_id?: string
+          payslip_1_url?: string | null
+          payslip_2_url?: string | null
+          payslip_3_url?: string | null
           payslips?: string[] | null
           separation_letter_url?: string | null
-          hike_letter_url: string | null
           start_date?: string
           status?: string | null
           upload_date?: string | null
@@ -806,6 +937,288 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "hr_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_goals: {
+        Row: {
+          created_at: string
+          description: string
+          end_date: string
+          id: string
+          metric_type: string
+          metric_unit: string
+          name: string
+          sector: string
+          start_date: string
+          target_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          end_date: string
+          id?: string
+          metric_type: string
+          metric_unit: string
+          name: string
+          sector: string
+          start_date: string
+          target_value: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          end_date?: string
+          id?: string
+          metric_type?: string
+          metric_unit?: string
+          name?: string
+          sector?: string
+          start_date?: string
+          target_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hr_job_candidates: {
+        Row: {
+          applied_date: string
+          applied_from: string | null
+          availability: string | null
+          career_experience: Json | null
+          cover_letter: string | null
+          created_at: string
+          current_salary: number | null
+          education: Json | null
+          email: string | null
+          expected_salary: number | null
+          experience: string | null
+          github: string | null
+          id: string
+          job_id: string
+          linkedin: string | null
+          location: string | null
+          match_score: number | null
+          metadata: Json | null
+          name: string
+          phone: string | null
+          resume_url: string | null
+          skill_ratings: Json | null
+          skills: string[] | null
+          status: string
+          updated_at: string
+          updated_by?: string
+          organization_id: string
+        }
+        Insert: {
+          applied_date?: string
+          applied_from?: string | null
+          availability?: string | null
+          career_experience?: Json | null
+          cover_letter?: string | null
+          created_at?: string
+          current_salary?: number | null
+          education?: Json | null
+          email?: string | null
+          expected_salary?: number | null
+          experience?: string | null
+          github?: string | null
+          id?: string
+          job_id: string
+          linkedin?: string | null
+          location?: string | null
+          match_score?: number | null
+          metadata?: Json | null
+          name: string
+          phone?: string | null
+          resume_url?: string | null
+          skill_ratings?: Json | null
+          skills?: string[] | null
+          status?: string
+          updated_at?: string
+          updated_by?: string
+          organization_id: string
+        }
+        Update: {
+          applied_date?: string
+          applied_from?: string | null
+          availability?: string | null
+          career_experience?: Json | null
+          cover_letter?: string | null
+          created_at?: string
+          current_salary?: number | null
+          education?: Json | null
+          email?: string | null
+          expected_salary?: number | null
+          experience?: string | null
+          github?: string | null
+          id?: string
+          job_id?: string
+          linkedin?: string | null
+          location?: string | null
+          match_score?: number | null
+          metadata?: Json | null
+          name?: string
+          phone?: string | null
+          resume_url?: string | null
+          skill_ratings?: Json | null
+          skills?: string[] | null
+          status?: string
+          updated_at?: string
+          updated_by?: string
+          organization_id: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_job_candidates_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_jobs: {
+        Row: {
+          applications: number | null
+          budget: number | null
+          budget_type: string | null
+          client_details: Json | null
+          client_owner: string | null
+          client_project_id: string | null
+          created_at: string | null
+          department: string | null
+          description: string | null
+          description_bullets: string[] | null
+          due_date: string | null
+          experience: Json | null
+          hiring_mode: string | null
+          hr_organization_id: string | null
+          id: string
+          job_id: string
+          job_type: string | null
+          job_type_category: string | null
+          location: string[]
+          posted_date: string | null
+          service_type: string | null
+          skills: string[] | null
+          status: string | null
+          submission_type: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          applications?: number | null
+          budget?: number | null
+          budget_type?: string | null
+          client_details?: Json | null
+          client_owner?: string | null
+          client_project_id?: string | null
+          created_at?: string | null
+          department?: string | null
+          description?: string | null
+          description_bullets?: string[] | null
+          due_date?: string | null
+          experience?: Json | null
+          hiring_mode?: string | null
+          hr_organization_id?: string | null
+          id?: string
+          job_id: string
+          job_type?: string | null
+          job_type_category?: string | null
+          location?: string[]
+          posted_date?: string | null
+          service_type?: string | null
+          skills?: string[] | null
+          status?: string | null
+          submission_type?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          applications?: number | null
+          budget?: number | null
+          budget_type?: string | null
+          client_details?: Json | null
+          client_owner?: string | null
+          client_project_id?: string | null
+          created_at?: string | null
+          department?: string | null
+          description?: string | null
+          description_bullets?: string[] | null
+          due_date?: string | null
+          experience?: Json | null
+          hiring_mode?: string | null
+          hr_organization_id?: string | null
+          id?: string
+          job_id?: string
+          job_type?: string | null
+          job_type_category?: string | null
+          location?: string[]
+          posted_date?: string | null
+          service_type?: string | null
+          skills?: string[] | null
+          status?: string | null
+          submission_type?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_jobs_client_project_id_fkey"
+            columns: ["client_project_id"]
+            isOneToOne: false
+            referencedRelation: "hr_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_kpis: {
+        Row: {
+          created_at: string
+          current_value: number
+          goal_id: string
+          id: string
+          metric_type: string
+          metric_unit: string
+          name: string
+          target_value: number
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          current_value: number
+          goal_id: string
+          id?: string
+          metric_type: string
+          metric_unit: string
+          name: string
+          target_value: number
+          updated_at?: string
+          weight: number
+        }
+        Update: {
+          created_at?: string
+          current_value?: number
+          goal_id?: string
+          id?: string
+          metric_type?: string
+          metric_unit?: string
+          name?: string
+          target_value?: number
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_kpis_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "hr_goals"
             referencedColumns: ["id"]
           },
         ]
@@ -1156,143 +1569,6 @@ export type Database = {
         }
         Relationships: []
       }
-      hr_job_candidates: {
-        Row: {
-          applied_date: string
-          created_at: string
-          email: string | null
-          experience: string | null
-          id: string
-          job_id: string
-          match_score: number | null
-          name: string
-          phone: string | null
-          resume_url: string | null
-          skills: string[] | null
-          status: string
-          updated_at: string
-          current_salary: Number | null
-          expected_salary: Number | null
-          applied_from: string
-        }
-        Insert: {
-          applied_date?: string
-          created_at?: string
-          email?: string | null
-          experience?: string | null
-          id?: string
-          job_id: string
-          match_score?: number | null
-          name: string
-          phone?: string | null
-          resume_url?: string | null
-          skills?: string[] | null
-          status?: string
-          updated_at?: string
-          current_salary: Number | null
-          expected_salary: Number | null
-          applied_from: string
-        }
-        Update: {
-          applied_date?: string
-          created_at?: string
-          email?: string | null
-          experience?: string | null
-          id?: string
-          job_id?: string
-          match_score?: number | null
-          name?: string
-          phone?: string | null
-          resume_url?: string | null
-          skills?: string[] | null
-          status?: string
-          updated_at?: string
-          current_salary: Number | null
-          expected_salary: Number | null
-          applied_from: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hr_job_candidates_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "hr_jobs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      hr_jobs: {
-        Row: {
-          applications: number | null
-          client_details: Json | null
-          client_owner: string | null
-          created_at: string | null
-          department: string | null
-          description: string | null
-          description_bullets: string[] | null
-          due_date: string | null
-          experience: Json | null
-          hiring_mode: string | null
-          hr_organization_id: string | null
-          id: string
-          job_id: string
-          job_type: string | null
-          location: string[]
-          posted_date: string | null
-          skills: string[] | null
-          status: string | null
-          submission_type: string | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          applications?: number | null
-          client_details?: Json | null
-          client_owner?: string | null
-          created_at?: string | null
-          department?: string | null
-          description?: string | null
-          description_bullets?: string[] | null
-          due_date?: string | null
-          experience?: Json | null
-          hiring_mode?: string | null
-          hr_organization_id?: string | null
-          id?: string
-          job_id: string
-          job_type?: string | null
-          location?: string[]
-          posted_date?: string | null
-          skills?: string[] | null
-          status?: string | null
-          submission_type?: string | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          applications?: number | null
-          client_details?: Json | null
-          client_owner?: string | null
-          created_at?: string | null
-          department?: string | null
-          description?: string | null
-          description_bullets?: string[] | null
-          due_date?: string | null
-          experience?: Json | null
-          hiring_mode?: string | null
-          hr_organization_id?: string | null
-          id?: string
-          job_id?: string
-          job_type?: string | null
-          location?: string[]
-          posted_date?: string | null
-          skills?: string[] | null
-          status?: string | null
-          submission_type?: string | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       locations: {
         Row: {
           created_at: string | null
@@ -1315,10 +1591,96 @@ export type Database = {
         Relationships: []
       }
       shared_jobs: {
-        Row: { id: string; job_id: string; shared_at: string };
-        Insert: { job_id: string };
-        Update: Partial<{ job_id: string }>;
-      };
+        Row: {
+          id: string
+          job_id: string | null
+          shared_at: string | null
+        }
+        Insert: {
+          id?: string
+          job_id?: string | null
+          shared_at?: string | null
+        }
+        Update: {
+          id?: string
+          job_id?: string | null
+          shared_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tlscheduler_candidates: {
+        Row: {
+          availability: string
+          created_at: string | null
+          id: string
+          meeting_link: string | null
+          name: string
+          role: string
+          whatsapp_number: string
+        }
+        Insert: {
+          availability: string
+          created_at?: string | null
+          id?: string
+          meeting_link?: string | null
+          name: string
+          role: string
+          whatsapp_number: string
+        }
+        Update: {
+          availability?: string
+          created_at?: string | null
+          id?: string
+          meeting_link?: string | null
+          name?: string
+          role?: string
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
+      tracking_records: {
+        Row: {
+          assigned_goal_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          record_date: string
+          value: number
+        }
+        Insert: {
+          assigned_goal_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          record_date: string
+          value?: number
+        }
+        Update: {
+          assigned_goal_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          record_date?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_records_assigned_goal_id_fkey"
+            columns: ["assigned_goal_id"]
+            isOneToOne: false
+            referencedRelation: "hr_assigned_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

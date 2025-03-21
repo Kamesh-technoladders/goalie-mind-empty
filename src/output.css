@@ -2909,6 +2909,7 @@ body{
   background-color: hsl(var(--accent));
 }
 
+
 .bg-amber-100{
   --tw-bg-opacity: 1;
   background-color: rgb(254 243 199 / var(--tw-bg-opacity, 1));

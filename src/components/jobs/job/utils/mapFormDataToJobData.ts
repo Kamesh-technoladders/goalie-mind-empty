@@ -2,27 +2,29 @@
 import { JobData } from "@/lib/types";
 import { JobFormData } from "../hooks/useJobFormState";
 
-type StaffingType = "Internal" | "Talent Deployment" | null;
-
 export const mapFormDataToJobData = (
   formData: JobFormData, 
   editJob: JobData | null,
-  staffingType: StaffingType
+  jobType: "Internal" | "External"
 ): JobData => {
+  console.log("Mapping form data to job data:", formData);
+  
+  // Create the job data object
   const jobData: JobData = {
     id: editJob?.id || crypto.randomUUID(),
     jobId: formData.jobInformation.jobId,
     title: formData.jobInformation.jobTitle,
-    department: "Engineering", // Default value, could be made editable
+    department: editJob?.department || "Engineering", // Default value, could be made editable
     location: formData.jobInformation.jobLocation,
     type: "Full-time", // Default value, could be made editable
-    status: "Active",
+    status: editJob?.status || "Active",
     postedDate: editJob?.postedDate || new Date().toISOString().split('T')[0],
     applications: editJob?.applications || 0,
     dueDate: editJob?.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     clientOwner: formData.clientDetails.clientName || "Internal HR",
-    hiringMode: formData.jobInformation.hiringMode,
-    submissionType: staffingType === "Internal" ? "Internal" : "Client",
+    hiringMode: formData.jobInformation.hiringMode || "Full Time",
+    submissionType: jobType === "Internal" ? "Internal" : "Client",
+    jobType: jobType, // Set the job type
     experience: {
       min: { 
         years: formData.experienceSkills.minimumYear, 
@@ -35,6 +37,7 @@ export const mapFormDataToJobData = (
     },
     skills: formData.experienceSkills.skills,
     description: formData.jobDescription.description,
+    descriptionBullets: [],
     clientDetails: {
       clientName: formData.clientDetails.clientName,
       clientBudget: formData.clientDetails.clientBudget,
@@ -42,8 +45,13 @@ export const mapFormDataToJobData = (
       pointOfContact: formData.clientDetails.pointOfContact
     },
     noticePeriod: formData.jobInformation.noticePeriod,
-    budgetType: formData.jobInformation.budgetType,
+    numberOfCandidates: formData.jobInformation.numberOfCandidates 
   };
+
+  // Only add clientProjectId if it's present in the form data
+  if (formData.clientDetails.clientProjectId) {
+    jobData.clientProjectId = formData.clientDetails.clientProjectId;
+  }
 
   // Add assignedTo if present
   if (formData.clientDetails.assignedTo) {
@@ -53,5 +61,6 @@ export const mapFormDataToJobData = (
     };
   }
 
+  console.log("Final job data:", jobData);
   return jobData;
 };

@@ -24,6 +24,9 @@ export const transformToJobData = (jobRecord: any): JobData => {
     description: jobRecord.description || undefined,
     descriptionBullets: jobRecord.description_bullets || [],
     clientDetails: jobRecord.client_details || undefined,
+    noticePeriod: jobRecord.notice_period || undefined, 
+    numberOfCandidates: jobRecord.number_of_candidates || 0,
+    organization: jobRecord.organization_id,
   };
 };
 
@@ -47,6 +50,9 @@ export const transformToDbJob = (job: JobData): Record<string, any> => {
     description: job.description || null,
     experience: job.experience || null,
     client_details: job.clientDetails || null,
-    description_bullets: job.descriptionBullets || []
+    description_bullets: job.descriptionBullets || [],
+    notice_period: job.noticePeriod || null, 
+    number_of_candidates: job.numberOfCandidates || 0,
+    organization_id: job.organization,
   };
 };

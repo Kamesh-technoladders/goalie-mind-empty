@@ -1,23 +1,19 @@
 
 import { Check } from "lucide-react";
 
-type JobType = "Staffing" | "Augment Staffing" | null;
-type StaffingType = "Internal" | "Talent Deployment" | null;
-
 interface StepperNavigationProps {
   currentStep: number;
   totalSteps: number;
-  jobType: JobType;
-  staffingType: StaffingType;
+  jobType: "Internal" | "External";
 }
 
-const StepperNavigation = ({ currentStep, totalSteps, jobType, staffingType }: StepperNavigationProps) => {
-  // Generate steps based on job type and staffing type
+const StepperNavigation = ({ currentStep, totalSteps, jobType }: StepperNavigationProps) => {
+  // Generate steps based on job type
   const getSteps = (): string[] => {
-    if (jobType === "Staffing" && staffingType === "Internal") {
+    if (jobType === "Internal") {
       return ["Job Information", "Experience & Skills", "Job Description"];
-    } else {
-      return ["Job Information", "Experience & Skills", "Client Details", "Job Description"];
+    } else { // External
+      return ["Client Details", "Job Information", "Experience & Skills", "Job Description"];
     }
   };
   
@@ -31,9 +27,9 @@ const StepperNavigation = ({ currentStep, totalSteps, jobType, staffingType }: S
             <div 
               className={`w-10 h-10 rounded-full flex items-center justify-center z-10 ${
                 index + 1 < currentStep
-                  ? "bg-blue-500 text-white"
+                  ? "bg-button text-white"
                   : index + 1 === currentStep
-                  ? "bg-blue-500 text-white ring-4 ring-blue-200"
+                  ? "bg-button text-white ring-4 ring-blue-200"
                   : "bg-gray-200 text-gray-500"
               }`}
             >
@@ -60,7 +56,7 @@ const StepperNavigation = ({ currentStep, totalSteps, jobType, staffingType }: S
         style={{ transform: "translate(0, -50%)" }}
       >
         <div 
-          className="h-full bg-blue-500 transition-all duration-300"
+          className="h-full bg-button-hover transition-all duration-300"
           style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
         ></div>
       </div>

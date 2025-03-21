@@ -23,13 +23,13 @@ const ClientDetailsStep = ({ data, onChange, hiringMode }: ClientDetailsStepProp
         <BudgetField 
           data={data} 
           onChange={onChange} 
-          hiringMode={hiringMode} 
+        
         />
         
-        <AssignJobField 
+        {/* <AssignJobField 
           data={data} 
           onChange={onChange} 
-        />
+        /> */}
       </div>
     </div>
   );

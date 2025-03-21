@@ -75,7 +75,7 @@ const SkillSelector = ({ skills, onChange }: SkillSelectorProps) => {
         <button
           type="button"
           onClick={handleAddSkill}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="px-4 py-2 bg-button text-white rounded-md hover:bg-button-hover focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           Add
         </button>

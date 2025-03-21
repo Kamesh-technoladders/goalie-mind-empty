@@ -42,13 +42,7 @@ const JobDetailView = ({ job, candidates, onCandidateAdded }: JobDetailViewProps
         onAddCandidate={handleOpenCandidateModal} 
       />
 
-      {/* Add Candidate Modal */}
-      <AddCandidateModal 
-        jobId={job.id}
-        open={isCandidateModalOpen}
-        onOpenChange={setIsCandidateModalOpen}
-        onCandidateAdded={onCandidateAdded}
-      />
+     
     </div>
   );
 };

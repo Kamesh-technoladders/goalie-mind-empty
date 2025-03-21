@@ -26,9 +26,6 @@ import { supabase } from "@/integrations/supabase/client";
 interface AddCandidateDrawerProps {
   job: JobData;
   onCandidateAdded: () => void;
-  candidate?: Candidate;
-  open?: boolean;        // Add this
-  onOpenChange?: (open: boolean) => void;  // Add this
 }
 
 export type CandidateFormData = {
@@ -51,16 +48,11 @@ export type CandidateFormData = {
   currentSalary?: number;  // Make optional
 };
 
-const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChange }: AddCandidateDrawerProps) => {
+const AddCandidateDrawer = ({ job, onCandidateAdded }: AddCandidateDrawerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const user = useSelector((state: any) => state.auth.user);
-  const isEditMode = !!candidate;
-
-  // Use controlled open state if provided, otherwise use internal state
-  const controlledOpen = open !== undefined ? open : isOpen;
-  const controlledOnOpenChange = onOpenChange || setIsOpen;
 
   console.log("user", user)
 
@@ -90,9 +82,9 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
   const handleClose = () => {
     basicInfoForm.reset();
     skillsForm.reset();
-    setCandidateId(isEditMode ? candidate?.id.toString() : null);
+    setCandidateId(null);
     setActiveTab("basic-info");
-    controlledOnOpenChange(false); // Use controlled handler
+    setIsOpen(false);
   };
   
 // Inside the component
@@ -209,14 +201,10 @@ const fetchCandidateById = async (id: string) => {
   };
   
   return (
-    <Sheet open={controlledOpen} 
-    onOpenChange={controlledOnOpenChange} >
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button 
-          id={isEditMode ? "edit-candidate-btn" : "add-candidate-btn"} 
-          onClick={() => controlledOnOpenChange(true)}
-        >
-          {isEditMode ? "Edit Candidate" : "Add Candidate"}
+        <Button id="add-candidate-btn" onClick={() => setIsOpen(true)}>
+          Add Candidate
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md md:max-w-lg overflow-y-auto">

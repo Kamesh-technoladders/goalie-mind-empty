@@ -44,6 +44,8 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --tab: 211 24% 85%;
+
   }
 
   .dark {
@@ -82,6 +84,7 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --tab: 120 40% 50%;
   }
 }
 
@@ -275,6 +278,9 @@
       @apply px-0.5 py-0.5 text-[9px];
     }
   }
+  .bg-tab {
+    background-color: hsl(var(--tab)) !important;
+}
 }
 
 @keyframes slideIn {

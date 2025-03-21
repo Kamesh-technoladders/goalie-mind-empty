@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 27%;
 
-    --primary: 196 97% 50%;
+    --primary: 256 86% 56%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 20% 96%;
@@ -23,7 +23,7 @@
     --muted: 215 16% 47%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 196 97% 50%;
+    --accent: 240, 5%, 60%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
@@ -31,7 +31,7 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 196 97% 50%;
+    --ring: 255 83% 77%;
 
     --radius: 0.5rem;
 
@@ -98,6 +98,15 @@
   /* Image scale on hover */
   .image-hover {
     @apply transition-transform duration-500 hover:scale-105;
+  }
+  .bg-select{
+    background-color: #ad94f5;
+  }
+  .bg-button{
+    background-color: #602eef;
+  }
+    .bg-button-hover{
+    background-color: #8c6af2;
   }
 }
 

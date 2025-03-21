@@ -25,7 +25,7 @@ export interface HrJob {
   description: string | null;
   description_bullets: string[];
   client_details: Record<string, any> | null;
-  hr_organization_id: string | null;
+  organization_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -51,4 +51,5 @@ export interface DbJob {
   experience: Record<string, any> | null;
   client_details: Record<string, any> | null;
   description_bullets: string[];
+  organization_id: string | null;
 }

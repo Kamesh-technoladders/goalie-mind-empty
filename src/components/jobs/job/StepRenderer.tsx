@@ -6,66 +6,84 @@ import ClientDetailsStep from "./steps/ClientDetailsStep";
 import JobDescriptionStep from "./steps/JobDescriptionStep";
 import { JobFormData } from "./hooks/useJobFormState";
 
-type JobType = "Staffing" | "Augment Staffing" | null;
-type StaffingType = "Internal" | "Talent Deployment" | null;
-
 interface StepRendererProps {
   currentStep: number;
   formData: JobFormData;
   updateFormData: (step: string, data: any) => void;
-  jobType: JobType;
-  staffingType: StaffingType;
+  jobType: "Internal" | "External";
 }
 
 const StepRenderer = ({ 
   currentStep, 
   formData, 
   updateFormData,
-  jobType,
-  staffingType
+  jobType
 }: StepRendererProps): ReactNode => {
-  switch(currentStep) {
-    case 1:
-      return (
-        <JobInformationStep 
-          data={formData.jobInformation}
-          onChange={(data) => updateFormData("jobInformation", data)}
-          jobType={jobType}
-          staffingType={staffingType}
-        />
-      );
-    case 2:
-      return (
-        <ExperienceSkillsStep 
-          data={formData.experienceSkills}
-          onChange={(data) => updateFormData("experienceSkills", data)}
-        />
-      );
-    case 3:
-      if (staffingType === "Internal") {
+  // For Internal jobs: Job Info -> Experience & Skills -> Job Description
+  // For External jobs: Client Details -> Job Info -> Experience & Skills -> Job Description
+  
+  if (jobType === "Internal") {
+    switch(currentStep) {
+      case 1:
+        return (
+          <JobInformationStep 
+            data={formData.jobInformation}
+            onChange={(data) => updateFormData("jobInformation", data)}
+            jobType={jobType}
+          />
+        );
+      case 2:
+        return (
+          <ExperienceSkillsStep 
+            data={formData.experienceSkills}
+            onChange={(data) => updateFormData("experienceSkills", data)}
+          />
+        );
+      case 3:
         return (
           <JobDescriptionStep 
             data={formData.jobDescription}
             onChange={(data) => updateFormData("jobDescription", data)}
           />
         );
-      }
-      return (
-        <ClientDetailsStep 
-          data={formData.clientDetails}
-          onChange={(data) => updateFormData("clientDetails", data)}
-          hiringMode={formData.jobInformation.hiringMode}
-        />
-      );
-    case 4:
-      return (
-        <JobDescriptionStep 
-          data={formData.jobDescription}
-          onChange={(data) => updateFormData("jobDescription", data)}
-        />
-      );
-    default:
-      return null;
+      default:
+        return null;
+    }
+  } else { // External jobs
+    switch(currentStep) {
+      case 1:
+        return (
+          <ClientDetailsStep 
+            data={formData.clientDetails}
+            onChange={(data) => updateFormData("clientDetails", data)}
+            hiringMode={formData.jobInformation.hiringMode}
+          />
+        );
+      case 2:
+        return (
+          <JobInformationStep 
+            data={formData.jobInformation}
+            onChange={(data) => updateFormData("jobInformation", data)}
+            jobType={jobType}
+          />
+        );
+      case 3:
+        return (
+          <ExperienceSkillsStep 
+            data={formData.experienceSkills}
+            onChange={(data) => updateFormData("experienceSkills", data)}
+          />
+        );
+      case 4:
+        return (
+          <JobDescriptionStep 
+            data={formData.jobDescription}
+            onChange={(data) => updateFormData("jobDescription", data)}
+          />
+        );
+      default:
+        return null;
+    }
   }
 };
 

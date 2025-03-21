@@ -2,12 +2,8 @@
 import { useState, useEffect } from "react";
 import { JobData } from "@/lib/types";
 
-type JobType = "Staffing" | "Augment Staffing" | null;
-type StaffingType = "Internal" | "Talent Deployment" | null;
-
 interface UseJobFormStateProps {
-  jobType: JobType;
-  staffingType: StaffingType;
+  jobType: "Internal" | "External";
   editJob: JobData | null;
 }
 
@@ -18,7 +14,6 @@ export interface JobInformationData {
   numberOfCandidates: number;
   jobLocation: string[];
   noticePeriod: string;
-  budgetType: string;
 }
 
 export interface ExperienceSkillsData {
@@ -35,6 +30,7 @@ export interface ClientDetailsData {
   endClient: string;
   pointOfContact: string;
   assignedTo: string;
+  clientProjectId: string;
 }
 
 export interface JobDescriptionData {
@@ -48,16 +44,15 @@ export interface JobFormData {
   jobDescription: JobDescriptionData;
 }
 
-export const useJobFormState = ({ jobType, staffingType, editJob }: UseJobFormStateProps) => {
+export const useJobFormState = ({ jobType, editJob }: UseJobFormStateProps) => {
   const [formData, setFormData] = useState<JobFormData>({
     jobInformation: {
-      hiringMode: jobType === "Staffing" && staffingType === "Internal" ? "Full Time" : "",
+      hiringMode: jobType === "Internal" ? "Full Time" : "",
       jobId: "",
       jobTitle: "",
       numberOfCandidates: 1,
       jobLocation: [],
       noticePeriod: "",
-      budgetType: jobType === "Staffing" && staffingType === "Internal" ? "LPA" : "",
     },
     experienceSkills: {
       minimumYear: 0,
@@ -72,6 +67,7 @@ export const useJobFormState = ({ jobType, staffingType, editJob }: UseJobFormSt
       endClient: "",
       pointOfContact: "",
       assignedTo: "",
+      clientProjectId: "",
     },
     jobDescription: {
       description: "",
@@ -83,13 +79,12 @@ export const useJobFormState = ({ jobType, staffingType, editJob }: UseJobFormSt
     if (editJob) {
       const initialFormData = {
         jobInformation: {
-          hiringMode: editJob.hiringMode || (jobType === "Staffing" && staffingType === "Internal" ? "Full Time" : ""),
+          hiringMode: editJob.hiringMode || (jobType === "Internal" ? "Full Time" : ""),
           jobId: editJob.jobId || "",
           jobTitle: editJob.title || "",
-          numberOfCandidates: 1,
+          numberOfCandidates: editJob.numberOfCandidates || "",
           jobLocation: editJob.location || [],
           noticePeriod: editJob.noticePeriod || "",
-          budgetType: editJob.budgetType || (jobType === "Staffing" && staffingType === "Internal" ? "LPA" : ""),
         },
         experienceSkills: {
           minimumYear: editJob.experience?.min?.years || 0,
@@ -104,6 +99,7 @@ export const useJobFormState = ({ jobType, staffingType, editJob }: UseJobFormSt
           endClient: editJob.clientDetails?.endClient || "",
           pointOfContact: editJob.clientDetails?.pointOfContact || "",
           assignedTo: editJob.assignedTo?.name || "",
+          clientProjectId: editJob.clientProjectId || "",
         },
         jobDescription: {
           description: editJob.description || "",
@@ -112,7 +108,7 @@ export const useJobFormState = ({ jobType, staffingType, editJob }: UseJobFormSt
       
       setFormData(initialFormData);
     }
-  }, [editJob, jobType, staffingType]);
+  }, [editJob, jobType]);
 
   const updateFormData = (step: string, data: any) => {
     setFormData(prev => ({

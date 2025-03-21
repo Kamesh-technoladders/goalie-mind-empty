@@ -1,3 +1,4 @@
+
 import { ReactNode } from "react";
 
 export interface JobData {
@@ -7,13 +8,14 @@ export interface JobData {
   department: string;
   location: string[];
   type: string;
-  status: "Active" | "Pending" | "Completed";
+  status: "Active" | "Pending" | "Completed" | "OPEN" | "HOLD" | "CLOSE";
   postedDate: string;
   applications: number;
   dueDate: string;
   clientOwner: string;
   hiringMode: string;
   submissionType: "Internal" | "Client";
+  jobType: "Internal" | "External"; // Added jobType field
   experience?: {
     min?: { years: number; months: number };
     max?: { years: number; months: number };
@@ -47,19 +49,56 @@ export interface JobData {
   customUrl?: string;
   noticePeriod?: string;
   budgetType?: string;
+  clientProjectId?: string; 
+  numberOfCandidates?: number;
+  organization?: string;
 }
 
 export interface Candidate {
-  resume: any;
-  hasValidatedResume: boolean;
-  currentStage: string;
-  profit: ReactNode;
-  appliedFrom: ReactNode;
-  id: number;
+  id: string;  // Changed to string to match UUID
   name: string;
-  status: "Screening" | "Interviewing" | "Selected" | "Rejected";
-  experience: string;
-  matchScore: number;
+  status: CandidateStatus | "New" | "InReview" | "Engaged" | "Available" | "Offered" | "Hired" | "Rejected";
+  experience: string | null;
+  matchScore: number | null;
   appliedDate: string;
-  skills: string[];
+  skills: Array<{ name: string; rating: number }> | string[];  // Updated to support both formats
+  email?: string;
+  phone?: string;
+  resume?: string;
+  resumeUrl?: string;
+  appliedFrom?: string;
+  currentSalary?: number | string;
+  expectedSalary?: number | string;
+  location?: string;
+  metadata?: {
+    currentLocation?: string;
+    preferredLocations?: string[];
+    totalExperience?: string | number;
+    relevantExperience?: string | number;
+    currentSalary?: string | number;
+    expectedSalary?: string | number;
+    resume_url?: string;
+  };
+  skill_ratings?: Array<{ name: string; rating: number }>;
+  currentStage?: string;
+  completedStages?: string[];
+  hasValidatedResume?: boolean;
+  profit?: ReactNode;
+  organization?: string;
+  updatedBy?: string;
 }
+
+export enum CandidateStatus {
+  Screening = "Screening",
+  Interviewing = "Interviewing",
+  Selected = "Selected",
+  Rejected = "Rejected",
+  New = "New",
+  InReview = "InReview",
+  Engaged = "Engaged",
+  Available = "Available",
+  Offered = "Offered",
+  Hired = "Hired"
+}
+
+

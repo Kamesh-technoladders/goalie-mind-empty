@@ -1,38 +1,36 @@
 
-import { useState } from "react";
-import { Button } from "@/components/jobs/ui/button";
-import { toast } from "sonner";
-import StepperNavigation from "./StepperNavigation";
+import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
 import { JobData } from "@/lib/types";
 import { useJobFormState } from "./hooks/useJobFormState";
-import { getTotalSteps, validateStep } from "./utils/jobFormValidation";
+import { validateStep, getTotalSteps } from "./utils/jobFormValidation";
 import { mapFormDataToJobData } from "./utils/mapFormDataToJobData";
+import StepperNavigation from "./StepperNavigation";
 import StepRenderer from "./StepRenderer";
-import { Loader2 } from "lucide-react";
-
-type JobType = "Staffing" | "Augment Staffing" | null;
-type StaffingType = "Internal" | "Talent Deployment" | null;
+import { useSelector } from "react-redux";
 
 interface JobStepperFormProps {
-  jobType: JobType;
-  staffingType: StaffingType;
+  jobType: "Internal" | "External";
   onClose: () => void;
-  editJob?: JobData | null;
-  onSave?: (job: JobData) => void;
+  editJob: JobData | null;
+  onSave: (job: JobData) => void;
 }
 
 export const JobStepperForm = ({ 
-  jobType, 
-  staffingType, 
+  jobType,
   onClose, 
-  editJob = null, 
-  onSave 
+  editJob = null,
+  onSave
 }: JobStepperFormProps) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const { formData, updateFormData } = useJobFormState({ jobType, staffingType, editJob });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const totalSteps = getTotalSteps(jobType);
   
-  const totalSteps = getTotalSteps(jobType, staffingType);
+  const { formData, updateFormData } = useJobFormState({ 
+    jobType,
+    editJob
+  });
+  const user = useSelector((state: any) => state.auth.user);
+const organization_id = useSelector((state: any) => state.auth.organization_id);
   
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -46,87 +44,79 @@ export const JobStepperForm = ({
     }
   };
   
-  const handleSubmit = async () => {
+  const handleStepChange = (step: string, data: any) => {
+    updateFormData(step, data);
+  };
+  
+  const isCurrentStepValid = validateStep(currentStep, formData, jobType);
+  console.log("Is Current Step Valid:", isCurrentStepValid);
+  
+  const handleSave = () => {
     try {
-      setIsSubmitting(true);
-      
-      // Prepare job data from form data
-      const jobData = mapFormDataToJobData(formData, editJob, staffingType);
-      
-      console.log("Job data submitted:", jobData);
-      
-      // If onSave callback is provided, use it to save/update the job
-      if (onSave) {
-        await onSave(jobData);
-      }
-      
-      // Close the form
-      onClose();
+      // Map form data to JobData structure
+      console.log("Form data being mapped:", formData);
+      const jobData = mapFormDataToJobData(formData, editJob, jobType);
+  
+      // Attach organization_id and created_by
+      const finalJobData = {
+        ...jobData,
+        organization_id,
+        created_by: user?.id, // Assuming user object has an `id`
+      };
+  
+      console.log("Final job data with organization and creator:", finalJobData);
+  
+      // Pass updated job data to parent component
+      onSave(finalJobData);
     } catch (error) {
-      console.error("Error submitting job:", error);
-      toast.error(editJob ? "Failed to update job" : "Failed to create job");
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error saving job:", error);
     }
   };
   
   return (
-    <div className="py-2">
+    <div className="space-y-8 py-4">
+      {/* Stepper Navigation */}
       <StepperNavigation 
         currentStep={currentStep} 
         totalSteps={totalSteps}
         jobType={jobType}
-        staffingType={staffingType}
       />
       
-      <div className="mt-6">
+      {/* Step Content */}
+      <div className="mt-8">
         <StepRenderer 
           currentStep={currentStep}
-          formData={formData}
-          updateFormData={updateFormData}
           jobType={jobType}
-          staffingType={staffingType}
+          formData={formData}
+          onChange={handleStepChange}
+          updateFormData={updateFormData}
         />
       </div>
       
-      <div className="flex justify-between mt-8">
+      {/* Navigation Buttons */}
+      <div className="flex justify-between pt-4">
         <Button 
           variant="outline" 
-          onClick={onClose}
-          disabled={isSubmitting}
+          onClick={currentStep === 1 ? onClose : handlePrevious}
         >
-          Discard
+          {currentStep === 1 ? "Cancel" : "Back"}
         </Button>
+        
         <div className="flex gap-2">
-          {currentStep > 1 && (
-            <Button 
-              variant="outline" 
-              onClick={handlePrevious}
-              disabled={isSubmitting}
-            >
-              Previous
-            </Button>
-          )}
           {currentStep < totalSteps ? (
             <Button 
-              onClick={handleNext}
-              disabled={!validateStep(currentStep, formData) || isSubmitting}
+              onClick={handleNext} 
+              disabled={!isCurrentStepValid}
             >
               Next
             </Button>
           ) : (
             <Button 
-              onClick={handleSubmit}
-              disabled={!validateStep(currentStep, formData) || isSubmitting}
+              onClick={handleSave}
+              disabled={!isCurrentStepValid}
+              className="bg-green-600 hover:bg-green-700"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {editJob ? "Updating..." : "Saving..."}
-                </>
-              ) : (
-                editJob ? "Update Job" : "Save & Submit"
-              )}
+              {editJob ? "Update Job" : "Create Job"}
             </Button>
           )}
         </div>

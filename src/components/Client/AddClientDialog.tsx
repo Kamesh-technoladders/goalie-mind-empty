@@ -1,15 +1,18 @@
-import React from "react";
+
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../../components/ui/form";
-import { Input } from "../../components/ui/input";
+import { Form } from "../../components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { clientFormSchema, type ClientFormValues } from "../../lib/schemas/client";
 import { toast } from "sonner";
-import  supabase  from "../../config/supabaseClient";
+import { supabase } from "../../integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import ClientBasicInfo from "./form/ClientBasicInfo";
+import ClientAddress from "./form/ClientAddress";
 
 interface AddClientDialogProps {
   open: boolean;
@@ -17,8 +20,9 @@ interface AddClientDialogProps {
 }
 
 const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
+  const [activeTab, setActiveTab] = useState("details");
   const queryClient = useQueryClient();
-  const user = useSelector((state: any) => state.auth.user); 
+  const user = useSelector((state: any) => state.auth.user);
   const organization_id = useSelector((state: any) => state.auth.organization_id);
 
   const form = useForm<ClientFormValues>({
@@ -26,16 +30,25 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
     defaultValues: {
       display_name: "",
       client_name: "",
-      contact_person_first_name: "",
-      contact_person_last_name: "",
-      email: "",
-      phone_number: "",
-      address: "",
-      country: "",
-      state: "",
-      city: "",
-      postal_code: "",
-      currency: "",
+      contacts: [{ name: "", email: "", phone: "", designation: "" }],
+      currency: "INR",
+      service_type: [],
+      payment_terms: 30,
+      internal_contact: "",
+      billing_address: {
+        street: "",
+        city: "",
+        state: "",
+        country: "",
+        zipCode: "",
+      },
+      shipping_address: {
+        street: "",
+        city: "",
+        state: "",
+        country: "",
+        zipCode: "",
+      },
     },
   });
 
@@ -46,16 +59,50 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
         return;
       }
 
-      // ✅ Add auth-related fields
-      const newClient = {
-        ...values,
-        organization_id, // ✅ Store client under correct organization
-        created_by: user.id, // ✅ Assign created_by to the logged-in user
-        updated_by: user.id, // ✅ Assign updated_by to the logged-in user
+      // Create a client object without the contacts array
+      const clientData = {
+        display_name: values.display_name,
+        client_name: values.client_name,
+        currency: values.currency,
+        service_type: values.service_type,
+        payment_terms: values.payment_terms,
+        payment_terms_custom: values.payment_terms_custom,
+        commission_type: values.commission_type,
+        commission_value: values.commission_value,
+        internal_contact: values.internal_contact,
+        billing_address: values.billing_address,
+        shipping_address: values.shipping_address,
+        organization_id,
+        created_by: user.id,
+        updated_by: user.id,
+        status: "active"
       };
 
-      const { error } = await supabase.from("hr_clients").insert([newClient]);
-      if (error) throw error;
+      // Insert the client and get the new client ID
+      const { data: clientResult, error: clientError } = await supabase
+        .from("hr_clients")
+        .insert(clientData)
+        .select("id")
+        .single();
+
+      if (clientError) throw clientError;
+
+      const clientId = clientResult.id;
+      
+      // Insert each contact with the client ID
+      const contactsToInsert = values.contacts.map(contact => ({
+        client_id: clientId,
+        name: contact.name,
+        email: contact.email || null,
+        phone: contact.phone || null,
+        designation: contact.designation || null
+      }));
+
+      const { error: contactsError } = await supabase
+        .from("hr_client_contacts")
+        .insert(contactsToInsert);
+
+      if (contactsError) throw contactsError;
 
       toast.success("Client added successfully");
       queryClient.invalidateQueries({ queryKey: ["hr_clients"] });
@@ -75,164 +122,18 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="display_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Display Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="client_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Client Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contact_person_first_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="First Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="contact_person_last_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Last Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="Email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="phone_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Phone Number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem className="col-span-2">
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Address" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Country" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input placeholder="State" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input placeholder="City" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="postal_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Postal Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Postal Code" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Currency</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Currency" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details">Client Details</TabsTrigger>
+                <TabsTrigger value="address">Address Information</TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="space-y-4 mt-4">
+                <ClientBasicInfo form={form} />
+              </TabsContent>
+              <TabsContent value="address" className="space-y-4 mt-4">
+                <ClientAddress form={form} />
+              </TabsContent>
+            </Tabs>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel

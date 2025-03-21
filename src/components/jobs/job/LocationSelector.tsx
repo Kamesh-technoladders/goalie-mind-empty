@@ -61,7 +61,7 @@ export default function LocationSelector({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
+            variant="custom"
             className="w-full justify-between h-auto min-h-10 px-3 py-2"
           >
             <div className="flex flex-wrap gap-1 items-center">

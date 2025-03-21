@@ -1,9 +1,10 @@
+
 import React, { useState } from "react";
 import { Table } from "../../components/ui/table";
 import { Checkbox } from "../../components/ui/checkbox";
 import { cn } from "../../lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import supabase from "../../config/supabaseClient";
+import { supabase } from "../../integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
@@ -11,19 +12,16 @@ import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Download, Plus } from "lucide-react";
 import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { jsPDF } from "jspdf";
+import 'jspdf-autotable';
 import AddClientDialog from "../Client/AddClientDialog";
-
-
-
 
 const ClientTable = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useSelector((state: any) => state.auth.user);
   const organization_id = useSelector((state: any) => state.auth.organization_id);
-    const [addClientOpen, setAddClientOpen] = useState(false);
+  const [addClientOpen, setAddClientOpen] = useState(false);
 
   // Fetch clients from Supabase
   const [searchQuery, setSearchQuery] = useState(""); // 🔍 Search Query
@@ -124,8 +122,9 @@ const ClientTable = () => {
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("Client Data", 14, 10);
-  
-    doc.autoTable({
+
+    // TypeScript declaration merging to add autoTable to jsPDF
+    (doc as any).autoTable({
       head: [["Client Name", "Total Projects", "Ongoing", "Completed", "Active Employees", "Revenue", "Profit", "Status"]],
       body: filteredClients?.map((client) => [
         client.display_name,
@@ -143,11 +142,16 @@ const ClientTable = () => {
     doc.save("clients_data.pdf");
   };
 
+  // Mutation for updating client status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ clientId, newStatus }: { clientId: string; newStatus: string }) => {
       const { error } = await supabase
         .from("hr_clients")
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_by: user.id,
+          organization_id: organization_id
+        })
         .eq("id", clientId);
       if (error) throw error;
     },
@@ -163,7 +167,6 @@ const ClientTable = () => {
   
 
   if (loadingClients || loadingProjects || loadingEmployees) return <div>Loading...</div>;
-
 
   return (
     <div className="w-full overflow-auto">
