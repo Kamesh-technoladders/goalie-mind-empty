@@ -239,7 +239,7 @@ const EmployeeProfile = () => {
         {/* Left Column - Profile Info */}
         <div className="md:col-span-1">
           <Card className="relative">
-            <div className="h-36 w-full bg-gradient-to-r from-blue-100 to-blue-50"></div>
+            <div className="h-36 w-full bg-gradient-custom "></div>
           
             <div className="flex flex-col items-center -mt-16 px-6 pb-6">
               <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
@@ -332,18 +332,17 @@ const EmployeeProfile = () => {
         
         {/* Right Column - Tabs & Content */}
         <div className="md:col-span-2">
-          <Tabs defaultValue="personal" onValueChange={setActiveTab}>
-            <TabsList className="mb-6 justify-between w-full">
-            <div className="flex space-x-2">
-              <TabsTrigger value="personal" className="rounded-full">Personal Information</TabsTrigger>
-              <TabsTrigger value="job" className="rounded-full">Professional Information</TabsTrigger>
-              <TabsTrigger value="salary" className="rounded-full">Salary Information</TabsTrigger>
-              <TabsTrigger value="documents" className="rounded-full">Documents</TabsTrigger>
-              </div>
-    <div>
-      <Button onClick={() => navigate(`/employee/${id}`)}>Edit Profile</Button>
-    </div>
-            </TabsList>
+        <Tabs defaultValue="personal" onValueChange={setActiveTab}>
+  <div className="mb-6 flex justify-between items-center w-full">
+    <TabsList className="flex space-x-2">
+      <TabsTrigger value="personal" className="rounded-full">Personal Information</TabsTrigger>
+      <TabsTrigger value="job" className="rounded-full">Professional Information</TabsTrigger>
+      <TabsTrigger value="salary" className="rounded-full">Salary Information</TabsTrigger>
+      <TabsTrigger value="documents" className="rounded-full">Documents</TabsTrigger>
+    </TabsList>
+    <Button onClick={() => navigate(`/employee/${id}`)}>Edit Profile</Button>
+  </div>
+            
             
             <TabsContent value="personal" className="space-y-6">
               {/* Professional Information */}
