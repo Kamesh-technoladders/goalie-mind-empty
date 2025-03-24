@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from '@/components/careerPage/ui/button';
 import { Textarea } from '@/components/careerPage/ui/textarea';
 import { Label } from '@/components/careerPage/ui/label';
-import { Input } from '@/components/careerPage/ui/input'; // Assuming there's an Input component
+import { Input } from '@/components/careerPage/ui/input';
 import { FileText, Upload, X } from 'lucide-react';
-import { isValidResumeFile } from '@/lib/validation';
+import { v4 as uuidv4 } from 'uuid';
 
 const BUCKET_NAME = 'candidate_resumes';
 
@@ -18,39 +18,54 @@ const FileUploadSection: React.FC<FormSectionProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!isValidResumeFile(file)) {
-      alert('Invalid file format. Only PDF, DOC, or DOCX files are allowed.');
-      return;
-    }
-    setUploading(true);
-  
-    const filePath = `${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file, { cacheControl: '3600', upsert: false });
-  
-    if (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload resume. Please try again.');
-      setUploading(false);
-      return;
-    }
-  
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-    
-    if (data) {
-      console.log("Uploaded file URL:", data.publicUrl);
-      updateFormData({ ...formData, resume: data.publicUrl });
-    } else {
-      alert('Failed to retrieve resume URL. Please try again.');
-    }
-    setUploading(false);
-  };
 
-  const handleCoverLetterChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateFormData({ ...formData, coverLetter: e.target.value });
+    // Validate File Size
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File size exceeds 5MB. Please upload a smaller file.");
+      return;
+    }
+
+    // Generate a unique filename
+    const fileExt = file.name.split('.').pop();
+    const uniqueFileName = `${uuidv4()}.${fileExt}`;
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadProgress(0);
+
+    // Use a progress tracking method
+    try {
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(uniqueFileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(uniqueFileName);
+      if (data) {
+        updateFormData({ ...formData, resume: data.publicUrl });
+      } else {
+        throw new Error("Failed to retrieve resume URL.");
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadError(`Upload failed: ${error.message}`);
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
+    }
   };
 
   const handleRemoveFile = async () => {
@@ -71,38 +86,6 @@ const FileUploadSection: React.FC<FormSectionProps> = ({
       </h3>
       
       <div className="space-y-6">
-       
-
-      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0">
-
-
-  {/* Current Salary */}
-  <div className="flex-1">
-    <Label htmlFor="currentSalary" className="text-sm">Current Salary</Label>
-    <Input
-      id="currentSalary"
-      type="number"
-      value={formData.currentSalary || ""}
-      onChange={(e) => updateFormData({ ...formData, currentSalary: e.target.value })}
-      placeholder="Enter current salary in LPA"
-      className="w-full"
-    />
-  </div>
-
-  {/* Expected Salary */}
-  <div className="flex-1">
-    <Label htmlFor="expectedSalary" className="text-sm">Expected Salary</Label>
-    <Input
-      id="expectedSalary"
-      type="number"
-      value={formData.expectedSalary || ""}
-      onChange={(e) => updateFormData({ ...formData, expectedSalary: e.target.value })}
-      placeholder="Enter expected salary in LPA"
-      className="w-full"
-    />
-  </div>
-</div>
-
         <div className="space-y-2">
           <Label htmlFor="resume" className="flex items-center gap-1">
             Resume <span className="text-red-500">*</span>
@@ -116,7 +99,7 @@ const FileUploadSection: React.FC<FormSectionProps> = ({
               accept=".pdf,.doc,.docx"
               className="hidden"
             />
-            
+
             {formData.resume ? (
               <div className="border border-gray-200 rounded-md p-4 bg-slate-50 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -151,7 +134,9 @@ const FileUploadSection: React.FC<FormSectionProps> = ({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <h4 className="mt-2 font-medium">{uploading ? 'Uploading...' : 'Upload your resume'}</h4>
+                <h4 className="mt-2 font-medium">
+                  {uploading ? `Uploading... ${uploadProgress}%` : 'Upload your resume'}
+                </h4>
                 <p className="text-sm text-gray-500 mt-1">
                   PDF, DOC, or DOCX (Max 5MB)
                 </p>
@@ -167,6 +152,10 @@ const FileUploadSection: React.FC<FormSectionProps> = ({
               </div>
             )}
 
+            {uploadError && (
+              <p className="text-red-500 text-sm mt-1">{uploadError}</p>
+            )}
+
             {showValidationErrors && !formData.resume && (
               <p className="text-red-500 text-sm mt-1">Resume is required</p>
             )}
@@ -178,7 +167,7 @@ const FileUploadSection: React.FC<FormSectionProps> = ({
           <Textarea
             id="coverLetter"
             value={formData.coverLetter}
-            onChange={handleCoverLetterChange}
+            onChange={(e) => updateFormData({ ...formData, coverLetter: e.target.value })}
             placeholder="Write a brief cover letter explaining why you're interested in this position..."
             rows={6}
           />
