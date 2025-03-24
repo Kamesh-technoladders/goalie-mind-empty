@@ -12,7 +12,7 @@ const MainLayout = () => {
   const [isMobile] = useMediaQuery("(max-width: 768px)"); // ✅ Detect mobile screens\
   
   const user = useSelector((state) => state.auth.user); 
-  console.log("loggeduser", user)
+  // console.log("loggeduser", user)
 
   // ✅ Dynamically Adjust Sidebar Width Based on Expansion and Screen Size
   const sidebarWidth = isMobile ? (isSidebarExpanded ? "200px" : "0px") : isSidebarExpanded ? "200px" : "80px";

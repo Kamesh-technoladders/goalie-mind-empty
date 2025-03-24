@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
 import { Form } from "../../components/ui/form";
@@ -13,13 +12,15 @@ import { useSelector } from "react-redux";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import ClientBasicInfo from "./form/ClientBasicInfo";
 import ClientAddress from "./form/ClientAddress";
+import ContactList from "./form/ContactList";
 
 interface AddClientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  clientToEdit?: any;
 }
 
-const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
+const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogProps) => {
   const [activeTab, setActiveTab] = useState("details");
   const queryClient = useQueryClient();
   const user = useSelector((state: any) => state.auth.user);
@@ -30,27 +31,52 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
     defaultValues: {
       display_name: "",
       client_name: "",
+      end_client: "",
       contacts: [{ name: "", email: "", phone: "", designation: "" }],
       currency: "INR",
       service_type: [],
       payment_terms: 30,
       internal_contact: "",
-      billing_address: {
-        street: "",
-        city: "",
-        state: "",
-        country: "",
-        zipCode: "",
-      },
-      shipping_address: {
-        street: "",
-        city: "",
-        state: "",
-        country: "",
-        zipCode: "",
-      },
+      billing_address: { street: "", city: "", state: "", country: "", zipCode: "" },
+      shipping_address: { street: "", city: "", state: "", country: "", zipCode: "" },
     },
   });
+
+  useEffect(() => {
+    if (clientToEdit) {
+      const fetchClientDetails = async () => {
+        const { data: clientData, error: clientError } = await supabase
+          .from("hr_clients")
+          .select("*")
+          .eq("id", clientToEdit.id)
+          .single();
+
+        const { data: contactsData, error: contactsError } = await supabase
+          .from("hr_client_contacts")
+          .select("*")
+          .eq("client_id", clientToEdit.id);
+
+        if (clientError || contactsError) {
+          toast.error("Failed to load client details");
+          return;
+        }
+
+        form.reset({
+          display_name: clientData.display_name,
+          client_name: clientData.client_name || "",
+          end_client: clientData.end_client || "",
+          contacts: contactsData.length > 0 ? contactsData : [{ name: "", email: "", phone: "", designation: "" }],
+          currency: clientData.currency || "INR",
+          service_type: clientData.service_type || [],
+          payment_terms: clientData.payment_terms || 30,
+          internal_contact: clientData.internal_contact || "",
+          billing_address: clientData.billing_address || { street: "", city: "", state: "", country: "", zipCode: "" },
+          shipping_address: clientData.shipping_address || { street: "", city: "", state: "", country: "", zipCode: "" },
+        });
+      };
+      fetchClientDetails();
+    }
+  }, [clientToEdit, form]);
 
   const onSubmit = async (values: ClientFormValues) => {
     try {
@@ -59,86 +85,167 @@ const AddClientDialog = ({ open, onOpenChange }: AddClientDialogProps) => {
         return;
       }
 
-      // Create a client object without the contacts array
-      const clientData = {
-        display_name: values.display_name,
-        client_name: values.client_name,
-        currency: values.currency,
-        service_type: values.service_type,
-        payment_terms: values.payment_terms,
-        payment_terms_custom: values.payment_terms_custom,
-        commission_type: values.commission_type,
-        commission_value: values.commission_value,
-        internal_contact: values.internal_contact,
-        billing_address: values.billing_address,
-        shipping_address: values.shipping_address,
-        organization_id,
-        created_by: user.id,
-        updated_by: user.id,
-        status: "active"
-      };
+      if (clientToEdit) {
+        const clientData = {
+          display_name: values.display_name,
+          client_name: values.client_name,
+          end_client: values.end_client,
+          currency: values.currency,
+          service_type: values.service_type,
+          payment_terms: values.payment_terms,
+          internal_contact: values.internal_contact,
+          billing_address: values.billing_address,
+          shipping_address: values.shipping_address,
+          updated_by: user.id,
+          status: "active",
+        };
 
-      // Insert the client and get the new client ID
-      const { data: clientResult, error: clientError } = await supabase
-        .from("hr_clients")
-        .insert(clientData)
-        .select("id")
-        .single();
+        const { error: clientError } = await supabase
+          .from("hr_clients")
+          .update(clientData)
+          .eq("id", clientToEdit.id);
 
-      if (clientError) throw clientError;
+        if (clientError) throw clientError;
 
-      const clientId = clientResult.id;
-      
-      // Insert each contact with the client ID
-      const contactsToInsert = values.contacts.map(contact => ({
-        client_id: clientId,
-        name: contact.name,
-        email: contact.email || null,
-        phone: contact.phone || null,
-        designation: contact.designation || null
-      }));
+        await supabase.from("hr_client_contacts").delete().eq("client_id", clientToEdit.id);
 
-      const { error: contactsError } = await supabase
-        .from("hr_client_contacts")
-        .insert(contactsToInsert);
+        const contactsToInsert = values.contacts.map((contact) => ({
+          client_id: clientToEdit.id,
+          name: contact.name,
+          email: contact.email || null,
+          phone: contact.phone || null,
+          designation: contact.designation || null,
+        }));
 
-      if (contactsError) throw contactsError;
+        const { error: contactsError } = await supabase
+          .from("hr_client_contacts")
+          .insert(contactsToInsert);
 
-      toast.success("Client added successfully");
+        if (contactsError) throw contactsError;
+
+        toast.success("Client updated successfully");
+      } else {
+        const clientData = {
+          display_name: values.display_name,
+          client_name: values.client_name,
+          end_client: values.end_client,
+          currency: values.currency,
+          service_type: values.service_type,
+          payment_terms: values.payment_terms,
+          internal_contact: values.internal_contact,
+          billing_address: values.billing_address,
+          shipping_address: values.shipping_address,
+          organization_id,
+          created_by: user.id,
+          updated_by: user.id,
+          status: "active",
+        };
+
+        const { data: clientResult, error: clientError } = await supabase
+          .from("hr_clients")
+          .insert(clientData)
+          .select("id")
+          .single();
+
+        if (clientError) throw clientError;
+
+        const clientId = clientResult.id;
+        const contactsToInsert = values.contacts.map((contact) => ({
+          client_id: clientId,
+          name: contact.name,
+          email: contact.email || null,
+          phone: contact.phone || null,
+          designation: contact.designation || null,
+        }));
+
+        const { error: contactsError } = await supabase
+          .from("hr_client_contacts")
+          .insert(contactsToInsert);
+
+        if (contactsError) throw contactsError;
+
+        toast.success("Client added successfully");
+      }
+
       queryClient.invalidateQueries({ queryKey: ["hr_clients"] });
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      console.error("Error adding client:", error);
-      toast.error("Failed to add client");
+      console.error("Error saving client:", error);
+      toast.error(clientToEdit ? "Failed to update client" : "Failed to add client");
+    }
+  };
+
+  // Define required fields for each tab
+  const isDetailsTabValid = () => {
+    const values = form.getValues();
+    return (
+      values.display_name.trim() !== "" && // Required
+      values.service_type.length > 0 // At least one service type selected
+    );
+  };
+
+  const isContactsTabValid = () => {
+    const values = form.getValues();
+    return values.contacts.length > 0 && values.contacts.every(contact => contact.name.trim() !== ""); // At least one contact with a name
+  };
+
+  const handleNext = () => {
+    if (activeTab === "details" && isDetailsTabValid()) {
+      setActiveTab("contacts");
+    } else if (activeTab === "contacts" && isContactsTabValid()) {
+      setActiveTab("address");
+    } else {
+      toast.error("Please fill all required fields before proceeding.");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Add New Client</DialogTitle>
+      <DialogContent className="max-w-2xl p-4">
+        <DialogHeader className="mb-2">
+          <DialogTitle className="text-lg font-semibold">
+            {clientToEdit ? "Edit Client" : "Add New Client"}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="details">Client Details</TabsTrigger>
-                <TabsTrigger value="address">Address Information</TabsTrigger>
-              </TabsList>
-              <TabsContent value="details" className="space-y-4 mt-4">
-                <ClientBasicInfo form={form} />
-              </TabsContent>
-              <TabsContent value="address" className="space-y-4 mt-4">
-                <ClientAddress form={form} />
-              </TabsContent>
-            </Tabs>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+            <div className="max-h-[60vh] overflow-y-auto pr-2">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-3 mb-2">
+                  <TabsTrigger value="details" className="text-sm">Client Details</TabsTrigger>
+                  <TabsTrigger value="contacts" className="text-sm">Contacts</TabsTrigger>
+                  <TabsTrigger value="address" className="text-sm">Address Info</TabsTrigger>
+                </TabsList>
+                <TabsContent value="details" className="space-y-2">
+                  <ClientBasicInfo form={form} />
+                </TabsContent>
+                <TabsContent value="contacts" className="space-y-2">
+                  <ContactList form={form} />
+                </TabsContent>
+                <TabsContent value="address" className="space-y-2">
+                  <ClientAddress form={form} />
+                </TabsContent>
+              </Tabs>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit">Save Client</Button>
+              {activeTab === "address" ? (
+                <Button type="submit" size="sm">
+                  {clientToEdit ? "Update" : "Save"}
+                </Button>
+              ) : (
+                <Button type="button" size="sm" onClick={handleNext}>
+                  Next
+                </Button>
+              )}
             </div>
           </form>
         </Form>

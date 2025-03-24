@@ -972,12 +972,6 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
       console.error("File upload failed:", error);
     }
   };
-  
- 
-  
-  
-  
-  
 
   const handleBankUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,

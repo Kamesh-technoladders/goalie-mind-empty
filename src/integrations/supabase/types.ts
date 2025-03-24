@@ -142,6 +142,7 @@ export type Database = {
           total_projects: number | null
           updated_at: string | null
           updated_by: string | null
+          end_client: string | null
         }
         Insert: {
           active_employees?: number | null
@@ -177,6 +178,7 @@ export type Database = {
           total_projects?: number | null
           updated_at?: string | null
           updated_by?: string | null
+          end_client: string | null
         }
         Update: {
           active_employees?: number | null
@@ -212,6 +214,7 @@ export type Database = {
           total_projects?: number | null
           updated_at?: string | null
           updated_by?: string | null
+          end_client: string | null
         }
         Relationships: [
           {
