@@ -18,9 +18,11 @@ import { Button } from "@/components/ui/button";
 import { JobData, CandidateStatus, Candidate } from "@/lib/types";
 import BasicInformationTab from "./BasicInformationTab";
 import SkillInformationTab from "./SkillInformationTab";
-import { createCandidate, updateCandidate, updateCandidateSkillRatings } from "@/services/candidateService";
+import { createCandidate, updateCandidate, updateCandidateSkillRatings, eidtCandidate, editCandidate } from "@/services/candidateService";
 import { useSelector } from "react-redux";
 import { supabase } from "@/integrations/supabase/client";
+import { getJobById } from "@/services/jobService";
+import { useQuery } from "@tanstack/react-query";
 
 interface AddCandidateDrawerProps {
   job: JobData;
@@ -54,8 +56,21 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
   const [candidateId, setCandidateId] = useState<string | null>(candidate?.id || null);
+  const [localCandidateData, setLocalCandidateData] = useState<CandidateFormData | null>(null);
   const user = useSelector((state: any) => state.auth.user);
   const isEditMode = !!candidate;
+
+  // Fetch job data
+  const { 
+    data: jobs, 
+    isLoading: jobLoading, 
+    error: jobError,
+    refetch: refetchJob
+  } = useQuery({
+    queryKey: ['job', job.id],
+    queryFn: () => getJobById(job.id || ""),
+    enabled: !!job.id,
+  });
 
   const controlledOpen = open !== undefined ? open : isOpen;
   const controlledOnOpenChange = onOpenChange || setIsOpen;
@@ -106,9 +121,7 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
 
   useEffect(() => {
     if (candidate && isEditMode) {
-      console.log("Setting form values for candidate:", candidate);
       setCandidateId(candidate.id);
-      
       basicInfoForm.reset({
         firstName: candidate.name.split(" ")[0] || "",
         lastName: candidate.name.split(" ").slice(1).join(" ") || "",
@@ -130,70 +143,31 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
         skills: candidate.skill_ratings || candidate.skills || []
       });
 
-      skillsForm.reset({
-        skills: candidate.skill_ratings || candidate.skills || []
-      });
+      // Fallback to job skills if candidate skills are empty
+      if (!candidate.skills || candidate.skills.length === 0) {
+        const defaultSkills = jobs?.skills?.map(skill => ({ name: skill, rating: 0 })) || [];
+        skillsForm.reset({ skills: defaultSkills });
+      } else {
+        skillsForm.reset({ skills: candidate.skill_ratings || candidate.skills || [] });
+      }
     }
-  }, [candidate, isEditMode, basicInfoForm, skillsForm]);
+  }, [candidate, isEditMode, basicInfoForm, skillsForm, jobs]);
 
   const handleClose = () => {
     basicInfoForm.reset();
     skillsForm.reset();
     setCandidateId(isEditMode ? candidate?.id : null);
+    setLocalCandidateData(null);
     setActiveTab("basic-info");
     controlledOnOpenChange(false);
   };
 
   const handleSaveBasicInfo = async (data: CandidateFormData) => {
     try {
-      if (!job.id) {
-        toast.error("Job ID is missing");
-        return;
-      }
-
-      const updatedFrom = user?.user_metadata
-        ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-        : candidate?.appliedFrom || "Unknown";
-
-      const candidateData = {
-        id: candidateId || "",
-        name: `${data.firstName} ${data.lastName}`,
-        status: isEditMode ? (candidate?.status || "Screening") : "Screening" as CandidateStatus,
-        experience: `${data.totalExperience} years`,
-        matchScore: isEditMode ? (candidate?.matchScore || 0) : 0,
-        appliedDate: isEditMode ? (candidate?.appliedDate || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
-        skills: isEditMode ? (candidate?.skills || []) : [],
-        email: data.email,
-        phone: data.phone,
-        currentSalary: data.currentSalary,
-        expectedSalary: data.expectedSalary,
-        location: data.currentLocation || candidate?.location || "",
-        updatedFrom,
-        resumeUrl: data.resume,
-        metadata: {
-          currentLocation: data.currentLocation,
-          preferredLocations: data.preferredLocations,
-          totalExperience: data.totalExperience,
-          relevantExperience: data.relevantExperience,
-          currentSalary: data.currentSalary,
-          expectedSalary: data.expectedSalary,
-          resume_url: data.resume,
-        },
-        skill_ratings: isEditMode ? (candidate?.skill_ratings || []) : []
-      };
-
-      console.log("Basic Info Payload:", candidateData);
-
-      if (!candidateId || !isEditMode) {
-        const newCandidate = await createCandidate(job.id, candidateData);
-        setCandidateId(newCandidate.id);
-        toast.success("Basic information saved successfully");
-      } else {
-        await updateCandidate(candidateId, candidateData);
-        toast.success("Basic information updated successfully");
-      }
-
+      // Save data locally without persisting
+      setLocalCandidateData(data);
       setActiveTab("skills-info");
+      toast.success("Basic information saved locally");
     } catch (error) {
       console.error("Error saving candidate basic info:", error);
       toast.error("Failed to save basic information");
@@ -202,53 +176,62 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
 
   const handleSaveSkills = async (data: CandidateFormData) => {
     try {
-      if (!candidateId || !job.id) {
-        toast.error("Candidate ID or Job ID is missing");
+      if (!job.id) {
+        toast.error("Job ID is missing");
         return;
       }
-
-      // Update skill ratings
-      await updateCandidateSkillRatings(candidateId, data.skills);
-
-      // Calculate match score
-      const matchScore = calculateMatchScore(data.skills);
-
-      // Fetch current candidate data to preserve existing fields
-      const { data: currentCandidateData, error: fetchError } = await supabase
-        .from('hr_job_candidates')
-        .select('*')
-        .eq('id', candidateId)
-        .single();
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      // Prepare the full candidate object with updated skills and match score
-      const updatedCandidateData = {
-        ...currentCandidateData,
-        match_score: matchScore,
+  
+      // Use local candidate data if available
+      const candidateData = localCandidateData || basicInfoForm.getValues();
+  
+      // Ensure skill_ratings is populated
+      const skillsToSave = data.skills.length > 0 ? data.skills : [];
+  
+      const updatedFrom = user?.user_metadata
+        ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+        : candidate?.appliedFrom || "Unknown";
+  
+      const payload: CandidateData = {
+        id: candidateId || "",
+        name: `${candidateData.firstName} ${candidateData.lastName}`,
+        status: isEditMode ? (candidate?.status || "Screening") : "Screening",
+        experience: `${candidateData.totalExperience} years`,
+        matchScore: isEditMode ? (candidate?.matchScore || 0) : 0,
+        appliedDate: isEditMode ? (candidate?.appliedDate || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+        skills: skillsToSave.map(skill => JSON.stringify(skill)), // Convert to string array
+        email: candidateData.email,
+        phone: candidateData.phone,
+        currentSalary: candidateData.currentSalary,
+        expectedSalary: candidateData.expectedSalary,
+        location: candidateData.currentLocation || candidate?.location || "",
+        resumeUrl: candidateData.resume,
+        metadata: {
+          currentLocation: candidateData.currentLocation,
+          preferredLocations: candidateData.preferredLocations,
+          totalExperience: candidateData.totalExperience,
+          relevantExperience: candidateData.relevantExperience,
+          currentSalary: candidateData.currentSalary,
+          expectedSalary: candidateData.expectedSalary,
+          resume_url: candidateData.resume,
+        },
+        skillRatings: skillsToSave, // Explicitly set skillRatings
       };
-
-      console.log("Skills Save Payload:", updatedCandidateData);
-
-      // Update the candidate with all preserved fields
-      await updateCandidate(candidateId, updatedCandidateData);
-
-      toast.success("Skills updated successfully");
+  
+      if (!candidateId || !isEditMode) {
+        const newCandidate = await createCandidate(job.id, payload);
+        setCandidateId(newCandidate.id);
+        toast.success("Candidate created successfully");
+      } else {
+        await editCandidate(candidateId, payload);
+        toast.success("Candidate updated successfully");
+      }
+  
       onCandidateAdded();
       handleClose();
     } catch (error) {
       console.error("Error saving candidate skills:", error);
-      toast.error("Failed to save skills information");
+      toast.error("Failed to save candidate information");
     }
-  };
-
-  const calculateMatchScore = (skills: Array<{name: string, rating: number}>) => {
-    if (skills.length === 0) return 0;
-    const totalPossibleScore = skills.length * 5;
-    const actualScore = skills.reduce((sum, skill) => sum + skill.rating, 0);
-    return Math.round((actualScore / totalPossibleScore) * 100);
   };
 
   return (
@@ -271,7 +254,7 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
             <TabsTrigger value="basic-info">Basic Information</TabsTrigger>
             <TabsTrigger 
               value="skills-info" 
-              disabled={!candidateId}
+              disabled={!localCandidateData && !isEditMode}
             >
               Skill Information
             </TabsTrigger>
@@ -288,7 +271,7 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
           <TabsContent value="skills-info">
             <SkillInformationTab 
               form={skillsForm}
-              jobSkills={job.skills || []}
+              jobSkills={jobs?.skills || []}
               onSave={(data) => handleSaveSkills(data)}
               onCancel={handleClose}
             />

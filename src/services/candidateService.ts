@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CandidateStatus } from "@/lib/types";
 
+
 export interface HrJobCandidate {
   location: any;
   id: string;
@@ -19,7 +20,7 @@ export interface HrJobCandidate {
   updated_at: string;
   // Additional fields
   metadata: Record<string, any> | null;
-  skill_ratings: Array<{name: string, rating: number}> | null;
+  skill_ratings: Record<string, any> | Array<{ name: string; rating: number }> | null; 
   applied_from?: string;
   expected_salary: any;
   current_salary: any;
@@ -48,8 +49,8 @@ export interface CandidateData {
 // Map database candidate to application candidate model
 // ✅ FIX: Include missing fields
 export const mapDbCandidateToData = (candidate: HrJobCandidate): CandidateData => {
-  console.log("Candidate from DB:", candidate); // ✅ Debugging log
-  
+  console.log("Candidate from DB:", candidate); // Debug log
+
   return {
     id: candidate.id,
     name: candidate.name,
@@ -62,16 +63,17 @@ export const mapDbCandidateToData = (candidate: HrJobCandidate): CandidateData =
     phone: candidate.phone || undefined,
     resumeUrl: candidate.resume_url || undefined,
     metadata: candidate.metadata || undefined,
-    skillRatings: candidate.skill_ratings || undefined,
-    appliedFrom: candidate.applied_from ?? undefined, // ✅ Ensure mapping
-    currentSalary: candidate.current_salary ?? undefined, // ✅ Ensure mapping
-    expectedSalary: candidate.expected_salary ?? undefined, // ✅ Ensure mapping
-    location: candidate.location ?? undefined, // ✅ Ensure mapping
+    skillRatings: candidate.skill_ratings || undefined, // This can now be of type Record<string, any>
+    appliedFrom: candidate.applied_from ?? undefined,
+    currentSalary: candidate.current_salary ?? undefined,
+    expectedSalary: candidate.expected_salary ?? undefined,
+    location: candidate.location ?? undefined,
   };
 };
 
-
 export const mapCandidateToDbData = (candidate: CandidateData): Partial<HrJobCandidate> => {
+  console.log("skillRatings in CandidateData:", candidate.skillRatings); // Debug log
+
   return {
     name: candidate.name,
     status: candidate.status,
@@ -83,10 +85,10 @@ export const mapCandidateToDbData = (candidate: CandidateData): Partial<HrJobCan
     phone: candidate.phone || null,
     resume_url: candidate.resumeUrl || null,
     metadata: candidate.metadata || null,
-    skill_ratings: candidate.skillRatings || null,
-    applied_from: candidate.appliedFrom || null, // ✅ Fix
-    current_salary: candidate.currentSalary || null, // ✅ Fix
-    expected_salary: candidate.expectedSalary || null, // ✅ Fix
+    skill_ratings: candidate.skillRatings || null, // This can now be of type Record<string, any>
+    applied_from: candidate.appliedFrom || null,
+    current_salary: candidate.currentSalary || null,
+    expected_salary: candidate.expectedSalary || null,
   };
 };
 
@@ -151,6 +153,29 @@ export const updateCandidate = async (id: string, candidate: CandidateData): Pro
     const dbCandidate = mapCandidateToDbData(candidate);
     
     // Using raw SQL query since the table isn't in the TypeScript types yet
+    const { data, error } = await supabase
+      .from('hr_job_candidates')
+      .update(dbCandidate)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error("Error updating candidate:", error);
+      throw error;
+    }
+
+    return mapDbCandidateToData(data as HrJobCandidate);
+  } catch (error) {
+    console.error(`Failed to update candidate with ID ${id}:`, error);
+    throw error;
+  }
+};
+export const editCandidate = async (id: string, candidate: CandidateData): Promise<CandidateData> => {
+  try {
+    const dbCandidate = mapCandidateToDbData(candidate);
+    console.log("Payload being sent to DB:", dbCandidate); // Debug log
+
     const { data, error } = await supabase
       .from('hr_job_candidates')
       .update(dbCandidate)

@@ -19,6 +19,7 @@ import EmployeeForm from "./pages/EmployeeForm";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import GoalPage from "./pages/goals/Index";
 import GoalView from "./pages/goals/EmployeeView";
+import EmployeeGoalView from "./components/goals/employee/EmployeeGoalDashboard"
 import Jobs from "./pages/jobs/Jobs";
 import JobView from "./pages/jobs/JobView";
 import JobDescription from "./pages/jobs/JobDescription";
@@ -76,6 +77,7 @@ function App() {
             {/* Goals */}
             <Route path="/goals" element={<GoalPage />} />
             <Route path="/goalsview" element={<GoalView />} />
+            <Route path="goalview" element={<EmployeeGoalView/>} />
 
             {/* Jobs */}
             <Route path="/jobs" element={<Jobs />} />

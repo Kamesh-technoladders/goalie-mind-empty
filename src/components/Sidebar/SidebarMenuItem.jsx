@@ -3,6 +3,7 @@ import { IoDiamondOutline } from "react-icons/io5";
 import { SiAwsorganizations } from "react-icons/si";
 import { MdDashboardCustomize, MdOutlineManageAccounts, MdOutlineEmojiPeople} from "react-icons/md";
 import { ImProfile } from "react-icons/im";
+import { GoGoal } from "react-icons/go";
 
 
 const menuItemsByRole = {
@@ -16,7 +17,7 @@ const menuItemsByRole = {
     { icon: FiUsers, label: "Employees", path: "/employee" },
     { icon: MdOutlineEmojiPeople, label: "Clients", path: "/clients" },
     { icon: FiBriefcase, label: "Jobs", path: "/jobs" },
-    { icon: FiCheckSquare, label: "Goals", path: "/goals" },
+    { icon: GoGoal, label: "Goals", path: "/goals" },
     { icon: ImProfile, label: "My Profile", path: "/profile" },
     { icon: MdOutlineManageAccounts, label: "User Management", path: "/user-management" },
     { icon: FiSettings, label: "Settings", path: "#" },
@@ -26,7 +27,7 @@ const menuItemsByRole = {
     { icon: FiUsers, label: "Employees", path: "/employee" },
     { icon: MdOutlineEmojiPeople, label: "Clients", path: "/clients" },
     { icon: FiBriefcase, label: "Jobs", path: "/jobs" },
-    { icon: FiCheckSquare, label: "Goals", path: "/goals" },
+    { icon: GoGoal, label: "Goals", path: "/goals" },
     { icon: ImProfile, label: "My Profile", path: "/profile" },
     // { icon: MdOutlineManageAccounts, label: "User Management", path: "/user-management" },
     { icon: FiSettings, label: "Settings", path: "#" },
@@ -35,6 +36,7 @@ const menuItemsByRole = {
     { icon: MdDashboardCustomize, label: "Dashboard", path: "/dashboard" },
     { icon: FiBriefcase, label: "Jobs", path: "/jobs" },
     { icon: ImProfile, label: "My Profile", path: "/profile" },
+    { icon: GoGoal, label: "Goals", path: "/goalview" },
     { icon: FiCheckSquare, label: "My Tasks", path: "#" },
   ],
 };

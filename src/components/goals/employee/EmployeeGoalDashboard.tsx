@@ -1,5 +1,5 @@
-
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getEmployeeGoals } from "@/lib/supabaseData";
 import { Employee, GoalWithDetails } from "@/types/goal";
@@ -11,19 +11,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
 interface EmployeeGoalDashboardProps {
-  employee: Employee;
+  employee?: Employee; // Make employee optional
 }
 
 const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({ employee }) => {
+  const user = useSelector((state: any) => state.auth.user);
   const [activeTab, setActiveTab] = useState("all");
+
+  const employeeId = employee?.id || user.id; // Use employee.id if provided, otherwise use user.id
 
   const {
     data: goals,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["employeeGoals", employee.id],
-    queryFn: () => getEmployeeGoals(employee.id),
+    queryKey: ["employeeGoals", employeeId],
+    queryFn: () => getEmployeeGoals(employeeId),
   });
 
   if (error) {
@@ -170,23 +173,23 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({ employee 
         </div>
 
         <TabsContent value="all" className="mt-0">
-          <GoalsList goals={goals} isLoading={isLoading} employee={employee} />
+          <GoalsList goals={goals} isLoading={isLoading} employee={employee || user} />
         </TabsContent>
         
         <TabsContent value="pending" className="mt-0">
-          <GoalsList goals={getGoalsByStatus("pending")} isLoading={isLoading} employee={employee} />
+          <GoalsList goals={getGoalsByStatus("pending")} isLoading={isLoading} employee={employee || user} />
         </TabsContent>
         
         <TabsContent value="in-progress" className="mt-0">
-          <GoalsList goals={getGoalsByStatus("in-progress")} isLoading={isLoading} employee={employee} />
+          <GoalsList goals={getGoalsByStatus("in-progress")} isLoading={isLoading} employee={employee || user} />
         </TabsContent>
         
         <TabsContent value="completed" className="mt-0">
-          <GoalsList goals={getGoalsByStatus("completed")} isLoading={isLoading} employee={employee} />
+          <GoalsList goals={getGoalsByStatus("completed")} isLoading={isLoading} employee={employee || user} />
         </TabsContent>
         
         <TabsContent value="overdue" className="mt-0">
-          <GoalsList goals={getGoalsByStatus("overdue")} isLoading={isLoading} employee={employee} />
+          <GoalsList goals={getGoalsByStatus("overdue")} isLoading={isLoading} employee={employee || user} />
         </TabsContent>
         
         {sectors.map((sector) => (
@@ -194,7 +197,7 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({ employee 
             <GoalsList
               goals={getGoalsBySector(sector)}
               isLoading={isLoading}
-              employee={employee}
+              employee={employee || user}
               title={`${sector} Goals`}
             />
           </TabsContent>
