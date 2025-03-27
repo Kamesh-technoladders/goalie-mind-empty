@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Tooltip,
@@ -16,18 +15,27 @@ interface ProgressColumnProps {
   subStatus?: Partial<SubStatus> | null;
 }
 
-// Helper functions to get color and status information
-const getDummyStageColor = (stageLabel: string) => {
-  const stageColors: Record<string, string> = {
+// Get color for a stage based on status data
+const getStageColor = (
+  stageName: string, 
+  mainStatus?: Partial<MainStatus> | null
+): string => {
+  if (mainStatus?.name === stageName && mainStatus?.color) {
+    return mainStatus.color;
+  }
+  
+  // Default colors if no custom color is provided
+  const defaultColors: Record<string, string> = {
     'Screening': '#1E88E5',
     'Interview': '#E65100',
     'Offer': '#FFA000',
     'Hired': '#00897B',
     'Joined': '#2E7D32',
+    'Rejected': '#D32F2F',
     'Not Started': '#9CA3AF'
   };
   
-  return stageColors[stageLabel] || '#9CA3AF';
+  return defaultColors[stageName] || '#9CA3AF';
 };
 
 export const ProgressColumn = ({ 
@@ -36,6 +44,7 @@ export const ProgressColumn = ({
   mainStatus, 
   subStatus 
 }: ProgressColumnProps) => {
+  // Define standard recruitment stages
   const stages = [
     { key: 'screening', label: 'Screening', color: 'bg-blue-500' },
     { key: 'interview', label: 'Interview', color: 'bg-yellow-500' },
@@ -44,25 +53,30 @@ export const ProgressColumn = ({
     { key: 'joined', label: 'Joined', color: 'bg-emerald-700' }
   ] as const;
   
-  const getCurrentStage = () => {
+  // Determine the current stage based on available data
+  const getCurrentStage = (): string => {
     // If we have explicit main status, use that
     if (mainStatus?.name) {
       return mainStatus.name;
     }
     
     // Otherwise, determine from progress
-    for (let i = stages.length - 1; i >= 0; i--) {
-      if (progress[stages[i].key]) {
-        return stages[i].label;
+    if (progress) {
+      for (let i = stages.length - 1; i >= 0; i--) {
+        if (progress[stages[i].key]) {
+          return stages[i].label;
+        }
       }
     }
+    
+    // Default if no data
     return 'Not Started';
   };
   
   const currentStage = getCurrentStage();
 
   // Format the display status text
-  const getStatusDisplayText = () => {
+  const getStatusDisplayText = (): string => {
     if (mainStatus && subStatus) {
       return `${mainStatus.name} (${subStatus.name})`;
     } else if (currentStatus) {
@@ -71,9 +85,18 @@ export const ProgressColumn = ({
     return currentStage;
   };
   
-  // NEW: Determine if a stage should be colored based on the current main status
-  const shouldColorStage = (stageIndex: number) => {
-    if (!mainStatus) return false;
+  // Determine if a stage should be colored based on the current main status
+  const shouldColorStage = (stageIndex: number): boolean => {
+    if (!mainStatus) {
+      // If no main status is provided, use progress
+      if (progress) {
+        const currentStageIndex = stages.findIndex(stage => 
+          stage.label === currentStage
+        );
+        return stageIndex <= currentStageIndex;
+      }
+      return false;
+    }
     
     // Find the index of the current main status in our stages array
     const currentMainStatusIndex = stages.findIndex(stage => 
@@ -90,8 +113,13 @@ export const ProgressColumn = ({
         {stages.map((stage, index) => {
           // Check if this stage corresponds to the current main status
           const isCurrentMainStage = mainStatus?.name === stage.label;
-          // NEW: Check if this stage should be colored based on progress
+          // Check if this stage should be colored based on progress
           const shouldColor = shouldColorStage(index);
+          
+          // Get custom color from status if available
+          const customColor = isCurrentMainStage && mainStatus?.color 
+            ? `bg-[${mainStatus.color}]` 
+            : stage.color;
 
           return (
             <React.Fragment key={stage.key}>
@@ -101,8 +129,8 @@ export const ProgressColumn = ({
                     <div className="group relative cursor-pointer transition-all duration-150">
                       <div
                         className={`h-1 w-2.5 rounded-sm transition-all ${
-                          progress[stage.key] || isCurrentMainStage || shouldColor
-                            ? `${stage.color}`
+                          progress?.[stage.key] || isCurrentMainStage || shouldColor
+                            ? customColor
                             : "bg-gray-200"
                         } hover:opacity-80`}
                       />
@@ -124,7 +152,7 @@ export const ProgressColumn = ({
               </TooltipProvider>
               {index < stages.length - 1 && (
                 <div className={`h-px w-1 ${
-                  (progress[stage.key] && progress[stages[index + 1].key]) || 
+                  (progress?.[stage.key] && progress?.[stages[index + 1].key]) || 
                   (shouldColor && shouldColorStage(index + 1))
                     ? "bg-gray-400"
                     : "bg-gray-200"
@@ -140,7 +168,7 @@ export const ProgressColumn = ({
         <div 
           className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse"
           style={{
-            backgroundColor: mainStatus?.color || getDummyStageColor(currentStage)
+            backgroundColor: mainStatus?.color || getStageColor(currentStage)
           }}
         />
         <span className="text-xs text-gray-600">

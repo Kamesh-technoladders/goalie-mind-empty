@@ -1,3 +1,4 @@
+
 import React from "react";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ interface ValidateResumeButtonProps {
   isValidated: boolean;
   candidateId: number;
   onValidate: (candidateId: number) => void;
-  isLoading?: boolean; // Add isLoading prop
+  isLoading?: boolean;
 }
 
 const ValidateResumeButton = ({

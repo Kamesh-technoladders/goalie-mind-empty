@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,9 +23,9 @@ import EditCandidateDrawer from "@/components/jobs/job/candidate/EditCandidateDr
 import { getJobById } from "@/services/jobService";
 import { ProgressColumn } from "./ProgressColumn";
 import { Candidates } from "./types/candidate.types";
-import { getCandidatesForJob, createDummyCandidate, } from "@/services/candidatesService";
+import { getCandidatesForJob, createDummyCandidate } from "@/services/candidatesService";
 import { updateCandidateStatus } from "@/services/statusService";
-
+import { useSelector } from "react-redux";
 
 interface CandidatesListProps {
   jobId: string;
@@ -35,18 +36,21 @@ interface CandidatesListProps {
 }
 
 const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, onRefresh }: CandidatesListProps) => {
+  // Get user info from Redux state
+  const user = useSelector((state: any) => state.auth.user);
+  const organizationId = useSelector((state: any) => state.auth.organization_id);
+  
   // Fetch candidates
   const { data: candidatesData = [], isLoading, refetch } = useQuery({
     queryKey: ["job-candidates", jobId],
     queryFn: () => getCandidatesByJobId(jobId),
   });
-  const [candidate, setCandidates] = useState([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
 
-  // Fetch job data (moved outside map)
+  // Fetch job data
   const { 
     data: job, 
     isLoading: jobLoading, 
-    error: jobError,
     refetch: refetchJob
   } = useQuery({
     queryKey: ['job', jobId],
@@ -61,76 +65,73 @@ const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, o
   const recruitmentStages = ["New", "InReview", "Engaged", "Available", "Offered", "Hired"];
 
   // Transform candidates data
-  const candidates: Candidate[] = candidatesData.map((candidate) => {
-    let statusValue: CandidateStatus = "New";
-    if (candidate.status === "Screening") statusValue = "New";
-    else if (candidate.status === "Interviewing") statusValue = "InReview";
-    else if (candidate.status === "Selected") statusValue = "Hired";
-    else if (candidate.status === "Rejected") statusValue = "Rejected";
-    else statusValue = candidate.status as CandidateStatus;
+  useEffect(() => {
+    if (candidatesData.length > 0) {
+      const transformedCandidates: Candidate[] = candidatesData.map((candidate) => {
+        let statusValue: CandidateStatus = candidate.status as CandidateStatus || "New";
+        
+        // Handle legacy status mappings
+        if (candidate.status === "Screening") statusValue = "New";
+        else if (candidate.status === "Interviewing") statusValue = "InReview";
+        else if (candidate.status === "Selected") statusValue = "Hired";
+        
+        const stageIndex = recruitmentStages.indexOf(statusValue);
+        const currentStage = statusValue === "Rejected" ? "Rejected" : recruitmentStages[stageIndex >= 0 ? stageIndex : 0];
 
-    const stageIndex = recruitmentStages.indexOf(statusValue);
-    const currentStage = statusValue === "Rejected" ? "Rejected" : recruitmentStages[stageIndex >= 0 ? stageIndex : 0];
-
-    console.log("jobIDIDIDDIID", candidate);
-
-    const fetchCandidates = async (jobId: string) => {
-      try {
-        const data = await getCandidatesForJob(jobId);
-        setCandidates(data);
-      } catch (error: any) {
-        console.error('Error fetching candidates:', error);
-        toast.error(`Error fetching candidates: ${error.message}`);
-      }
-    };
-
-    return {
-      id: candidate.id,
-      name: candidate.name,
-      status: statusValue,
-      experience: candidate.experience || "",
-      matchScore: candidate.matchScore || 0,
-      appliedDate: candidate.appliedDate,
-      skills: candidate.skillRatings || candidate.skills || [],
-      email: candidate.email,
-      phone: candidate.phone,
-      resume: candidate.resumeUrl,
-      appliedFrom: candidate.appliedFrom,
-      currentSalary: candidate.currentSalary,
-      expectedSalary: candidate.expectedSalary,
-      location: candidate.location,
-      metadata: candidate.metadata,
-      skill_ratings: candidate.skillRatings,
-      currentStage,
-      completedStages: recruitmentStages.slice(0, stageIndex),
-      hasValidatedResume: candidate.hasValidatedResume || false,
-      // Add progress field if needed by ProgressColumn
-      progress: {
-        screening: stageIndex >= 0,
-        interview: stageIndex >= 1,
-        offer: stageIndex >= 2,
-        hired: stageIndex >= 3,
-        joined: stageIndex >= 4,
-      },
-      main_status: job?.mainStatus, // Adjust based on your job data structure
-      sub_status: job?.subStatus,   // Adjust based on your job data structure
-    };
-  });
+        return {
+          id: candidate.id,
+          name: candidate.name,
+          status: statusValue,
+          experience: candidate.experience || "",
+          matchScore: candidate.matchScore || 0,
+          appliedDate: candidate.appliedDate,
+          skills: candidate.skillRatings || candidate.skills || [],
+          email: candidate.email,
+          phone: candidate.phone,
+          resume: candidate.resumeUrl,
+          appliedFrom: candidate.appliedFrom,
+          currentSalary: candidate.currentSalary,
+          expectedSalary: candidate.expectedSalary,
+          location: candidate.location,
+          metadata: candidate.metadata,
+          skill_ratings: candidate.skillRatings,
+          currentStage,
+          completedStages: recruitmentStages.slice(0, stageIndex),
+          hasValidatedResume: candidate.hasValidatedResume || false,
+          // Add progress field
+          progress: {
+            screening: stageIndex >= 0,
+            interview: stageIndex >= 1,
+            offer: stageIndex >= 2,
+            hired: stageIndex >= 3,
+            joined: stageIndex >= 4,
+          },
+          main_status: candidate.main_status,
+          sub_status: candidate.sub_status,
+          main_status_id: candidate.main_status_id,
+          sub_status_id: candidate.sub_status_id,
+        };
+      });
+      
+      setCandidates(transformedCandidates);
+    }
+  }, [candidatesData]);
 
   const filteredCandidates = statusFilter ? candidates.filter((c) => c.status === statusFilter) : candidates;
 
-  console.log("filteredcandidates", filteredCandidates)
   const handleStatusChange = async (value: string, candidate: Candidate) => {
     try {
       if (!candidate || !candidate.id) {
         toast.error("Invalid candidate data");
         return;
       }
-      const updatedCandidate = {
-        ...candidate,
-        sub_status_id: value
-      };
-      const success = await updateCandidateStatus(candidate.id, value);
+      
+      const success = await updateCandidateStatus(
+        candidate.id, 
+        value,
+        user?.id // Pass user ID for updated_by field
+      );
+      
       if (success) {
         toast.success("Status updated successfully");
         await onRefresh();
@@ -154,6 +155,8 @@ const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, o
         candidate_id: candidateId.toString(),
         resume_path: candidate.resume,
         job_description: jobdescription,
+        organization_id: organizationId, // Add organization ID
+        user_id: user?.id // Add user ID for tracking
       };
 
       console.log("Backend data", payload);
@@ -187,7 +190,11 @@ const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, o
   const handleViewResume = (candidateId: number) => {
     const candidate = filteredCandidates.find((c) => c.id === candidateId);
     if (candidate?.resume) {
-      window.open(candidate.resume, "_blank");
+      // Handle resume URL - could be a string or an object with URL
+      const resumeUrl = typeof candidate.resume === 'string' 
+        ? candidate.resume 
+        : candidate.resume.url;
+      window.open(resumeUrl, "_blank");
     } else {
       toast.error("Resume not available");
     }
@@ -275,25 +282,25 @@ const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, o
                   </div>
                 </TableCell>
                 <TableCell>
-                <div className="truncate max-w-[120px]">
-                <StatusSelector
-  value={candidate.sub_status_id || ''}
-  onChange={(value: string) => handleStatusChange(value, candidate)}
-  className="h-7 text-xs w-full"
-/>
-      </div>
+                  <div className="truncate max-w-[120px]">
+                    <StatusSelector
+                      value={candidate.sub_status_id || ''}
+                      onChange={(value: string) => handleStatusChange(value, candidate)}
+                      className="h-7 text-xs w-full"
+                    />
+                  </div>
                 </TableCell>
                 <TableCell className="text-center">
                   <ValidateResumeButton
                     isValidated={candidate.hasValidatedResume || false}
-                    candidateId={candidate.id}
+                    candidateId={parseInt(candidate.id.toString())}
                     onValidate={handleValidateResume}
-                    isLoading={validatingId === candidate.id}
+                    isLoading={validatingId === parseInt(candidate.id.toString())}
                   />
                 </TableCell>
                 <TableCell className="text-right">
                   <ActionButtons
-                    candidateId={candidate.id}
+                    candidateId={parseInt(candidate.id.toString())}
                     onViewResume={handleViewResume}
                     onScheduleInterview={handleScheduleInterview}
                     onViewProfile={handleViewProfile}
@@ -313,7 +320,11 @@ const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, o
 
       {selectedCandidate && (
         <EditCandidateDrawer
-          job={{ id: jobId, skills: selectedCandidate.skills.map((s) => (typeof s === "string" ? s : s.name)) } as any}
+          job={{ 
+            id: jobId, 
+            skills: selectedCandidate.skills.map((s) => (typeof s === "string" ? s : s.name)),
+            organization_id: organizationId
+          } as any}
           onCandidateAdded={handleCandidateUpdated}
           candidate={selectedCandidate}
           open={isEditDrawerOpen}

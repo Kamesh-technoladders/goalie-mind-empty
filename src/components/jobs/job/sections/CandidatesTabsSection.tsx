@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "react-router-dom";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,9 +11,6 @@ import StatusSettings from "@/pages/jobs/StatusSettings";
 import { getCandidatesForJob, createDummyCandidate } from "@/services/candidatesService";
 import { toast } from "sonner";
 
-
-
-
 interface CandidatesTabsSectionProps {
   jobId: string;
   jobdescription: string;
@@ -24,33 +21,41 @@ interface CandidatesTabsSectionProps {
 const CandidatesTabsSection = ({ 
   jobId, 
   jobdescription,
-  // candidates, 
+  candidates,
   onAddCandidate 
 }: CandidatesTabsSectionProps) => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("all");
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [candidates, setCandidates] = useState([]);
+  const [localCandidates, setLocalCandidates] = useState<Candidate[]>([]);
 
+  // Set local candidates from props
+  useEffect(() => {
+    if (candidates.length > 0) {
+      setLocalCandidates(candidates);
+    }
+  }, [candidates]);
 
   // Calculate counts for each status category
-  const newCount = candidates.filter(c => c.status === "New").length;
-  const inReviewCount = candidates.filter(c => c.status === "InReview").length;
-  const engagedCount = candidates.filter(c => c.status === "Engaged").length;
-  const availableCount = candidates.filter(c => c.status === "Available").length;
-  const offeredCount = candidates.filter(c => c.status === "Offered").length;
-  const hiredCount = candidates.filter(c => c.status === "Hired").length;
-  const rejectedCount = candidates.filter(c => c.status === "Rejected").length;
+  const getStatusCount = (status: string) => {
+    return localCandidates.filter(c => 
+      c.status === status || 
+      (c.main_status && c.main_status.name === status)
+    ).length;
+  };
 
-  // Also include the original status values for backward compatibility
-  const screeningCount = candidates.filter(c => c.status === "Screening").length;
-  const interviewingCount = candidates.filter(c => c.status === "Interviewing").length;
-  const selectedCount = candidates.filter(c => c.status === "Selected").length;
+  const newCount = getStatusCount("New") + getStatusCount("Screening");
+  const inReviewCount = getStatusCount("InReview") + getStatusCount("Interviewing");
+  const engagedCount = getStatusCount("Engaged");
+  const availableCount = getStatusCount("Available");
+  const offeredCount = getStatusCount("Offered");
+  const hiredCount = getStatusCount("Hired") + getStatusCount("Selected");
+  const rejectedCount = getStatusCount("Rejected");
 
-  const fetchCandidates = async (jobId: string) => {
+  const fetchCandidates = async () => {
     try {
       const data = await getCandidatesForJob(jobId);
-      setCandidates(data);
+      setLocalCandidates(data);
     } catch (error: any) {
       console.error('Error fetching candidates:', error);
       toast.error(`Error fetching candidates: ${error.message}`);
@@ -61,111 +66,158 @@ const CandidatesTabsSection = ({
     <div className="md:col-span-3">
       <Tabs defaultValue="all" className="w-full">
         <div className="border-b mb-4 overflow-x-auto">
-        <div className="flex items-center justify-between">
-          <TabsList className="bg-transparent p-0 flex flex-wrap">
-            <TabsTrigger 
-              value="all" 
-              onClick={() => setActiveTab("all")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              All Candidates ({candidates.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="new" 
-              onClick={() => setActiveTab("new")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              New ({newCount + screeningCount})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="inReview" 
-              onClick={() => setActiveTab("inReview")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              In Review ({inReviewCount + interviewingCount})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="engaged" 
-              onClick={() => setActiveTab("engaged")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              Engaged ({engagedCount})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="available" 
-              onClick={() => setActiveTab("available")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              Available ({availableCount})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="offered" 
-              onClick={() => setActiveTab("offered")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              Offered ({offeredCount})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="hired" 
-              onClick={() => setActiveTab("hired")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              Hired ({hiredCount + selectedCount})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="rejected" 
-              onClick={() => setActiveTab("rejected")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-            >
-              Rejected ({rejectedCount})
-            </TabsTrigger>
-          </TabsList>
-          <Button 
-              onClick={() => setShowStatusDialog(true)}
-              className="ml-4"
-            >
-              Status Settings
-            </Button>
-        </div>
+          <div className="flex items-center justify-between">
+            <TabsList className="bg-transparent p-0 flex flex-wrap">
+              <TabsTrigger 
+                value="all" 
+                onClick={() => setActiveTab("all")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                All Candidates ({localCandidates.length})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="new" 
+                onClick={() => setActiveTab("new")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                New ({newCount})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="inReview" 
+                onClick={() => setActiveTab("inReview")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                In Review ({inReviewCount})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="engaged" 
+                onClick={() => setActiveTab("engaged")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                Engaged ({engagedCount})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="available" 
+                onClick={() => setActiveTab("available")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                Available ({availableCount})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="offered" 
+                onClick={() => setActiveTab("offered")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                Offered ({offeredCount})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="hired" 
+                onClick={() => setActiveTab("hired")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                Hired ({hiredCount})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="rejected" 
+                onClick={() => setActiveTab("rejected")}
+                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+              >
+                Rejected ({rejectedCount})
+              </TabsTrigger>
+            </TabsList>
+            <Button 
+                onClick={() => setShowStatusDialog(true)}
+                className="ml-4"
+              >
+                Status Settings
+              </Button>
+          </div>
         </div>
         
         <TabsContent value="all" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} onAddCandidate={onAddCandidate}  onRefresh={() => fetchCandidates(id || '')} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            onAddCandidate={onAddCandidate} 
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
         
         <TabsContent value="new" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="New" onAddCandidate={onAddCandidate} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            statusFilter="New" 
+            onAddCandidate={onAddCandidate} 
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
         
         <TabsContent value="inReview" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="InReview" onAddCandidate={onAddCandidate} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            statusFilter="InReview" 
+            onAddCandidate={onAddCandidate} 
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
         
         <TabsContent value="engaged" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Engaged" onAddCandidate={onAddCandidate} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            statusFilter="Engaged" 
+            onAddCandidate={onAddCandidate} 
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
         
         <TabsContent value="available" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Available" onAddCandidate={onAddCandidate} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            statusFilter="Available" 
+            onAddCandidate={onAddCandidate}
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
         
         <TabsContent value="offered" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Offered" onAddCandidate={onAddCandidate} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            statusFilter="Offered" 
+            onAddCandidate={onAddCandidate}
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
         
         <TabsContent value="hired" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Hired" onAddCandidate={onAddCandidate} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            statusFilter="Hired" 
+            onAddCandidate={onAddCandidate}
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
         
         <TabsContent value="rejected" className="mt-0">
-          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Rejected" onAddCandidate={onAddCandidate} />
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            statusFilter="Rejected" 
+            onAddCandidate={onAddCandidate}
+            onRefresh={fetchCandidates} 
+          />
         </TabsContent>
       </Tabs>
 
       {/*Job Status Dialog */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
         <DialogContent className="max-w-4xl p-0">
-          <StatusSettings />
+          <StatusSettings onStatusChange={fetchCandidates} />
         </DialogContent>
       </Dialog>
     </div>
