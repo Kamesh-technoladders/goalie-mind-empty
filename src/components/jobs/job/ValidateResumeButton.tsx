@@ -1,31 +1,22 @@
-import React from "react";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+// components/jobs/candidate/ValidateResumeButton.tsx
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { CheckCircle2 } from "lucide-react";
 
 interface ValidateResumeButtonProps {
   isValidated: boolean;
   candidateId: number;
   onValidate: (candidateId: number) => void;
-  isLoading?: boolean; // Add isLoading prop
 }
 
-const ValidateResumeButton = ({
-  isValidated,
-  candidateId,
-  onValidate,
-  isLoading,
-}: ValidateResumeButtonProps) => {
+const ValidateResumeButton = ({ isValidated, candidateId, onValidate }: ValidateResumeButtonProps) => {
   return (
     <Button
       variant={isValidated ? "outline" : "default"}
       size="sm"
       onClick={() => !isValidated && onValidate(candidateId)}
-      disabled={isValidated || isLoading}
+      disabled={isValidated}
     >
-      {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : isValidated ? (
+      {isValidated ? (
         <>
           <CheckCircle2 className="h-4 w-4 mr-1" />
           Validated

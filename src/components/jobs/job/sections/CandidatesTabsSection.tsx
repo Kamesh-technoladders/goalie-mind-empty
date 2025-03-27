@@ -1,21 +1,36 @@
 
-import { useState } from "react";
+import { useState } from "react"
+import { useParams } from "react-router-dom";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import CandidatesList from "../CandidatesList";
 import { Candidate, CandidateStatus } from "@/lib/types";
+import StatusSettings from "@/pages/jobs/StatusSettings";
+import { getCandidatesForJob, createDummyCandidate } from "@/services/candidatesService";
+import { toast } from "sonner";
+
+
+
 
 interface CandidatesTabsSectionProps {
   jobId: string;
+  jobdescription: string;
   candidates: Candidate[];
   onAddCandidate: () => void;
 }
 
 const CandidatesTabsSection = ({ 
   jobId, 
-  candidates, 
+  jobdescription,
+  // candidates, 
   onAddCandidate 
 }: CandidatesTabsSectionProps) => {
+  const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState("all");
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [candidates, setCandidates] = useState([]);
 
 
   // Calculate counts for each status category
@@ -32,102 +47,127 @@ const CandidatesTabsSection = ({
   const interviewingCount = candidates.filter(c => c.status === "Interviewing").length;
   const selectedCount = candidates.filter(c => c.status === "Selected").length;
 
+  const fetchCandidates = async (jobId: string) => {
+    try {
+      const data = await getCandidatesForJob(jobId);
+      setCandidates(data);
+    } catch (error: any) {
+      console.error('Error fetching candidates:', error);
+      toast.error(`Error fetching candidates: ${error.message}`);
+    }
+  };
+
   return (
     <div className="md:col-span-3">
       <Tabs defaultValue="all" className="w-full">
         <div className="border-b mb-4 overflow-x-auto">
-          <TabsList className="w-full justify-start bg-transparent p-0">
+        <div className="flex items-center justify-between">
+          <TabsList className="bg-transparent p-0 flex flex-wrap">
             <TabsTrigger 
               value="all" 
               onClick={() => setActiveTab("all")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               All Candidates ({candidates.length})
             </TabsTrigger>
             <TabsTrigger 
               value="new" 
               onClick={() => setActiveTab("new")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               New ({newCount + screeningCount})
             </TabsTrigger>
             <TabsTrigger 
               value="inReview" 
               onClick={() => setActiveTab("inReview")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               In Review ({inReviewCount + interviewingCount})
             </TabsTrigger>
             <TabsTrigger 
               value="engaged" 
               onClick={() => setActiveTab("engaged")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               Engaged ({engagedCount})
             </TabsTrigger>
             <TabsTrigger 
               value="available" 
               onClick={() => setActiveTab("available")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               Available ({availableCount})
             </TabsTrigger>
             <TabsTrigger 
               value="offered" 
               onClick={() => setActiveTab("offered")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               Offered ({offeredCount})
             </TabsTrigger>
             <TabsTrigger 
               value="hired" 
               onClick={() => setActiveTab("hired")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               Hired ({hiredCount + selectedCount})
             </TabsTrigger>
             <TabsTrigger 
               value="rejected" 
               onClick={() => setActiveTab("rejected")}
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
             >
               Rejected ({rejectedCount})
             </TabsTrigger>
           </TabsList>
+          <Button 
+              onClick={() => setShowStatusDialog(true)}
+              className="ml-4"
+            >
+              Status Settings
+            </Button>
+        </div>
         </div>
         
         <TabsContent value="all" className="mt-0">
-          <CandidatesList jobId={jobId} onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} onAddCandidate={onAddCandidate}  onRefresh={() => fetchCandidates(id || '')} />
         </TabsContent>
         
         <TabsContent value="new" className="mt-0">
-          <CandidatesList jobId={jobId} statusFilter="New" onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="New" onAddCandidate={onAddCandidate} />
         </TabsContent>
         
         <TabsContent value="inReview" className="mt-0">
-          <CandidatesList jobId={jobId} statusFilter="InReview" onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="InReview" onAddCandidate={onAddCandidate} />
         </TabsContent>
         
         <TabsContent value="engaged" className="mt-0">
-          <CandidatesList jobId={jobId} statusFilter="Engaged" onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Engaged" onAddCandidate={onAddCandidate} />
         </TabsContent>
         
         <TabsContent value="available" className="mt-0">
-          <CandidatesList jobId={jobId} statusFilter="Available" onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Available" onAddCandidate={onAddCandidate} />
         </TabsContent>
         
         <TabsContent value="offered" className="mt-0">
-          <CandidatesList jobId={jobId} statusFilter="Offered" onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Offered" onAddCandidate={onAddCandidate} />
         </TabsContent>
         
         <TabsContent value="hired" className="mt-0">
-          <CandidatesList jobId={jobId} statusFilter="Hired" onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Hired" onAddCandidate={onAddCandidate} />
         </TabsContent>
         
         <TabsContent value="rejected" className="mt-0">
-          <CandidatesList jobId={jobId} statusFilter="Rejected" onAddCandidate={onAddCandidate} />
+          <CandidatesList jobId={jobId} jobdescription={jobdescription} statusFilter="Rejected" onAddCandidate={onAddCandidate} />
         </TabsContent>
       </Tabs>
+
+      {/*Job Status Dialog */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent className="max-w-4xl p-0">
+          <StatusSettings />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

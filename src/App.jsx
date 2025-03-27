@@ -26,6 +26,7 @@ import JobDescription from "./pages/jobs/JobDescription";
 import Career from "./pages/careerPage/Index";
 import CareerJobDetail from "./pages/careerPage/JobDetail";
 import CareerJobApplication from "./pages/careerPage/JobApplication";
+import StatusSettings from "./pages/jobs/StatusSettings";
 
 function App() {
   return (
@@ -84,6 +85,7 @@ function App() {
             <Route path="/jobs/:id" element={<JobView />} />
             <Route path="/jobs/:id/description" element={<JobDescription />} />
             <Route path="/jobs/edit/:id" element={<JobDescription />} />
+            <Route path="/jobstatuses" element={<StatusSettings />} />
           </Route>
         </Route>
       </Routes>

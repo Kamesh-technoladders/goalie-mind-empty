@@ -1,5 +1,3 @@
-
-import { ReactNode } from "react";
 import { MainStatus, SubStatus } from "@/services/statusService";
 
 // Define the progress mapping for candidate statuses
@@ -100,137 +98,46 @@ export interface Progress {
   joined: boolean;
 }
 
-
-export interface JobData {
-  id: string;  // Changed from number to string since we're using UUIDs
-  jobId: string;
-  title: string;
-  department: string;
-  location: string[];
-  type: string;
-  status: "Active" | "Pending" | "Completed" | "OPEN" | "HOLD" | "CLOSE";
-  postedDate: string;
-  applications: number;
-  dueDate: string;
-  clientOwner: string;
-  hiringMode: string;
-  submissionType: "Internal" | "Client";
-  jobType: "Internal" | "External"; // Added jobType field
-  experience?: {
-    min?: { years: number; months: number };
-    max?: { years: number; months: number };
-  };
-  skills?: string[];
-  description?: string;
-  descriptionBullets?: string[];
-  clientDetails?: {
-    clientName?: string;
-    clientBudget?: string;
-    endClient?: string;
-    pointOfContact?: string;
-  };
-  jobCategory?: string;
-  primarySkills?: string[];
-  secondarySkills?: string[];
-  staffingManager?: string;
-  interviewProcess?: string[];
-  payRate?: string;
-  billRate?: string;
-  startDate?: string;
-  assignedTo?: {
-    type: "individual" | "team" | "vendor";
-    name: string;
-  };
-  budgets?: {
-    clientBudget?: string;
-    hrBudget?: string;
-    vendorBudget?: string;
-  };
-  customUrl?: string;
-  noticePeriod?: string;
-  budgetType?: string;
-  clientProjectId?: string; 
-  numberOfCandidates?: number;
-  organization?: string;
-}
-
-export interface Candidate {
+// Define the Candidate type that represents a job candidate
+export interface Candidates {
   id: string;
   name: string;
-  status: CandidateStatus | "New" | "InReview" | "Engaged" | "Available" | "Offered" | "Hired" | "Rejected";
-  
-  contact?: {
+  contact: {
     email: string;
     phone: string;
     emailVisible: boolean;
     phoneVisible: boolean;
   };
-  
-  resume?: {
+  owner: string;
+  resume: {
     url: string;
     filename: string;
     size: number;
     uploadDate: string;
   } | null;
-  
-  resumeAnalysis?: {
+  resumeAnalysis: {
     score: number;
     status?: 'analyzed' | 'pending' | 'failed' | 'not_uploaded' | 'processing';
     details?: any;
   };
-  
-  progress?: Progress;
-  
+  progress: Progress;
+  status: string;
   main_status_id?: string;
   sub_status_id?: string;
   main_status?: Partial<MainStatus> | null;
   sub_status?: Partial<SubStatus> | null;
-
-  totalExperience?: { years: number; months: number };
-  relevantExperience?: { years: number; months: number };
-  
-  currentSalary?: number | string;
-  expectedSalary?: number | string;
-  noticePeriod?: string;
-
-  skills: Array<{ name: string; rating: number }> | string[];
-  
-  appliedDate: string;
-  appliedFrom?: string;
-  location?: string;
-
-  metadata?: {
-    currentLocation?: string;
-    preferredLocations?: string[];
-    totalExperience?: string | number;
-    relevantExperience?: string | number;
-    currentSalary?: string | number;
-    expectedSalary?: string | number;
-    resume_url?: string;
+  currentLocation?: string;
+  preferredLocation?: string;
+  totalExperience: {
+    years: number;
+    months: number;
   };
-
-  skill_ratings?: Array<{ name: string; rating: number }>;
-  currentStage?: string;
-  completedStages?: string[];
-  hasValidatedResume?: boolean;
-  
-  profit?: ReactNode;
-  organization?: string;
-  updatedBy?: string;
+  relevantExperience?: {
+    years: number;
+    months: number;
+  };
+  currentSalary?: number;
+  expectedSalary?: number;
+  noticePeriod?: string;
+  skills: string[];
 }
-
-
-export enum CandidateStatus {
-  Screening = "Screening",
-  Interviewing = "Interviewing",
-  Selected = "Selected",
-  Rejected = "Rejected",
-  New = "New",
-  InReview = "InReview",
-  Engaged = "Engaged",
-  Available = "Available",
-  Offered = "Offered",
-  Hired = "Hired"
-}
-
-

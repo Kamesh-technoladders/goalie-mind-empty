@@ -16,6 +16,7 @@ interface JobDetailViewProps {
 
 const JobDetailView = ({ job, candidates, onCandidateAdded }: JobDetailViewProps) => {
   const [isCandidateModalOpen, setIsCandidateModalOpen] = useState(false);
+
   
   const handleOpenCandidateModal = () => {
     setIsCandidateModalOpen(true);
@@ -38,6 +39,7 @@ const JobDetailView = ({ job, candidates, onCandidateAdded }: JobDetailViewProps
       {/* Candidates Tabs */}
       <CandidatesTabsSection 
         jobId={job.id} 
+        jobdescription={job.description}
         candidates={candidates} 
         onAddCandidate={handleOpenCandidateModal} 
       />

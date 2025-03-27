@@ -1,8 +1,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { CandidateStatus } from "@/lib/types";
+import { MainStatus, SubStatus } from "@/services/statusService";
 
-
+// Interfaces remain unchanged
 export interface HrJobCandidate {
   location: any;
   id: string;
@@ -18,19 +19,22 @@ export interface HrJobCandidate {
   resume_url: string | null;
   created_at: string;
   updated_at: string;
-  // Additional fields
   metadata: Record<string, any> | null;
-  skill_ratings: Record<string, any> | Array<{ name: string; rating: number }> | null; 
+  skill_ratings: Record<string, any> | Array<{ name: string; rating: number }> | null;
   applied_from?: string;
   expected_salary: any;
   current_salary: any;
+  main_status_id: string | null;
+  sub_status_id: string | null;
+  main_status?: Partial<MainStatus> | null;
+  sub_status?: Partial<SubStatus> | null;
 }
 
 export interface CandidateData {
   location: any;
-  expectedSalary: any; // ✅ Fix field name
-  currentSalary: any; // ✅ Fix field name
-  appliedFrom?: string; // ✅ Fix field name
+  expectedSalary: any;
+  currentSalary: any;
+  appliedFrom?: string;
   id: string;
   name: string;
   status: CandidateStatus;
@@ -43,33 +47,84 @@ export interface CandidateData {
   resumeUrl?: string;
   metadata?: Record<string, any>;
   skillRatings?: Array<{ name: string; rating: number }>;
+  main_status?: Partial<MainStatus> | null;
+  sub_status?: Partial<SubStatus> | null;
+  progress: {
+    screening: boolean;
+    interview: boolean;
+    offer: boolean;
+    hired: boolean;
+    joined: boolean;
+  };
 }
 
-
-// Map database candidate to application candidate model
-// ✅ FIX: Include missing fields
+// Updated mapDbCandidateToData function
 export const mapDbCandidateToData = (candidate: HrJobCandidate): CandidateData => {
   console.log("Candidate from DB:", candidate); // Debug log
+
+  const rawStatus = candidate.status || "New";
+  const cleanedStatus = rawStatus.replace(/'::text$/, "") as CandidateStatus;
+
+  // Parse skills from JSON strings to an array of skill names
+  const skills = candidate.skills
+    ? candidate.skills.map((skill) => {
+        try {
+          const parsed = JSON.parse(skill);
+          return parsed.name || skill; // Extract name if it’s an object, fallback to raw string
+        } catch {
+          return skill; // If parsing fails, use the raw string
+        }
+      })
+    : [];
+
+  // Calculate progress based solely on main_status.name
+  const mainStatusName = candidate.main_status?.name;
+  const progress = {
+    screening: false,
+    interview: false,
+    offer: false,
+    hired: false,
+    joined: false
+  };
+
+  if (mainStatusName) {
+    const stageOrder = ['Screening', 'Interview', 'Offer', 'Hired', 'Joined'];
+    const stageIndex = stageOrder.indexOf(mainStatusName);
+
+    if (stageIndex >= 0) {
+      progress.screening = true;
+      if (stageIndex >= 1) progress.interview = true;
+      if (stageIndex >= 2) progress.offer = true;
+      if (stageIndex >= 3) progress.hired = true;
+      if (stageIndex >= 4) progress.joined = true;
+    }
+  }
 
   return {
     id: candidate.id,
     name: candidate.name,
-    status: candidate.status,
+    status: cleanedStatus,
     experience: candidate.experience || "",
     matchScore: candidate.match_score || 0,
     appliedDate: candidate.applied_date,
-    skills: candidate.skills || [],
+    skills,
     email: candidate.email || undefined,
     phone: candidate.phone || undefined,
     resumeUrl: candidate.resume_url || undefined,
     metadata: candidate.metadata || undefined,
-    skillRatings: candidate.skill_ratings || undefined, // This can now be of type Record<string, any>
+    skillRatings: candidate.skill_ratings || undefined,
     appliedFrom: candidate.applied_from ?? undefined,
     currentSalary: candidate.current_salary ?? undefined,
     expectedSalary: candidate.expected_salary ?? undefined,
     location: candidate.location ?? undefined,
+    main_status: candidate.main_status || undefined,
+    sub_status: candidate.sub_status || undefined,
+    progress,
   };
 };
+
+// Rest of the file (mapCandidateToDbData, getCandidatesByJobId, etc.) remains unchanged
+// ... [Your other functions here] ...
 
 export const mapCandidateToDbData = (candidate: CandidateData): Partial<HrJobCandidate> => {
   console.log("skillRatings in CandidateData:", candidate.skillRatings); // Debug log
@@ -96,13 +151,40 @@ export const mapCandidateToDbData = (candidate: CandidateData): Partial<HrJobCan
 // Get all candidates for a job
 export const getCandidatesByJobId = async (jobId: string): Promise<CandidateData[]> => {
   try {
-    // Using raw SQL query since the table isn't in the TypeScript types yet
     const { data, error } = await supabase
       .from('hr_job_candidates')
       .select(`
-        id, job_id, name, status, experience, match_score, applied_date, 
-        skills, email, phone, resume_url, metadata, skill_ratings, 
-        applied_from, current_salary, expected_salary, location
+        id, 
+        job_id, 
+        name, 
+        status, 
+        experience, 
+        match_score, 
+        applied_date, 
+        skills, 
+        email, 
+        phone, 
+        resume_url, 
+        metadata, 
+        skill_ratings, 
+        applied_from, 
+        current_salary, 
+        expected_salary, 
+        location, 
+        main_status_id, 
+        sub_status_id,
+        main_status:job_statuses!main_status_id (
+          id,
+          name,
+          color,
+          type
+        ),
+        sub_status:job_statuses!sub_status_id (
+          id,
+          name,
+          color,
+          type
+        )
       `)
       .eq('job_id', jobId)
       .order('created_at', { ascending: false });
@@ -118,7 +200,6 @@ export const getCandidatesByJobId = async (jobId: string): Promise<CandidateData
     throw error;
   }
 };
-
 // Create a new candidate
 export const createCandidate = async (jobId: string, candidate: CandidateData): Promise<CandidateData> => {
   try {

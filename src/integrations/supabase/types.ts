@@ -1015,6 +1015,20 @@ export type Database = {
           updated_at: string
           updated_by?: string
           organization_id: string
+          
+        //  new for candidate table
+          current_location: string | null
+          first_name: string
+          hr_organization_id: string
+          last_name: string
+          main_status_id: string | null
+          notice_period: string | null
+          preferred_location: string | null
+          resume_filename: string | null
+          resume_size: number | null
+          resume_upload_date: string | null
+          sub_status_id: string | null
+          total_experience: Json | null
         }
         Insert: {
           applied_date?: string
@@ -1044,6 +1058,20 @@ export type Database = {
           updated_at?: string
           updated_by?: string
           organization_id: string
+
+            //  new for candidate table
+            current_location: string | null
+            first_name: string
+            hr_organization_id: string
+            last_name: string
+            main_status_id: string | null
+            notice_period: string | null
+            preferred_location: string | null
+            resume_filename: string | null
+            resume_size: number | null
+            resume_upload_date: string | null
+            sub_status_id: string | null
+            total_experience: Json | null
         }
         Update: {
           applied_date?: string
@@ -1073,6 +1101,20 @@ export type Database = {
           updated_at?: string
           updated_by?: string
           organization_id: string
+
+            //  new for candidate table
+            current_location: string | null
+            first_name: string
+            hr_organization_id: string
+            last_name: string
+            main_status_id: string | null
+            notice_period: string | null
+            preferred_location: string | null
+            resume_filename: string | null
+            resume_size: number | null
+            resume_upload_date: string | null
+            sub_status_id: string | null
+            total_experience: Json | null
         }
         Relationships: [
           {
@@ -1080,6 +1122,20 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_candidates_main_status_id_fkey"
+            columns: ["main_status_id"]
+            isOneToOne: false
+            referencedRelation: "job_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_candidates_sub_status_id_fkey"
+            columns: ["sub_status_id"]
+            isOneToOne: false
+            referencedRelation: "job_statuses"
             referencedColumns: ["id"]
           },
         ]
@@ -1684,6 +1740,91 @@ export type Database = {
           },
         ]
       }
+      hr_candidate_timeline: {
+        Row: {
+          candidate_id: string | null
+          created_at: string | null
+          created_by: string | null
+          event_data: Json | null
+          event_type: Database["public"]["Enums"]["hr_candidate_event_type"]
+          id: string
+          new_state: Json | null
+          previous_state: Json | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          event_data?: Json | null
+          event_type: Database["public"]["Enums"]["hr_candidate_event_type"]
+          id?: string
+          new_state?: Json | null
+          previous_state?: Json | null
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          event_data?: Json | null
+          event_type?: Database["public"]["Enums"]["hr_candidate_event_type"]
+          id?: string
+          new_state?: Json | null
+          previous_state?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_candidate_timeline_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_statuses: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          name: string
+          parent_id: string | null
+          type: Database["public"]["Enums"]["status_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          type: Database["public"]["Enums"]["status_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          type?: Database["public"]["Enums"]["status_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_statuses_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "job_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1706,9 +1847,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      check_job_code_exists: {
+        Args: {
+          p_job_code: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      hr_candidate_event_type:
+      | "status_change"
+      | "progress_update"
+      | "resume_upload"
+      | "resume_validation"
+      | "candidate_edit"
+      | "candidate_create"
+    status_type: "main" | "sub"
     }
     CompositeTypes: {
       [_ in never]: never
