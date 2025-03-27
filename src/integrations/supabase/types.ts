@@ -66,6 +66,47 @@ export type Database = {
           },
         ]
       }
+      hr_candidate_timeline: {
+        Row: {
+          candidate_id: string | null
+          created_at: string | null
+          created_by: string | null
+          event_data: Json | null
+          event_type: Database["public"]["Enums"]["hr_candidate_event_type"]
+          id: string
+          new_state: Json | null
+          previous_state: Json | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          event_data?: Json | null
+          event_type: Database["public"]["Enums"]["hr_candidate_event_type"]
+          id?: string
+          new_state?: Json | null
+          previous_state?: Json | null
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          event_data?: Json | null
+          event_type?: Database["public"]["Enums"]["hr_candidate_event_type"]
+          id?: string
+          new_state?: Json | null
+          previous_state?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_candidate_timeline_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_client_contacts: {
         Row: {
           client_id: string
@@ -117,21 +158,18 @@ export type Database = {
           commission_type: string | null
           commission_value: number | null
           completed_projects: number | null
-          contact_person_first_name: string
-          contact_person_last_name: string
           country: string | null
           created_at: string | null
           created_by: string | null
           currency: string | null
           display_name: string
-          email: string
+          end_client: string | null
           id: string
           internal_contact: string | null
           ongoing_projects: number | null
           organization_id: string | null
           payment_terms: number | null
           payment_terms_custom: number | null
-          phone_number: string
           postal_code: string | null
           profit: number | null
           revenue: number | null
@@ -142,7 +180,6 @@ export type Database = {
           total_projects: number | null
           updated_at: string | null
           updated_by: string | null
-          end_client: string | null
         }
         Insert: {
           active_employees?: number | null
@@ -153,21 +190,18 @@ export type Database = {
           commission_type?: string | null
           commission_value?: number | null
           completed_projects?: number | null
-          contact_person_first_name: string
-          contact_person_last_name: string
           country?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
           display_name: string
-          email: string
+          end_client?: string | null
           id?: string
           internal_contact?: string | null
           ongoing_projects?: number | null
           organization_id?: string | null
           payment_terms?: number | null
           payment_terms_custom?: number | null
-          phone_number: string
           postal_code?: string | null
           profit?: number | null
           revenue?: number | null
@@ -178,7 +212,6 @@ export type Database = {
           total_projects?: number | null
           updated_at?: string | null
           updated_by?: string | null
-          end_client: string | null
         }
         Update: {
           active_employees?: number | null
@@ -189,21 +222,18 @@ export type Database = {
           commission_type?: string | null
           commission_value?: number | null
           completed_projects?: number | null
-          contact_person_first_name?: string
-          contact_person_last_name?: string
           country?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
           display_name?: string
-          email?: string
+          end_client?: string | null
           id?: string
           internal_contact?: string | null
           ongoing_projects?: number | null
           organization_id?: string | null
           payment_terms?: number | null
           payment_terms_custom?: number | null
-          phone_number?: string
           postal_code?: string | null
           profit?: number | null
           revenue?: number | null
@@ -214,14 +244,13 @@ export type Database = {
           total_projects?: number | null
           updated_at?: string | null
           updated_by?: string | null
-          end_client: string | null
         }
         Relationships: [
           {
             foreignKeyName: "hr_clients_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "hr_profiles"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
           {
@@ -235,7 +264,7 @@ export type Database = {
             foreignKeyName: "hr_clients_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
-            referencedRelation: "hr_profiles"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
@@ -816,7 +845,7 @@ export type Database = {
           designation_id: string | null
           email: string
           emergency_contacts: Json[] | null
-          employee_id: string
+          employee_id: string | null
           employment_start_date: string | null
           employment_status: string | null
           esic_number: string | null
@@ -852,7 +881,7 @@ export type Database = {
           designation_id?: string | null
           email: string
           emergency_contacts?: Json[] | null
-          employee_id: string
+          employee_id?: string | null
           employment_start_date?: string | null
           employment_status?: string | null
           esic_number?: string | null
@@ -888,7 +917,7 @@ export type Database = {
           designation_id?: string | null
           email?: string
           emergency_contacts?: Json[] | null
-          employee_id?: string
+          employee_id?: string | null
           employment_start_date?: string | null
           employment_status?: string | null
           esic_number?: string | null
@@ -986,6 +1015,57 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_job_applications: {
+        Row: {
+          candidate_id: string | null
+          created_at: string | null
+          hr_organization_id: string
+          id: string
+          job_id: string | null
+          resume_analysis: Json | null
+          resume_score: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          created_at?: string | null
+          hr_organization_id: string
+          id?: string
+          job_id?: string | null
+          resume_analysis?: Json | null
+          resume_score?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          created_at?: string | null
+          hr_organization_id?: string
+          id?: string
+          job_id?: string | null
+          resume_analysis?: Json | null
+          resume_score?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_job_applications_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_job_candidates: {
         Row: {
           applied_date: string
@@ -1004,31 +1084,24 @@ export type Database = {
           job_id: string
           linkedin: string | null
           location: string | null
+          main_status_id: string | null
           match_score: number | null
           metadata: Json | null
           name: string
-          phone: string | null
-          resume_url: string | null
-          skill_ratings: Json | null
-          skills: string[] | null
-          status: string
-          updated_at: string
-          updated_by?: string
-          organization_id: string
-          
-        //  new for candidate table
-          current_location: string | null
-          first_name: string
-          hr_organization_id: string
-          last_name: string
-          main_status_id: string | null
           notice_period: string | null
+          organization_id: string | null
+          phone: string | null
           preferred_location: string | null
           resume_filename: string | null
           resume_size: number | null
           resume_upload_date: string | null
+          resume_url: string | null
+          skill_ratings: Json | null
+          skills: string[] | null
+          status: string | null
           sub_status_id: string | null
-          total_experience: Json | null
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
           applied_date?: string
@@ -1047,31 +1120,24 @@ export type Database = {
           job_id: string
           linkedin?: string | null
           location?: string | null
+          main_status_id?: string | null
           match_score?: number | null
           metadata?: Json | null
           name: string
+          notice_period?: string | null
+          organization_id?: string | null
           phone?: string | null
+          preferred_location?: string | null
+          resume_filename?: string | null
+          resume_size?: number | null
+          resume_upload_date?: string | null
           resume_url?: string | null
           skill_ratings?: Json | null
           skills?: string[] | null
-          status?: string
+          status?: string | null
+          sub_status_id?: string | null
           updated_at?: string
-          updated_by?: string
-          organization_id: string
-
-            //  new for candidate table
-            current_location: string | null
-            first_name: string
-            hr_organization_id: string
-            last_name: string
-            main_status_id: string | null
-            notice_period: string | null
-            preferred_location: string | null
-            resume_filename: string | null
-            resume_size: number | null
-            resume_upload_date: string | null
-            sub_status_id: string | null
-            total_experience: Json | null
+          updated_by?: string | null
         }
         Update: {
           applied_date?: string
@@ -1090,31 +1156,24 @@ export type Database = {
           job_id?: string
           linkedin?: string | null
           location?: string | null
+          main_status_id?: string | null
           match_score?: number | null
           metadata?: Json | null
           name?: string
+          notice_period?: string | null
+          organization_id?: string | null
           phone?: string | null
+          preferred_location?: string | null
+          resume_filename?: string | null
+          resume_size?: number | null
+          resume_upload_date?: string | null
           resume_url?: string | null
           skill_ratings?: Json | null
           skills?: string[] | null
-          status?: string
+          status?: string | null
+          sub_status_id?: string | null
           updated_at?: string
-          updated_by?: string
-          organization_id: string
-
-            //  new for candidate table
-            current_location: string | null
-            first_name: string
-            hr_organization_id: string
-            last_name: string
-            main_status_id: string | null
-            notice_period: string | null
-            preferred_location: string | null
-            resume_filename: string | null
-            resume_size: number | null
-            resume_upload_date: string | null
-            sub_status_id: string | null
-            total_experience: Json | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -1125,17 +1184,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "hr_candidates_main_status_id_fkey"
+            foreignKeyName: "hr_job_candidates_main_status_id_fkey"
             columns: ["main_status_id"]
             isOneToOne: false
             referencedRelation: "job_statuses"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "hr_candidates_sub_status_id_fkey"
+            foreignKeyName: "hr_job_candidates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_candidates_sub_status_id_fkey"
             columns: ["sub_status_id"]
             isOneToOne: false
             referencedRelation: "job_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_candidates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
@@ -1149,18 +1222,21 @@ export type Database = {
           client_owner: string | null
           client_project_id: string | null
           created_at: string | null
+          created_by: string | null
           department: string | null
           description: string | null
           description_bullets: string[] | null
           due_date: string | null
           experience: Json | null
           hiring_mode: string | null
-          hr_organization_id: string | null
           id: string
           job_id: string
           job_type: string | null
           job_type_category: string | null
           location: string[]
+          notice_period: string | null
+          number_of_candidates: number | null
+          organization_id: string | null
           posted_date: string | null
           service_type: string | null
           skills: string[] | null
@@ -1168,6 +1244,7 @@ export type Database = {
           submission_type: string | null
           title: string
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           applications?: number | null
@@ -1177,18 +1254,21 @@ export type Database = {
           client_owner?: string | null
           client_project_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           department?: string | null
           description?: string | null
           description_bullets?: string[] | null
           due_date?: string | null
           experience?: Json | null
           hiring_mode?: string | null
-          hr_organization_id?: string | null
           id?: string
           job_id: string
           job_type?: string | null
           job_type_category?: string | null
           location?: string[]
+          notice_period?: string | null
+          number_of_candidates?: number | null
+          organization_id?: string | null
           posted_date?: string | null
           service_type?: string | null
           skills?: string[] | null
@@ -1196,6 +1276,7 @@ export type Database = {
           submission_type?: string | null
           title: string
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           applications?: number | null
@@ -1205,18 +1286,21 @@ export type Database = {
           client_owner?: string | null
           client_project_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           department?: string | null
           description?: string | null
           description_bullets?: string[] | null
           due_date?: string | null
           experience?: Json | null
           hiring_mode?: string | null
-          hr_organization_id?: string | null
           id?: string
           job_id?: string
           job_type?: string | null
           job_type_category?: string | null
           location?: string[]
+          notice_period?: string | null
+          number_of_candidates?: number | null
+          organization_id?: string | null
           posted_date?: string | null
           service_type?: string | null
           skills?: string[] | null
@@ -1224,6 +1308,7 @@ export type Database = {
           submission_type?: string | null
           title?: string
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -1231,6 +1316,27 @@ export type Database = {
             columns: ["client_project_id"]
             isOneToOne: false
             referencedRelation: "hr_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_jobs_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]
@@ -1628,6 +1734,50 @@ export type Database = {
         }
         Relationships: []
       }
+      job_statuses: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          name: string
+          parent_id: string | null
+          type: Database["public"]["Enums"]["status_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          type: Database["public"]["Enums"]["status_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          type?: Database["public"]["Enums"]["status_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_statuses_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "job_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           created_at: string | null
@@ -1740,91 +1890,6 @@ export type Database = {
           },
         ]
       }
-      hr_candidate_timeline: {
-        Row: {
-          candidate_id: string | null
-          created_at: string | null
-          created_by: string | null
-          event_data: Json | null
-          event_type: Database["public"]["Enums"]["hr_candidate_event_type"]
-          id: string
-          new_state: Json | null
-          previous_state: Json | null
-        }
-        Insert: {
-          candidate_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          event_data?: Json | null
-          event_type: Database["public"]["Enums"]["hr_candidate_event_type"]
-          id?: string
-          new_state?: Json | null
-          previous_state?: Json | null
-        }
-        Update: {
-          candidate_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          event_data?: Json | null
-          event_type?: Database["public"]["Enums"]["hr_candidate_event_type"]
-          id?: string
-          new_state?: Json | null
-          previous_state?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hr_candidate_timeline_candidate_id_fkey"
-            columns: ["candidate_id"]
-            isOneToOne: false
-            referencedRelation: "hr_job_candidates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      job_statuses: {
-        Row: {
-          color: string | null
-          created_at: string | null
-          description: string | null
-          display_order: number | null
-          id: string
-          name: string
-          parent_id: string | null
-          type: Database["public"]["Enums"]["status_type"]
-          updated_at: string | null
-        }
-        Insert: {
-          color?: string | null
-          created_at?: string | null
-          description?: string | null
-          display_order?: number | null
-          id?: string
-          name: string
-          parent_id?: string | null
-          type: Database["public"]["Enums"]["status_type"]
-          updated_at?: string | null
-        }
-        Update: {
-          color?: string | null
-          created_at?: string | null
-          description?: string | null
-          display_order?: number | null
-          id?: string
-          name?: string
-          parent_id?: string | null
-          type?: Database["public"]["Enums"]["status_type"]
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "job_statuses_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "job_statuses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -1847,22 +1912,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      check_job_code_exists: {
-        Args: {
-          p_job_code: string
-        }
-        Returns: boolean
-      }
     }
     Enums: {
       hr_candidate_event_type:
-      | "status_change"
-      | "progress_update"
-      | "resume_upload"
-      | "resume_validation"
-      | "candidate_edit"
-      | "candidate_create"
-    status_type: "main" | "sub"
+        | "status_change"
+        | "progress_update"
+        | "resume_upload"
+        | "resume_validation"
+        | "candidate_edit"
+        | "candidate_create"
+      status_type: "main" | "sub"
     }
     CompositeTypes: {
       [_ in never]: never
