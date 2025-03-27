@@ -1,451 +1,181 @@
-import { supabase } from '@/integrations/supabase/client';
-import { Candidate } from "@/components/jobs/job/types/candidate.types";
-import { v4 as uuidv4 } from "uuid";
-import { updateCandidateStatus } from './statusService';
 
-interface CandidateData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  currentLocation: string;
-  preferredLocation: string;
-  totalExperience: {
-    years: number;
-    months: number;
-  };
-  relevantExperience: {
-    years: number;
-    months: number;
-  };
-  currentSalary: number;
-  expectedSalary: number;
-  noticePeriod: string;
-  offerDetails: string;
-  dateOfSubmission: Date;
-  resume?: {
-    url: string;
-    filename: string;
-    size: number;
-    uploadDate?: string;
-  } | null;
-  skills: Array<{
-    skillName: string;
-    rating: number;
-  }>;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { Candidate } from "@/lib/types";
+import { toast } from "sonner";
 
-interface DbCandidate {
+// Type definitions for database candidate
+export interface DbCandidate {
   id?: string;
-  first_name: string;
-  last_name: string;
-  email: string;
+  job_id: string;
+  name: string;
+  status: string;
+  applied_date: string;
+  skills?: string[];
+  email?: string;
   phone?: string;
-  current_location?: string;
-  preferred_location?: string;
-  total_experience: {
-    years: number;
-    months: number;
-  };
+  resume_url?: string;
+  experience?: string;
   current_salary?: number;
   expected_salary?: number;
-  notice_period?: string;
-  resume_url?: string;
-  resume_filename?: string;
-  resume_size?: number;
-  resume_upload_date?: string;
-  skills: {
-    skillName: string;
-    rating: number;
-  }[];
-  status?: string;
-  hr_organization_id: string;
+  location?: string;
+  applied_from?: string;
+  match_score?: number;
+  main_status_id?: string;
+  sub_status_id?: string;
+  metadata?: any;
 }
 
-export const uploadResume = async (file: File, candidateId: string) => {
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${candidateId}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = `resumes/${candidateId}/${fileName}`;
-    
-    const { data, error } = await supabase.storage
-      .from('candidates')
-      .upload(filePath, file);
-    
-    if (error) throw error;
-    
-    const { data: urlData } = supabase.storage
-      .from('candidates')
-      .getPublicUrl(filePath);
-    
-    return {
-      url: urlData.publicUrl,
-      filename: file.name,
-      size: file.size,
-      uploadDate: new Date().toISOString()
-    };
-  } catch (error) {
-    console.error('Error uploading resume:', error);
-    throw error;
-  }
-};
-
-export const addCandidate = async (candidateData: CandidateData, jobId: string) => {
-  try {
-    const { firstName, lastName, email, phoneNumber, currentLocation, preferredLocation, 
-      totalExperience, relevantExperience, currentSalary, expectedSalary, noticePeriod, resume, skills } = candidateData;
-    
-    const candidateToInsert: DbCandidate = {
-      id: uuidv4(),
-      first_name: firstName,
-      last_name: lastName,
-      email: email,
-      phone: phoneNumber,
-      current_location: currentLocation,
-      preferred_location: preferredLocation,
-      total_experience: {
-        years: totalExperience.years,
-        months: totalExperience.months
-      },
-      current_salary: currentSalary,
-      expected_salary: expectedSalary,
-      notice_period: noticePeriod,
-      resume_url: resume?.url,
-      resume_filename: resume?.filename,
-      resume_size: resume?.size,
-      resume_upload_date: resume?.uploadDate || (resume ? new Date().toISOString() : undefined),
-      skills: skills,
-      status: 'New',
-      hr_organization_id: uuidv4(),
-    };
-
-    const { data, error } = await supabase
-      .from('hr_job_candidates')
-      .insert(candidateToInsert);
-
-    if (error) throw error;
-
-    if (data) {
-      const candidateId = candidateToInsert.id;
-      
-      await supabase
-        .from('hr_job_applications')
-        .insert({
-          job_id: jobId,
-          candidate_id: candidateId,
-          status: 'Applied',
-          hr_organization_id: candidateToInsert.hr_organization_id
-        });
-      
-      await addCandidateTimelineEntry(candidateId, 'candidate_create', {
-        message: 'Candidate created',
-        jobId: jobId
-      });
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error adding candidate:', error);
-    throw error;
-  }
-};
-
-export const updateCandidate = async (candidate: Candidate) => {
-  try {
-    if (candidate.sub_status_id) {
-      await updateCandidateStatus(candidate.id, candidate.sub_status_id);
-    }
-    
-    const candidateToUpdate = {
-      id: candidate.id,
-      first_name: candidate.name.split(' ')[0],
-      last_name: candidate.name.split(' ').slice(1).join(' '),
-      email: candidate.contact.email,
-      phone: candidate.contact.phone,
-      current_location: candidate.currentLocation,
-      preferred_location: candidate.preferredLocation,
-      total_experience: candidate.totalExperience,
-      current_salary: candidate.currentSalary,
-      expected_salary: candidate.expectedSalary,
-      notice_period: candidate.noticePeriod,
-      status: candidate.status,
-      skills: Array.isArray(candidate.skills) 
-        ? candidate.skills.map(skill => 
-            typeof skill === 'string' 
-              ? { skillName: skill, rating: 3 } 
-              : skill
-          )
-        : []
-    };
-
-    const { error } = await supabase
-      .from('hr_job_candidates')
-      .update(candidateToUpdate)
-      .eq('id', candidate.id);
-
-    if (error) throw error;
-
-    await addCandidateTimelineEntry(candidate.id, 'candidate_edit', {
-      message: 'Candidate updated'
-    });
-
-    return true;
-  } catch (error) {
-    console.error('Error updating candidate:', error);
-    return false;
-  }
-};
-
-export const addCandidateTimelineEntry = async (
-  candidateId: string,
-  eventType: 'status_change' | 'progress_update' | 'resume_upload' | 'resume_validation' | 'candidate_edit' | 'candidate_create',
-  eventData: any
-) => {
-  try {
-    const entry = {
-      candidate_id: candidateId,
-      event_type: eventType,
-      event_data: eventData,
-      created_by: 'System'
-    };
-
-    const { error } = await supabase
-      .from('hr_candidate_timeline')
-      .insert(entry);
-
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error adding timeline entry:', error);
-    return false;
-  }
-};
-
-export const getCandidateTimeline = async (candidateId: string) => {
+// Fetch candidates for a specific job
+export const getCandidatesForJob = async (jobId: string): Promise<Candidate[]> => {
   try {
     const { data, error } = await supabase
-      .from('hr_candidate_timeline')
-      .select('*')
-      .eq('candidate_id', candidateId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching candidate timeline:', error);
-    return [];
-  }
-};
-
-export const getCandidatesForJob = async (jobId: string) => {
-  try {
-    const { data: applications, error: appError } = await supabase
-      .from('hr_job_applications')
-      .select('*')
-      .eq('job_id', jobId);
-
-    if (appError) throw appError;
-    
-    if (!applications || applications.length === 0) {
-      return [];
-    }
-
-    const candidateIds = applications.map(app => app.candidate_id);
-    
-    const { data: candidates, error: candError } = await supabase
       .from('hr_job_candidates')
       .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        current_location,
-        preferred_location,
-        total_experience,
-        current_salary,
-        expected_salary,
-        notice_period,
-        resume_url,
-        resume_filename,
-        resume_size,
-        resume_upload_date,
-        skills,
-        status,
-        main_status_id,
-        sub_status_id,
-        main_status:job_statuses!main_status_id (
-          id,
-          name,
-          color,
-          type
-        ),
-        sub_status:job_statuses!sub_status_id (
-          id,
-          name,
-          color,
-          type
-        )
+        *,
+        main_status:job_statuses!main_status_id(*),
+        sub_status:job_statuses!sub_status_id(*)
       `)
-      .in('id', candidateIds);
+      .eq('job_id', jobId);
 
-    if (candError) throw candError;
-    
-    if (!candidates) {
-      return [];
+    if (error) {
+      console.error('Error fetching candidates:', error);
+      throw error;
     }
 
-    return candidates.map(c => {
-      const application = applications.find(app => app.candidate_id === c.id);
-      
-      let candidateSkills: string[] = [];
-      if (Array.isArray(c.skills)) {
-        candidateSkills = c.skills.map((s: any) => 
-          typeof s === 'string' ? s : s.skillName || s
-        );
-      } else if (c.skills && typeof c.skills === 'object') {
-        candidateSkills = Object.values(c.skills).map((s: any) => 
-          typeof s === 'string' ? s : s.skillName || s
-        );
-      }
-
-      const mainStatusName = c.main_status?.name;
-      const progress = {
-        screening: false,
-        interview: false,
-        offer: false,
-        hired: false,
-        joined: false
-      };
-      
-      if (mainStatusName) {
-        const stageOrder = ['Screening', 'Interview', 'Offer', 'Hired', 'Joined'];
-        const stageIndex = stageOrder.indexOf(mainStatusName);
-        
-        if (stageIndex >= 0) {
-          progress.screening = true;
-          
-          if (stageIndex >= 1) progress.interview = true;
-          if (stageIndex >= 2) progress.offer = true;
-          if (stageIndex >= 3) progress.hired = true;
-          if (stageIndex >= 4) progress.joined = true;
-        }
-      } else if (c.status) {
-        progress.screening = c.status !== 'New';
-        progress.interview = ['Interview', 'Shortlisted', 'Offered', 'Hired', 'Joined'].includes(c.status);
-        progress.offer = ['Offered', 'Hired', 'Joined'].includes(c.status);
-        progress.hired = ['Hired', 'Joined'].includes(c.status);
-        progress.joined = c.status === 'Joined';
-      }
-      
-      return {
-        id: c.id,
-        name: `${c.first_name} ${c.last_name}`,
-        contact: {
-          email: c.email,
-          phone: c.phone || '',
-          emailVisible: false,
-          phoneVisible: false
-        },
-        owner: 'HR Team',
-        resume: c.resume_url ? {
-          url: c.resume_url,
-          filename: c.resume_filename || 'resume.pdf',
-          size: c.resume_size || 0,
-          uploadDate: c.resume_upload_date || new Date().toISOString()
-        } : null,
-        resumeAnalysis: {
-          score: application?.resume_score || 0,
-          status: c.resume_url ? 'analyzed' : 'not_uploaded'
-        },
-        progress: progress,
-        status: c.status || 'New',
-        main_status_id: c.main_status_id,
-        sub_status_id: c.sub_status_id,
-        main_status: c.main_status,
-        sub_status: c.sub_status,
-        currentLocation: c.current_location || '',
-        preferredLocation: c.preferred_location || '',
-        totalExperience: c.total_experience || { years: 0, months: 0 },
-        relevantExperience: c.total_experience || { years: 0, months: 0 },
-        currentSalary: c.current_salary || 0,
-        expectedSalary: c.expected_salary || 0,
-        noticePeriod: c.notice_period || '',
-        skills: candidateSkills
-      };
-    });
+    return (data || []).map(mapDbCandidateToCandidate);
   } catch (error) {
     console.error('Error fetching candidates:', error);
     return [];
   }
 };
 
-export const createDummyCandidate = async (jobId: string) => {
+// Map database candidate to frontend Candidate type
+const mapDbCandidateToCandidate = (dbCandidate: any): Candidate => {
+  // Calculate progress based on status
+  const progress = calculateProgressFromStatus(dbCandidate.status, dbCandidate.main_status?.name);
+  
+  return {
+    id: dbCandidate.id,
+    name: dbCandidate.name || '',
+    status: dbCandidate.status || 'New',
+    experience: dbCandidate.experience || '',
+    matchScore: dbCandidate.match_score || 0,
+    appliedDate: dbCandidate.applied_date || new Date().toISOString().split('T')[0],
+    skills: dbCandidate.skills || [],
+    email: dbCandidate.email || '',
+    phone: dbCandidate.phone || '',
+    currentSalary: dbCandidate.current_salary || 0,
+    expectedSalary: dbCandidate.expected_salary || 0,
+    location: dbCandidate.location || '',
+    appliedFrom: dbCandidate.applied_from || '',
+    resume: dbCandidate.resume_url ? {
+      url: dbCandidate.resume_url,
+      filename: dbCandidate.resume_filename || 'resume.pdf',
+      size: dbCandidate.resume_size || 0,
+      uploadDate: dbCandidate.resume_upload_date || new Date().toISOString()
+    } : null,
+    main_status_id: dbCandidate.main_status_id,
+    sub_status_id: dbCandidate.sub_status_id,
+    main_status: dbCandidate.main_status,
+    sub_status: dbCandidate.sub_status,
+    progress,
+    currentStage: dbCandidate.main_status?.name || '',
+    completedStages: [], // This would need to be calculated based on your application logic
+    hasValidatedResume: false, // This would need to be set based on your application logic
+  };
+};
+
+// Helper function to calculate progress from status
+const calculateProgressFromStatus = (status: string, mainStatusName?: string): {
+  screening: boolean;
+  interview: boolean;
+  offer: boolean;
+  hired: boolean;
+  joined: boolean;
+} => {
+  const defaultProgress = {
+    screening: false,
+    interview: false,
+    offer: false,
+    hired: false,
+    joined: false
+  };
+
+  // Use main status name if available
+  if (mainStatusName) {
+    const stageOrder = ['Screening', 'Interview', 'Offer', 'Hired', 'Joined'];
+    const stageIndex = stageOrder.indexOf(mainStatusName);
+    
+    if (stageIndex >= 0) {
+      defaultProgress.screening = true;
+      if (stageIndex >= 1) defaultProgress.interview = true;
+      if (stageIndex >= 2) defaultProgress.offer = true;
+      if (stageIndex >= 3) defaultProgress.hired = true;
+      if (stageIndex >= 4) defaultProgress.joined = true;
+    }
+    
+    return defaultProgress;
+  }
+  
+  // Fall back to status string if main_status not available
+  switch (status) {
+    case 'New':
+    case 'Screening':
+      return { ...defaultProgress, screening: true };
+    case 'InReview':
+    case 'Interviewing':
+      return { ...defaultProgress, screening: true, interview: true };
+    case 'Selected':
+      return { ...defaultProgress, screening: true, interview: true, offer: true, hired: true };
+    case 'Offered':
+      return { ...defaultProgress, screening: true, interview: true, offer: true };
+    case 'Hired':
+      return { ...defaultProgress, screening: true, interview: true, offer: true, hired: true };
+    case 'Joined':
+      return { ...defaultProgress, screening: true, interview: true, offer: true, hired: true, joined: true };
+    default:
+      return defaultProgress;
+  }
+};
+
+// Create a dummy candidate for testing
+export const createDummyCandidate = async (jobId: string): Promise<void> => {
   try {
-    const { data: job, error: jobError } = await supabase
+    const { data: jobData, error: jobError } = await supabase
       .from('hr_jobs')
       .select('*')
       .eq('id', jobId)
       .single();
-
+    
     if (jobError) throw jobError;
-
-    const names = ['John Smith', 'Jane Doe', 'Michael Johnson', 'Emily Williams', 'David Brown'];
-    const randomName = names[Math.floor(Math.random() * names.length)];
-    const [firstName, lastName] = randomName.split(' ');
-
-    const dummyCandidate = {
-      id: uuidv4(),
-      hr_organization_id: job.hr_organization_id,
-      first_name: firstName,
-      last_name: lastName,
-      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Math.floor(Math.random() * 1000)}@example.com`,
-      phone: `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`,
-      current_location: 'New York',
-      preferred_location: job.location?.[0] || 'Remote',
-      total_experience: {
-        years: Math.floor(Math.random() * 10) + 1,
-        months: Math.floor(Math.random() * 12)
-      },
-      current_salary: 75000 + Math.floor(Math.random() * 50000),
-      expected_salary: 90000 + Math.floor(Math.random() * 50000),
-      notice_period: ['Immediate', '15 Days', '30 Days', '60 Days'][Math.floor(Math.random() * 4)],
-      skills: job.skills.map((skill: string) => ({
-        skillName: skill,
-        rating: Math.floor(Math.random() * 3) + 3
-      })),
-      status: 'New'
+    
+    const newCandidate: DbCandidate = {
+      job_id: jobId,
+      name: `Test Candidate ${Math.floor(Math.random() * 1000)}`,
+      status: 'New',
+      applied_date: new Date().toISOString().split('T')[0],
+      skills: jobData.skills || [],
+      email: `test${Math.floor(Math.random() * 1000)}@example.com`,
+      phone: `+1-555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+      resume_url: null,
+      experience: '3 years',
+      current_salary: 50000,
+      expected_salary: 70000,
+      location: 'Remote',
+      applied_from: 'Test',
+      match_score: Math.floor(Math.random() * 100),
+      organization_id: jobData.organization_id
     };
-
-    const { data: candidateData, error } = await supabase
+    
+    const { error } = await supabase
       .from('hr_job_candidates')
-      .insert(dummyCandidate);
+      .insert(newCandidate);
     
     if (error) throw error;
-
-    if (candidateData) {
-      await supabase
-        .from('hr_job_applications')
-        .insert({
-          job_id: jobId,
-          candidate_id: dummyCandidate.id,
-          status: 'Applied',
-          resume_score: Math.floor(Math.random() * 50) + 50,
-          hr_organization_id: job.hr_organization_id
-        });
-      
-      await addCandidateTimelineEntry(dummyCandidate.id, 'candidate_create', {
-        message: 'Candidate created',
-        jobId: jobId
-      });
-    }
-
-    return candidateData;
+    
+    toast.success('Test candidate created successfully');
   } catch (error) {
     console.error('Error creating dummy candidate:', error);
-    return null;
+    toast.error('Failed to create test candidate');
   }
 };
-
-export const getCandidates = getCandidatesForJob;
-export const createDummyData = createDummyCandidate;

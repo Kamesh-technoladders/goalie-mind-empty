@@ -55,7 +55,9 @@ const CandidatesTabsSection = ({
   const fetchCandidates = async () => {
     try {
       const data = await getCandidatesForJob(jobId);
-      setLocalCandidates(data);
+      if (data) {
+        setLocalCandidates(data);
+      }
     } catch (error: any) {
       console.error('Error fetching candidates:', error);
       toast.error(`Error fetching candidates: ${error.message}`);
