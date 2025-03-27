@@ -1,3 +1,4 @@
+
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import * as path from "path";
@@ -8,7 +9,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::",
-      port: 8081,
+      port: 8080,
       strictPort: true,
       hmr: {
         protocol: "ws",

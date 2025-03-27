@@ -1,33 +1,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-export interface MainStatus {
-  id: string;
-  name: string;
-  color: string;
-  type: 'main';
-  description?: string;
-  display_order?: number;
-  created_at?: string;
-  updated_at?: string;
-  subStatuses?: SubStatus[];
-}
-
-export interface SubStatus {
-  id: string;
-  name: string;
-  color: string;
-  type: 'sub';
-  parent_id: string;
-  description?: string;
-  display_order?: number;
-  created_at?: string;
-  updated_at?: string;
-}
+import { MainStatus, SubStatus } from "@/types/supabase-extensions";
+import { useSelector } from "react-redux";
 
 // Fetch all statuses with their sub-statuses
-export const fetchAllStatuses = async (): Promise<MainStatus[]> => {
+export const fetchAllStatuses = async (organizationId?: string): Promise<MainStatus[]> => {
   try {
     // First, get all main statuses
     const { data: mainStatuses, error: mainError } = await supabase
@@ -84,7 +62,8 @@ export const getStatusById = async (statusId: string): Promise<MainStatus | SubS
 export const updateCandidateStatus = async (
   candidateId: string | number, 
   subStatusId: string,
-  userId?: string
+  userId?: string,
+  organizationId?: string
 ): Promise<boolean> => {
   try {
     // Get the sub status to find its parent
@@ -103,7 +82,8 @@ export const updateCandidateStatus = async (
         main_status_id: subStatus.parent_id,
         sub_status_id: subStatusId,
         updated_by: userId || null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        organization_id: organizationId || null
       })
       .eq('id', candidateId);
     
