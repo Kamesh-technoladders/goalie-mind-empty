@@ -36,6 +36,7 @@ import {
 } from "@/services/statusService";
 import { toast } from "sonner";
 import { useSelector } from "react-redux";
+import { Pencil, Trash2 } from "lucide-react";
 
 // Create interface for component props
 interface StatusSettingsProps {
@@ -48,7 +49,10 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditSubModalOpen, setIsEditSubModalOpen] = useState(false);
   const [selectedMainStatus, setSelectedMainStatus] = useState<string | null>(null);
+  const [editingStatus, setEditingStatus] = useState<MainStatus | SubStatus | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     color: "#3b82f6",
@@ -130,6 +134,103 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
     }
   };
 
+  // Update existing main status
+  const handleUpdateMainStatus = async () => {
+    try {
+      if (!editingStatus || !editingStatus.id) {
+        toast.error("No status selected for editing");
+        return;
+      }
+      
+      const updatedStatus: Partial<MainStatus> = {
+        name: formData.name,
+        color: formData.color,
+        description: formData.description,
+        display_order: formData.displayOrder
+      };
+      
+      await updateStatus(editingStatus.id, updatedStatus);
+      
+      toast.success("Status updated successfully");
+      setIsEditModalOpen(false);
+      resetForm();
+      loadStatuses();
+      if (onStatusChange) onStatusChange();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
+
+  // Update existing sub status
+  const handleUpdateSubStatus = async () => {
+    try {
+      if (!editingStatus || !editingStatus.id) {
+        toast.error("No sub-status selected for editing");
+        return;
+      }
+      
+      const updatedStatus: Partial<SubStatus> = {
+        name: formData.name,
+        color: formData.color,
+        description: formData.description,
+        display_order: formData.displayOrder,
+        parent_id: selectedMainStatus || (editingStatus as SubStatus).parent_id
+      };
+      
+      await updateStatus(editingStatus.id, updatedStatus);
+      
+      toast.success("Sub-status updated successfully");
+      setIsEditSubModalOpen(false);
+      resetForm();
+      loadStatuses();
+      if (onStatusChange) onStatusChange();
+    } catch (error) {
+      console.error("Error updating sub-status:", error);
+      toast.error("Failed to update sub-status");
+    }
+  };
+
+  // Handle status deletion
+  const handleDeleteStatus = async (statusId: string) => {
+    if (window.confirm("Are you sure you want to delete this status? This action cannot be undone.")) {
+      try {
+        await deleteStatus(statusId);
+        toast.success("Status deleted successfully");
+        loadStatuses();
+        if (onStatusChange) onStatusChange();
+      } catch (error) {
+        console.error("Error deleting status:", error);
+        toast.error("Failed to delete status");
+      }
+    }
+  };
+
+  // Open edit modal for main status
+  const handleEditMainStatus = (status: MainStatus) => {
+    setEditingStatus(status);
+    setFormData({
+      name: status.name,
+      color: status.color || "#3b82f6",
+      description: status.description || "",
+      displayOrder: status.display_order || 0
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Open edit modal for sub status
+  const handleEditSubStatus = (status: SubStatus) => {
+    setEditingStatus(status);
+    setSelectedMainStatus(status.parent_id);
+    setFormData({
+      name: status.name,
+      color: status.color || "#3b82f6",
+      description: status.description || "",
+      displayOrder: status.display_order || 0
+    });
+    setIsEditSubModalOpen(true);
+  };
+
   // Reset form data
   const resetForm = () => {
     setFormData({
@@ -139,6 +240,7 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
       displayOrder: 0
     });
     setSelectedMainStatus(null);
+    setEditingStatus(null);
   };
 
   return (
@@ -165,16 +267,17 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
                 <TableHead>Color</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Display Order</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4">Loading...</TableCell>
+                  <TableCell colSpan={5} className="text-center py-4">Loading...</TableCell>
                 </TableRow>
               ) : statuses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4">No statuses found</TableCell>
+                  <TableCell colSpan={5} className="text-center py-4">No statuses found</TableCell>
                 </TableRow>
               ) : (
                 statuses.map((status) => (
@@ -191,6 +294,25 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
                     </TableCell>
                     <TableCell>{status.description || "N/A"}</TableCell>
                     <TableCell>{status.display_order || 0}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleEditMainStatus(status)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDeleteStatus(status.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -207,12 +329,13 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
                 <TableHead>Color</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Display Order</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">Loading...</TableCell>
+                  <TableCell colSpan={6} className="text-center py-4">Loading...</TableCell>
                 </TableRow>
               ) : (
                 statuses.flatMap(mainStatus => 
@@ -231,6 +354,25 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
                       </TableCell>
                       <TableCell>{subStatus.description || "N/A"}</TableCell>
                       <TableCell>{subStatus.display_order || 0}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditSubStatus(subStatus)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteStatus(subStatus.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   )) : []
                 )
@@ -366,6 +508,136 @@ const StatusSettings: React.FC<StatusSettingsProps> = ({ onStatusChange }) => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSubModalOpen(false)}>Cancel</Button>
             <Button onClick={handleCreateSubStatus}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Main Status Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Main Status</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Name</Label>
+              <Input 
+                className="col-span-3" 
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Color</Label>
+              <div className="col-span-3 flex gap-2">
+                <Input 
+                  type="color" 
+                  className="w-12"
+                  value={formData.color} 
+                  onChange={(e) => setFormData({...formData, color: e.target.value})}
+                />
+                <Input 
+                  className="flex-1" 
+                  value={formData.color} 
+                  onChange={(e) => setFormData({...formData, color: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Description</Label>
+              <Input 
+                className="col-span-3" 
+                value={formData.description} 
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Display Order</Label>
+              <Input 
+                type="number" 
+                className="col-span-3" 
+                value={formData.displayOrder} 
+                onChange={(e) => setFormData({...formData, displayOrder: parseInt(e.target.value) || 0})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateMainStatus}>Update</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Sub Status Modal */}
+      <Dialog open={isEditSubModalOpen} onOpenChange={setIsEditSubModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Sub Status</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Parent Status</Label>
+              <Select
+                value={selectedMainStatus || ""}
+                onValueChange={setSelectedMainStatus}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a parent status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status.id} value={status.id}>
+                      {status.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Name</Label>
+              <Input 
+                className="col-span-3" 
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Color</Label>
+              <div className="col-span-3 flex gap-2">
+                <Input 
+                  type="color" 
+                  className="w-12"
+                  value={formData.color} 
+                  onChange={(e) => setFormData({...formData, color: e.target.value})}
+                />
+                <Input 
+                  className="flex-1" 
+                  value={formData.color} 
+                  onChange={(e) => setFormData({...formData, color: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Description</Label>
+              <Input 
+                className="col-span-3" 
+                value={formData.description} 
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Display Order</Label>
+              <Input 
+                type="number" 
+                className="col-span-3" 
+                value={formData.displayOrder} 
+                onChange={(e) => setFormData({...formData, displayOrder: parseInt(e.target.value) || 0})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditSubModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateSubStatus}>Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

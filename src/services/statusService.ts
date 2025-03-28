@@ -77,7 +77,7 @@ export const getStatusById = async (statusId: string): Promise<MainStatus | SubS
   }
 };
 
-// Update candidate status
+// Update candidate status and create timeline entry
 export const updateCandidateStatus = async (
   candidateId: string | number, 
   subStatusId: string,
@@ -93,6 +93,22 @@ export const updateCandidateStatus = async (
       .single();
     
     if (subError) throw subError;
+
+    // Get the previous status data
+    const { data: prevCandidateData, error: prevError } = await supabase
+      .from('hr_job_candidates')
+      .select(`
+        main_status_id,
+        sub_status_id,
+        main_status:main_status_id (name),
+        sub_status:sub_status_id (name)
+      `)
+      .eq('id', candidateId)
+      .single();
+
+    if (prevError) {
+      console.error('Error fetching previous status:', prevError);
+    }
     
     // Now update the candidate with both main and sub status
     const { error } = await supabase
@@ -107,10 +123,83 @@ export const updateCandidateStatus = async (
       .eq('id', candidateId);
     
     if (error) throw error;
+
+    // Get the new status data for timeline entry
+    const { data: mainStatus, error: mainStatusError } = await supabase
+      .from('job_statuses')
+      .select('name')
+      .eq('id', subStatus.parent_id)
+      .single();
+    
+    if (mainStatusError) {
+      console.error('Error fetching main status:', mainStatusError);
+    }
+
+    // Create timeline entry for status change
+    await createStatusChangeTimelineEntry(
+      candidateId.toString(),
+      userId || 'System',
+      {
+        previousState: prevCandidateData ? {
+          mainStatusId: prevCandidateData.main_status_id,
+          subStatusId: prevCandidateData.sub_status_id,
+          mainStatusName: prevCandidateData.main_status?.name,
+          subStatusName: prevCandidateData.sub_status?.name
+        } : null,
+        newState: {
+          mainStatusId: subStatus.parent_id,
+          subStatusId: subStatusId,
+          mainStatusName: mainStatus?.name,
+          subStatusName: subStatus.name
+        }
+      }
+    );
     
     return true;
   } catch (error) {
     console.error('Error updating candidate status:', error);
+    return false;
+  }
+};
+
+// Create a timeline entry for status change
+export const createStatusChangeTimelineEntry = async (
+  candidateId: string,
+  createdBy: string,
+  statusChangeData: {
+    previousState: {
+      mainStatusId: string;
+      subStatusId: string;
+      mainStatusName: string;
+      subStatusName: string;
+    } | null;
+    newState: {
+      mainStatusId: string;
+      subStatusId: string;
+      mainStatusName: string;
+      subStatusName: string;
+    };
+  }
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('hr_candidate_timeline')
+      .insert({
+        candidate_id: candidateId,
+        created_by: createdBy,
+        event_type: 'status_change',
+        previous_state: statusChangeData.previousState,
+        new_state: statusChangeData.newState,
+        event_data: {
+          action: 'Status updated',
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error creating timeline entry:', error);
     return false;
   }
 };

@@ -1742,6 +1742,7 @@ export type Database = {
           display_order: number | null
           id: string
           name: string
+          organization_id: string | null
           parent_id: string | null
           type: Database["public"]["Enums"]["status_type"]
           updated_at: string | null
@@ -1753,6 +1754,7 @@ export type Database = {
           display_order?: number | null
           id?: string
           name: string
+          organization_id?: string | null
           parent_id?: string | null
           type: Database["public"]["Enums"]["status_type"]
           updated_at?: string | null
@@ -1764,11 +1766,19 @@ export type Database = {
           display_order?: number | null
           id?: string
           name?: string
+          organization_id?: string | null
           parent_id?: string | null
           type?: Database["public"]["Enums"]["status_type"]
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "job_statuses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "job_statuses_parent_id_fkey"
             columns: ["parent_id"]
