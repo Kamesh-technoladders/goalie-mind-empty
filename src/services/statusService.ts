@@ -1,8 +1,27 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { MainStatus, SubStatus } from "@/types/supabase-extensions";
-import { useSelector } from "react-redux";
+
+// Type definitions
+export interface MainStatus {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  display_order?: number;
+  type: 'main';
+  subStatuses?: SubStatus[];
+}
+
+export interface SubStatus {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  display_order?: number;
+  type: 'sub';
+  parent_id: string;
+}
 
 // Fetch all statuses with their sub-statuses
 export const fetchAllStatuses = async (organizationId?: string): Promise<MainStatus[]> => {
@@ -182,5 +201,56 @@ export const getProgressForStatus = async (statusId: string): Promise<{
       hired: false,
       joined: false
     };
+  }
+};
+
+// Update existing status
+export const updateStatus = async (
+  id: string,
+  updates: Partial<MainStatus> | Partial<SubStatus>
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('job_statuses')
+      .update(updates)
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error updating status:', error);
+    return false;
+  }
+};
+
+// Delete status
+export const deleteStatus = async (id: string): Promise<boolean> => {
+  try {
+    // Check if this is a main status with sub-statuses
+    if (id) {
+      const { data: subStatuses, error: checkError } = await supabase
+        .from('job_statuses')
+        .select('id')
+        .eq('parent_id', id);
+      
+      if (checkError) throw checkError;
+      
+      // If this main status has sub-statuses, don't allow deletion
+      if (subStatuses && subStatuses.length > 0) {
+        toast.error("Cannot delete a status that has sub-statuses. Delete the sub-statuses first.");
+        return false;
+      }
+    }
+    
+    const { error } = await supabase
+      .from('job_statuses')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting status:', error);
+    return false;
   }
 };

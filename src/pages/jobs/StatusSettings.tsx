@@ -29,9 +29,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   fetchAllStatuses, 
   createStatus,
-  getStatusById
+  updateStatus,
+  deleteStatus,
+  MainStatus,
+  SubStatus
 } from "@/services/statusService";
-import { MainStatus, SubStatus } from "@/types/supabase-extensions";
 import { toast } from "sonner";
 import { useSelector } from "react-redux";
 
