@@ -45,14 +45,17 @@ const RecentActivityCard = ({ candidates, onAddCandidate }: RecentActivityCardPr
           return;
         }
         
-        // Fetch timeline events for these candidates
+        // Fix: Using string values for IDs to avoid UUID parsing issues
+        const validCandidateIds = candidateIds.map(id => String(id));
+        
+        // Fetch timeline events for these candidates with proper string IDs
         const { data, error } = await supabase
           .from('hr_candidate_timeline')
           .select(`
             *,
-            candidate:hr_job_candidates(name)
+            candidate:hr_job_candidates!hr_candidate_timeline_candidate_id_fkey(name)
           `)
-          .in('candidate_id', candidateIds)
+          .in('candidate_id', validCandidateIds)
           .order('created_at', { ascending: false })
           .limit(5);
         
@@ -82,9 +85,14 @@ const RecentActivityCard = ({ candidates, onAddCandidate }: RecentActivityCardPr
           table: 'hr_candidate_timeline'
         },
         (payload) => {
-          // Since we can't filter by candidate_id in the subscription,
-          // we'll refetch all timeline events when a new one is created
-          fetchTimelineEvents();
+          // When a new timeline event is created, update the UI
+          setTimelineEvents(prev => {
+            // Check if this event is already in our list
+            if (prev.some(e => e.id === payload.new.id)) return prev;
+            
+            // Add the new event to the beginning and limit to 5
+            return [payload.new as TimelineEvent, ...prev].slice(0, 5);
+          });
         }
       )
       .subscribe();

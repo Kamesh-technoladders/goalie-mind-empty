@@ -47,7 +47,7 @@ const CandidatesTabsSection = ({
   const [loading, setLoading] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
 
-  // Load statuses for filter options
+  // Load statuses for filter options and tabs
   useEffect(() => {
     const loadStatuses = async () => {
       try {
@@ -101,20 +101,15 @@ const CandidatesTabsSection = ({
   }, [candidates]);
 
   // Calculate counts for each status category
-  const getStatusCount = (status: string) => {
+  const getStatusCount = (statusId: string) => {
+    if (statusId === "all") {
+      return localCandidates.length;
+    }
+    
     return localCandidates.filter(c => 
-      c.status === status || 
-      (c.main_status && c.main_status.name === status)
+      c.main_status_id === statusId
     ).length;
   };
-
-  const newCount = getStatusCount("New") + getStatusCount("Screening");
-  const inReviewCount = getStatusCount("InReview") + getStatusCount("Interviewing");
-  const engagedCount = getStatusCount("Engaged");
-  const availableCount = getStatusCount("Available");
-  const offeredCount = getStatusCount("Offered");
-  const hiredCount = getStatusCount("Hired") + getStatusCount("Selected");
-  const rejectedCount = getStatusCount("Rejected");
 
   const fetchCandidates = async () => {
     try {
@@ -186,57 +181,24 @@ const CandidatesTabsSection = ({
                 onClick={() => setActiveTab("all")}
                 className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
               >
-                All Candidates ({localCandidates.length})
+                All Candidates ({getStatusCount("all")})
               </TabsTrigger>
-              <TabsTrigger 
-                value="new" 
-                onClick={() => setActiveTab("new")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                New ({newCount})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="inReview" 
-                onClick={() => setActiveTab("inReview")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                In Review ({inReviewCount})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="engaged" 
-                onClick={() => setActiveTab("engaged")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                Engaged ({engagedCount})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="available" 
-                onClick={() => setActiveTab("available")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                Available ({availableCount})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="offered" 
-                onClick={() => setActiveTab("offered")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                Offered ({offeredCount})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="hired" 
-                onClick={() => setActiveTab("hired")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                Hired ({hiredCount})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="rejected" 
-                onClick={() => setActiveTab("rejected")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                Rejected ({rejectedCount})
-              </TabsTrigger>
+              
+              {/* Dynamically generate tabs based on main statuses */}
+              {allStatuses.map(status => (
+                <TabsTrigger 
+                  key={status.id}
+                  value={status.id} 
+                  onClick={() => setActiveTab(status.id)}
+                  className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
+                  style={{
+                    borderColor: activeTab === status.id ? status.color : 'transparent',
+                    color: activeTab === status.id ? status.color : undefined
+                  }}
+                >
+                  {status.name} ({getStatusCount(status.id)})
+                </TabsTrigger>
+              ))}
             </TabsList>
             <div className="flex items-center gap-2 ml-4">
               {/* Filter Button */}
@@ -303,6 +265,7 @@ const CandidatesTabsSection = ({
           )}
         </div>
         
+        {/* All candidates tab */}
         <TabsContent value="all" className="mt-0">
           <CandidatesList 
             jobId={jobId} 
@@ -313,82 +276,19 @@ const CandidatesTabsSection = ({
           />
         </TabsContent>
         
-        <TabsContent value="new" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            statusFilter="New" 
-            onAddCandidate={onAddCandidate} 
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
-        
-        <TabsContent value="inReview" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            statusFilter="InReview" 
-            onAddCandidate={onAddCandidate} 
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
-        
-        <TabsContent value="engaged" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            statusFilter="Engaged" 
-            onAddCandidate={onAddCandidate} 
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
-        
-        <TabsContent value="available" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            statusFilter="Available" 
-            onAddCandidate={onAddCandidate}
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
-        
-        <TabsContent value="offered" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            statusFilter="Offered" 
-            onAddCandidate={onAddCandidate}
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
-        
-        <TabsContent value="hired" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            statusFilter="Hired" 
-            onAddCandidate={onAddCandidate}
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
-        
-        <TabsContent value="rejected" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            statusFilter="Rejected" 
-            onAddCandidate={onAddCandidate}
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
+        {/* Dynamically generate tab content for each main status */}
+        {allStatuses.map(status => (
+          <TabsContent key={status.id} value={status.id} className="mt-0">
+            <CandidatesList 
+              jobId={jobId} 
+              jobdescription={jobdescription} 
+              statusFilter={status.name}
+              onAddCandidate={onAddCandidate} 
+              onRefresh={fetchCandidates}
+              statusFilters={appliedFilters}
+            />
+          </TabsContent>
+        ))}
       </Tabs>
 
       {/*Job Status Dialog */}
