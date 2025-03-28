@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
 import { toast } from "sonner";
 import { getCandidatesByJobId } from "@/services/candidateService";
 import { Candidate, CandidateStatus } from "@/lib/types";
@@ -25,17 +25,24 @@ import { ProgressColumn } from "./ProgressColumn";
 import { Candidates } from "./types/candidate.types";
 import { getCandidatesForJob, createDummyCandidate } from "@/services/candidatesService";
 import { updateCandidateStatus } from "@/services/statusService";
-import { useSelector } from "react-redux";
 
 interface CandidatesListProps {
   jobId: string;
   jobdescription: string;
   statusFilter?: string;
+  statusFilters?: string[];
   onAddCandidate?: () => void;
   onRefresh: () => Promise<void>;
 }
 
-const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, onRefresh }: CandidatesListProps) => {
+const CandidatesList = ({ 
+  jobId, 
+  statusFilter, 
+  statusFilters = [],
+  onAddCandidate, 
+  jobdescription, 
+  onRefresh 
+}: CandidatesListProps) => {
   // Get user info from Redux state
   const user = useSelector((state: any) => state.auth.user);
   const organizationId = useSelector((state: any) => state.auth.organization_id);
@@ -46,6 +53,7 @@ const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, o
     queryFn: () => getCandidatesByJobId(jobId),
   });
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
 
   // Fetch job data
   const { 
@@ -117,7 +125,34 @@ const CandidatesList = ({ jobId, statusFilter, onAddCandidate, jobdescription, o
     }
   }, [candidatesData]);
 
-  const filteredCandidates = statusFilter ? candidates.filter((c) => c.status === statusFilter) : candidates;
+  // Apply all filters
+  useEffect(() => {
+    let filtered = candidates;
+    
+    // Apply status filter if specified
+    if (statusFilter) {
+      filtered = filtered.filter((c) => c.status === statusFilter);
+    }
+    
+    // Apply additional status filters
+    if (statusFilters && statusFilters.length > 0) {
+      filtered = filtered.filter(candidate => {
+        // Filter by main status ID
+        if (candidate.main_status_id && statusFilters.includes(candidate.main_status_id)) {
+          return true;
+        }
+        
+        // Filter by sub status ID
+        if (candidate.sub_status_id && statusFilters.includes(candidate.sub_status_id)) {
+          return true;
+        }
+        
+        return false;
+      });
+    }
+    
+    setFilteredCandidates(filtered);
+  }, [candidates, statusFilter, statusFilters]);
 
   const handleStatusChange = async (value: string, candidate: Candidate) => {
     try {

@@ -1074,6 +1074,7 @@ export type Database = {
           career_experience: Json | null
           cover_letter: string | null
           created_at: string
+          created_by: string | null
           current_salary: number | null
           education: Json | null
           email: string | null
@@ -1110,6 +1111,7 @@ export type Database = {
           career_experience?: Json | null
           cover_letter?: string | null
           created_at?: string
+          created_by?: string | null
           current_salary?: number | null
           education?: Json | null
           email?: string | null
@@ -1146,6 +1148,7 @@ export type Database = {
           career_experience?: Json | null
           cover_letter?: string | null
           created_at?: string
+          created_by?: string | null
           current_salary?: number | null
           education?: Json | null
           email?: string | null
@@ -1176,6 +1179,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "hr_job_candidates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hr_job_candidates_job_id_fkey"
             columns: ["job_id"]
