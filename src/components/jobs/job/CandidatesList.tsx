@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
@@ -127,16 +128,31 @@ const CandidatesList = ({
 
   // Apply all filters
   useEffect(() => {
-    let filtered = candidates;
+    let filtered = [...candidates];
     
-    // Apply status filter if specified
+    // Apply status filter if specified (tab filter)
     if (statusFilter) {
-      filtered = filtered.filter((c) => c.status === statusFilter);
+      filtered = filtered.filter((c) => {
+        // Check if main status name matches the status filter
+        if (c.main_status && c.main_status.name === statusFilter) {
+          return true;
+        }
+        
+        // Legacy status check (for backward compatibility)
+        if (c.status === statusFilter) {
+          return true;
+        }
+        
+        return false;
+      });
     }
     
-    // Apply additional status filters
+    // Apply additional status filters from the filter dialog
     if (statusFilters && statusFilters.length > 0) {
       filtered = filtered.filter(candidate => {
+        // If no status filters are selected, show all candidates
+        if (statusFilters.length === 0) return true;
+        
         // Filter by main status ID
         if (candidate.main_status_id && statusFilters.includes(candidate.main_status_id)) {
           return true;
@@ -182,7 +198,7 @@ const CandidatesList = ({
   const handleValidateResume = async (candidateId: number) => {
     try {
       setValidatingId(candidateId);
-      const candidate = filteredCandidates.find((c) => c.id === candidateId);
+      const candidate = filteredCandidates.find((c) => c.id === candidateId.toString());
       if (!candidate) return;
 
       const payload = {
@@ -208,7 +224,7 @@ const CandidatesList = ({
         throw new Error("Validation failed");
       }
 
-      const candidateIndex = filteredCandidates.findIndex((c) => c.id === candidateId);
+      const candidateIndex = filteredCandidates.findIndex((c) => c.id === candidateId.toString());
       if (candidateIndex !== -1) {
         filteredCandidates[candidateIndex].hasValidatedResume = true;
         toast.success("Resume validated successfully!");
@@ -223,7 +239,7 @@ const CandidatesList = ({
   };
 
   const handleViewResume = (candidateId: number) => {
-    const candidate = filteredCandidates.find((c) => c.id === candidateId);
+    const candidate = filteredCandidates.find((c) => c.id === candidateId.toString());
     if (candidate?.resume) {
       // Handle resume URL - could be a string or an object with URL
       const resumeUrl = typeof candidate.resume === 'string' 

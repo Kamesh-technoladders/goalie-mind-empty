@@ -28,6 +28,7 @@ interface StatusFilter {
   name: string;
   isMain: boolean;
   selected: boolean;
+  color?: string;
 }
 
 const CandidatesTabsSection = ({ 
@@ -63,7 +64,8 @@ const CandidatesTabsSection = ({
             id: mainStatus.id,
             name: mainStatus.name,
             isMain: true,
-            selected: false
+            selected: false,
+            color: mainStatus.color
           });
           
           // Add sub-statuses
@@ -73,7 +75,8 @@ const CandidatesTabsSection = ({
                 id: subStatus.id,
                 name: `${mainStatus.name} - ${subStatus.name}`,
                 isMain: false,
-                selected: false
+                selected: false,
+                color: subStatus.color || mainStatus.color
               });
             });
           }
@@ -167,6 +170,11 @@ const CandidatesTabsSection = ({
     setAppliedFilters(prev => prev.filter(filterId => filterId !== id));
   };
 
+  // Get the name of a filter by its ID
+  const getFilterNameById = (id: string): StatusFilter | undefined => {
+    return statusFilters.find(filter => filter.id === id);
+  };
+
   return (
     <div className="md:col-span-3">
       <Tabs defaultValue="all" className="w-full">
@@ -256,11 +264,20 @@ const CandidatesTabsSection = ({
           {appliedFilters.length > 0 && (
             <div className="flex flex-wrap gap-2 my-2">
               {appliedFilters.map(filterId => {
-                const filter = statusFilters.find(f => f.id === filterId);
+                const filter = getFilterNameById(filterId);
                 if (!filter) return null;
                 
                 return (
-                  <Badge key={filterId} variant="secondary" className="flex items-center gap-1 py-1">
+                  <Badge 
+                    key={filterId} 
+                    variant="secondary" 
+                    className="flex items-center gap-1 py-1"
+                    style={{
+                      backgroundColor: filter.color ? `${filter.color}20` : undefined,
+                      borderColor: filter.color || undefined,
+                      color: filter.color || undefined
+                    }}
+                  >
                     {filter.name}
                     <button 
                       onClick={() => removeFilter(filterId)}
@@ -402,9 +419,16 @@ const CandidatesTabsSection = ({
                     <label 
                       htmlFor={filter.id} 
                       className={`text-sm ${filter.isMain ? 'font-medium' : 'ml-2'}`}
+                      style={{ color: filter.color || undefined }}
                     >
                       {filter.name}
                     </label>
+                    {filter.color && (
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: filter.color }}
+                      />
+                    )}
                   </div>
                 ))
               )}

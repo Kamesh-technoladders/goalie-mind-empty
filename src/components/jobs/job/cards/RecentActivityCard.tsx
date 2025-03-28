@@ -40,6 +40,11 @@ const RecentActivityCard = ({ candidates, onAddCandidate }: RecentActivityCardPr
         // Get candidate IDs
         const candidateIds = candidates.map(c => c.id).filter(Boolean);
         
+        if (candidateIds.length === 0) {
+          setTimelineEvents([]);
+          return;
+        }
+        
         // Fetch timeline events for these candidates
         const { data, error } = await supabase
           .from('hr_candidate_timeline')
@@ -74,11 +79,11 @@ const RecentActivityCard = ({ candidates, onAddCandidate }: RecentActivityCardPr
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'hr_candidate_timeline',
-          filter: `candidate_id=in.(${candidateIds.join(',')})`,
+          table: 'hr_candidate_timeline'
         },
         (payload) => {
-          // Refetch timeline events when a new one is created
+          // Since we can't filter by candidate_id in the subscription,
+          // we'll refetch all timeline events when a new one is created
           fetchTimelineEvents();
         }
       )
