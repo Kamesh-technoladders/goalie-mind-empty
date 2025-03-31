@@ -1,5 +1,6 @@
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Calendar, Users, BarChart3, Clock, Target, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,6 +40,8 @@ interface GoalCardProps {
 }
 
 const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
+  const navigate = useNavigate();
+  
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), "MMM d, yyyy");
@@ -120,11 +123,16 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
     }
   };
 
+  const handleCardClick = () => {
+    navigate(`/goals/${goal.id}`);
+  };
+
   return (
     <AnimatedCard
       animation="fade"
       delay={delay}
-      className="bg-white border border-gray-100 transition-all hover:shadow-md"
+      className="bg-white border border-gray-100 transition-all cursor-pointer hover:shadow-md"
+      onClick={handleCardClick}
     >
       <div className="flex flex-col h-full">
         <div className="flex justify-between items-start mb-3">
@@ -174,16 +182,16 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
           {goal.assignmentDetails && (
             <div className="mb-3">
               <ProgressTracker
-                progress={goal.assignmentDetails.progress}
+                progress={goal.assignmentDetails.progress || 0}
                 size="md"
               />
               <div className="mt-2 flex justify-between text-xs text-gray-500">
                 <span>
-                  Current: {goal.assignmentDetails.currentValue}
+                  Current: {goal.assignmentDetails.currentValue || 0}
                   {goal.metricUnit}
                 </span>
                 <span>
-                  Target: {goal.assignmentDetails.targetValue}
+                  Target: {goal.assignmentDetails.targetValue || 0}
                   {goal.metricUnit}
                 </span>
               </div>
@@ -191,14 +199,12 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
           )}
 
           <div className="flex justify-between items-center mt-4">
-            {goal.assignmentDetails?.goalType && (
-              <div className="flex items-center">
-                <Target className="h-4 w-4 mr-2 text-gray-400" />
-                <span className="text-sm text-gray-600">
-                  {goal.assignmentDetails.goalType}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center">
+              <Target className="h-4 w-4 mr-2 text-gray-400" />
+              <span className="text-sm text-gray-600">
+                {goal.assignmentDetails?.goalType || "Not assigned"}
+              </span>
+            </div>
 
             {goal.assignedTo && goal.assignedTo.length > 0 && (
               <div className="flex items-center">
@@ -223,6 +229,9 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
                 </AvatarGroup>
               </div>
             )}
+          </div>
+          <div className="flex justify-end mt-3">
+            <ChevronRight className="h-5 w-5 text-gray-400" />
           </div>
         </div>
       </div>

@@ -634,3 +634,141 @@ export const updateGoalProgressFromRecords = async (assignedGoalId: string): Pro
     return false;
   }
 };
+
+export const getGoalById = async (goalId: string): Promise<GoalWithDetails | null> => {
+  try {
+    console.log(`Fetching goal with ID: ${goalId}`);
+    
+    // Fetch the goal details
+    const { data: goalData, error: goalError } = await supabase
+      .from('hr_goals')
+      .select('*')
+      .eq('id', goalId)
+      .single();
+    
+    if (goalError) {
+      console.error('Error fetching goal details:', goalError);
+      return null;
+    }
+    
+    // Fetch assigned employees
+    const { data: assignedData, error: assignedError } = await supabase
+      .from('hr_assigned_goals')
+      .select('*, hr_employees:employee_id(*)')
+      .eq('goal_id', goalId);
+    
+    if (assignedError) {
+      console.error('Error fetching assigned goals:', assignedError);
+      return null;
+    }
+    
+    // Map employees and assignment details
+    const assignedEmployees: Employee[] = [];
+    let assignmentDetails = null;
+    
+    if (assignedData && assignedData.length > 0) {
+      assignedData.forEach(assignment => {
+        if (assignment.hr_employees) {
+          const employee = assignment.hr_employees;
+          assignedEmployees.push({
+            id: employee.id,
+            name: `${employee.first_name} ${employee.last_name}`,
+            position: employee.position || 'Employee',
+            department: employee.department_id as any,
+            email: employee.email,
+            avatar: employee.profile_picture_url
+          });
+        }
+        
+        // For simplicity, we just take the first assignment details
+        // In a real app, you might handle multiple assignments differently
+        if (!assignmentDetails) {
+          assignmentDetails = {
+            id: assignment.id,
+            goalId: assignment.goal_id,
+            employeeId: assignment.employee_id,
+            status: assignment.status,
+            progress: assignment.progress,
+            currentValue: assignment.current_value,
+            targetValue: assignment.target_value,
+            notes: assignment.notes,
+            assignedAt: assignment.assigned_at,
+            goalType: assignment.goal_type as any,
+            updated_at: assignment.updated_at
+          };
+        }
+      });
+    }
+    
+    // Map goal with details
+    const goal: GoalWithDetails = {
+      id: goalData.id,
+      name: goalData.name,
+      description: goalData.description,
+      sector: goalData.sector,
+      targetValue: goalData.target_value,
+      metricType: goalData.metric_type,
+      metricUnit: goalData.metric_unit,
+      startDate: goalData.start_date,
+      endDate: goalData.end_date,
+      createdAt: goalData.created_at,
+      updatedAt: goalData.updated_at,
+      assignedTo: assignedEmployees,
+      assignmentDetails
+    };
+    
+    return goal;
+  } catch (error) {
+    console.error('Error in getGoalById:', error);
+    return null;
+  }
+};
+
+export const getTrackingRecordsForGoal = async (goalId: string, employeeId?: string): Promise<TrackingRecord[]> => {
+  try {
+    console.log(`Fetching tracking records for goal ID: ${goalId}`);
+    
+    // First get the assigned goal ID
+    let query = supabase
+      .from('hr_assigned_goals')
+      .select('id')
+      .eq('goal_id', goalId);
+    
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId);
+    }
+    
+    const { data: assignedGoals, error: assignedError } = await query;
+    
+    if (assignedError) {
+      console.error('Error fetching assigned goals:', assignedError);
+      return [];
+    }
+    
+    if (!assignedGoals || assignedGoals.length === 0) {
+      console.log('No assigned goals found');
+      return [];
+    }
+    
+    // Get all assigned goal IDs
+    const assignedGoalIds = assignedGoals.map(ag => ag.id);
+    
+    // Fetch tracking records for these assigned goals
+    const { data: trackingRecords, error: trackingError } = await supabase
+      .from('tracking_records')
+      .select('*')
+      .in('assigned_goal_id', assignedGoalIds)
+      .order('record_date', { ascending: false });
+    
+    if (trackingError) {
+      console.error('Error fetching tracking records:', trackingError);
+      return [];
+    }
+    
+    return trackingRecords.map(mapTrackingRecordDbToTrackingRecord);
+    
+  } catch (error) {
+    console.error('Error in getTrackingRecordsForGoal:', error);
+    return [];
+  }
+};

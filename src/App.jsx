@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/LoginPage";
 import SignUp from "./pages/GlobalSuperAdmin";
@@ -19,6 +20,7 @@ import EmployeeForm from "./pages/EmployeeForm";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import GoalPage from "./pages/goals/Index";
 import GoalView from "./pages/goals/EmployeeView";
+import GoalDetail from "./pages/goals/GoalDetail";
 import EmployeeGoalView from "./components/goals/employee/EmployeeGoalDashboard"
 import Jobs from "./pages/jobs/Jobs";
 import JobView from "./pages/jobs/JobView";
@@ -77,6 +79,7 @@ function App() {
 
             {/* Goals */}
             <Route path="/goals" element={<GoalPage />} />
+            <Route path="/goals/:goalId" element={<GoalDetail />} />
             <Route path="/goalsview" element={<GoalView />} />
             <Route path="goalview" element={<EmployeeGoalView/>} />
 
