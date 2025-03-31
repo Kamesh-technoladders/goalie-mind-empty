@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   DialogContent,
   DialogHeader,
@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { SectorType, MetricType } from "@/types/goal";
 import { createGoal } from "@/lib/supabaseData";
+import { supabase } from "@/integrations/supabase/client";
 
 const CreateGoalForm = () => {
   const [sector, setSector] = useState<SectorType>();
@@ -29,6 +30,34 @@ const CreateGoalForm = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [customUnit, setCustomUnit] = useState("");
+  const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        setIsLoadingDepartments(true);
+        const { data, error } = await supabase
+          .from('hr_departments')
+          .select('id, name')
+          .order('name');
+        
+        if (error) {
+          console.error("Error fetching departments:", error);
+          toast.error("Failed to load departments");
+        } else {
+          setDepartments(data || []);
+        }
+      } catch (error) {
+        console.error("Error in fetchDepartments:", error);
+        toast.error("Failed to load departments");
+      } finally {
+        setIsLoadingDepartments(false);
+      }
+    };
+    
+    fetchDepartments();
+  }, []);
 
   const getMetricUnitValue = () => {
     if (!metricType) return "";
@@ -137,18 +166,18 @@ const CreateGoalForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="sector" className="text-sm font-medium">
-                Sector
+                Department
               </Label>
               <Select onValueChange={(value) => setSector(value as SectorType)}>
                 <SelectTrigger id="sector" className="mt-1.5">
-                  <SelectValue placeholder="Select sector" />
+                  <SelectValue placeholder={isLoadingDepartments ? "Loading departments..." : "Select department"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="HR">HR</SelectItem>
-                  <SelectItem value="Sales">Sales</SelectItem>
-                  <SelectItem value="Finance">Finance</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                  <SelectItem value="Operations">Operations</SelectItem>
+                  {departments.map((department) => (
+                    <SelectItem key={department.id} value={department.name}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

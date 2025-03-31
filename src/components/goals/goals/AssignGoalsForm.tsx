@@ -34,6 +34,7 @@ import { SectorType, Employee, Goal, GoalType } from "@/types/goal";
 import { getEmployees, getGoals, assignGoalToEmployees } from "@/lib/supabaseData";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeGoalTarget, GoalAssignmentData } from "@/types/employeeGoalTarget";
+import { supabase } from "@/integrations/supabase/client";
 
 const AssignGoalsForm = () => {
   const [startDate, setStartDate] = useState<Date>();
@@ -51,6 +52,7 @@ const AssignGoalsForm = () => {
   const [employeeTargets, setEmployeeTargets] = useState<EmployeeGoalTarget[]>([]);
   const [employeeCommandOpen, setEmployeeCommandOpen] = useState(false);
   const [goalCommandOpen, setGoalCommandOpen] = useState(false);
+  const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,11 +60,19 @@ const AssignGoalsForm = () => {
       setError(null);
   
       try {
-        const [employeeData, goalsData] = await Promise.all([
+        // Fetch departments, employees and goals concurrently
+        const [departmentsResult, employeeData, goalsData] = await Promise.all([
+          supabase.from('hr_departments').select('id, name').order('name'),
           getEmployees(),
           getGoals(),
         ]);
   
+        if (departmentsResult.error) {
+          console.error("Error fetching departments:", departmentsResult.error);
+        } else {
+          setDepartments(departmentsResult.data || []);
+        }
+        
         console.log("Employees loaded:", employeeData);
         console.log("Goals loaded:", goalsData?.length || 0);
   
@@ -202,6 +212,7 @@ const AssignGoalsForm = () => {
         employeeTargets: employeeTargets
       };
       
+      // Attempt to assign goals to employees
       await assignGoalToEmployees(
         selectedGoal.id, 
         selectedEmployees.map(emp => emp.id), 
@@ -220,9 +231,15 @@ const AssignGoalsForm = () => {
       setSector(undefined);
       setGoalType('Monthly');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error assigning goal:", error);
-      toast.error("Failed to assign goal. Please try again.");
+      
+      // Handle duplicate assignments (unique constraint violation)
+      if (error.code === "23505" || (error.message && error.message.includes("duplicate key"))) {
+        toast.error("This goal has already been assigned to one or more of the selected employees");
+      } else {
+        toast.error("Failed to assign goal. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -246,21 +263,21 @@ const AssignGoalsForm = () => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="sector" className="text-sm font-medium">
-                Sector
+                Department
               </Label>
               <Select 
                 onValueChange={(value) => setSector(value as SectorType)}
                 value={sector}
               >
                 <SelectTrigger id="sector" className="mt-1.5">
-                  <SelectValue placeholder="Select sector" />
+                  <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="HR">HR</SelectItem>
-                  <SelectItem value="Sales">Sales</SelectItem>
-                  <SelectItem value="Finance">Finance</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                  <SelectItem value="Operations">Operations</SelectItem>
+                  {departments.map((department) => (
+                    <SelectItem key={department.id} value={department.name}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -288,8 +305,8 @@ const AssignGoalsForm = () => {
                     <CommandInput placeholder="Search goals..." />
                     <CommandEmpty>
                       {sector 
-                        ? "No goals found for this sector." 
-                        : "Please select a sector first."}
+                        ? "No goals found for this department." 
+                        : "Please select a department first."}
                     </CommandEmpty>
                     <CommandList>
                       <ScrollArea className="h-64">
@@ -309,7 +326,7 @@ const AssignGoalsForm = () => {
                           ))
                         ) : (
                           <div className="py-6 text-center text-sm text-gray-500">
-                            {sector ? "No goals available for this sector" : "Select a sector to view goals"}
+                            {sector ? "No goals available for this department" : "Select a department to view goals"}
                           </div>
                         )}
                       </ScrollArea>
@@ -319,7 +336,7 @@ const AssignGoalsForm = () => {
               </Popover>
               {filteredGoals.length === 0 && sector && (
                 <p className="mt-2 text-sm text-amber-600">
-                  No goals found for {sector}. Please create goals for this sector first.
+                  No goals found for {sector}. Please create goals for this department first.
                 </p>
               )}
             </div>
