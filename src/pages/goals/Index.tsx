@@ -18,12 +18,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import CreateGoalForm from "@/components/goals/goals/CreateGoalForm";
 import AssignGoalsForm from "@/components/goals/goals/AssignGoalsForm";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [goals, setGoals] = useState<GoalWithDetails[]>([]);
   const [sectors, setSectors] = useState<{name: string, count: number}[]>([]);
   const [selectedSector, setSelectedSector] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -31,6 +33,18 @@ const Index = () => {
         setLoading(true);
         const goalsData = await getGoalsWithDetails();
         const sectorsData = await getSectorsWithCounts();
+        
+        // Fetch departments
+        const { data: departmentsData, error } = await supabase
+          .from('hr_departments')
+          .select('id, name')
+          .order('name');
+        
+        if (error) {
+          console.error("Error fetching departments:", error);
+        } else {
+          setDepartments(departmentsData || []);
+        }
         
         setGoals(goalsData);
         setSectors(sectorsData);
@@ -68,8 +82,6 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-gray-50">
-      
-      
       <main className="container mx-auto px-4 pt-24 pb-12">
         <section className="mb-10">
           <div className="flex flex-col md:flex-row justify-between items-start mb-8">
@@ -104,7 +116,7 @@ const Index = () => {
           </div>
           
           <Tabs defaultValue="all" className="w-full mb-6">
-            <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full md:w-auto">
+            <TabsList className={`grid grid-cols-2 md:grid-cols-${Math.min(departments.length + 1, 7)} w-full md:w-auto`}>
               <TabsTrigger 
                 value="all" 
                 onClick={() => setSelectedSector("all")}
@@ -112,41 +124,17 @@ const Index = () => {
               >
                 All
               </TabsTrigger>
-              <TabsTrigger 
-                value="hr" 
-                onClick={() => setSelectedSector("hr")}
-                className="px-4 py-2"
-              >
-                HR
-              </TabsTrigger>
-              <TabsTrigger 
-                value="sales" 
-                onClick={() => setSelectedSector("sales")}
-                className="px-4 py-2"
-              >
-                Sales
-              </TabsTrigger>
-              <TabsTrigger 
-                value="finance" 
-                onClick={() => setSelectedSector("finance")}
-                className="px-4 py-2"
-              >
-                Finance
-              </TabsTrigger>
-              <TabsTrigger 
-                value="operations" 
-                onClick={() => setSelectedSector("operations")}
-                className="px-4 py-2"
-              >
-                Operations
-              </TabsTrigger>
-              <TabsTrigger 
-                value="marketing" 
-                onClick={() => setSelectedSector("marketing")}
-                className="px-4 py-2"
-              >
-                Marketing
-              </TabsTrigger>
+              
+              {departments.map(department => (
+                <TabsTrigger 
+                  key={department.id}
+                  value={department.name.toLowerCase()} 
+                  onClick={() => setSelectedSector(department.name.toLowerCase())}
+                  className="px-4 py-2"
+                >
+                  {department.name}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
           

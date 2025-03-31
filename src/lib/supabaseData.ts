@@ -154,8 +154,6 @@ export const getEmployees = async (): Promise<Employee[]> => {
   }
 };
 
-
-
 export const getGoals = async (): Promise<Goal[]> => {
   try {
     const { data: goalsData, error: goalsError } = await supabase
@@ -337,34 +335,36 @@ export const createGoal = async (
 export const assignGoalToEmployees = async (
   goalId: string,
   employeeIds: string[],
-  goalType: GoalType = 'Monthly',
-  targetValue: number = 0
-): Promise<AssignedGoal[]> => {
+  goalType: string,
+  employeeTargets: { employee: Employee; targetValue: number }[]
+) => {
   try {
-    const assignmentsToInsert = employeeIds.map(employeeId => ({
+    // Prepare the batch of assignments
+    const assignments = employeeTargets.map(target => ({
       goal_id: goalId,
-      employee_id: employeeId,
+      employee_id: target.employee.id,
       status: 'pending',
       progress: 0,
       current_value: 0,
-      target_value: targetValue,
-      goal_type: goalType
+      target_value: target.targetValue,
+      goal_type: goalType,
     }));
-    
+
+    // Insert assignments
     const { data, error } = await supabase
       .from('hr_assigned_goals')
-      .insert(assignmentsToInsert)
+      .insert(assignments)
       .select();
-    
+
     if (error) {
-      console.error('Error assigning goal to employees:', error);
-      return [];
+      console.error("Error assigning goals:", error);
+      throw error;
     }
-    
-    return data.map(mapHrAssignedGoalToAssignedGoal);
+
+    return data;
   } catch (error) {
-    console.error('Error in assignGoalToEmployees:', error);
-    return [];
+    console.error("Error in assignGoalToEmployees:", error);
+    throw error;
   }
 };
 
@@ -634,5 +634,3 @@ export const updateGoalProgressFromRecords = async (assignedGoalId: string): Pro
     return false;
   }
 };
-
-

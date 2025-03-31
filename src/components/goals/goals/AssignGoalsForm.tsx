@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   DialogContent,
@@ -9,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, Plus, Trash } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -31,6 +32,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { SectorType, Employee, Goal, GoalType } from "@/types/goal";
 import { getEmployees, getGoals, assignGoalToEmployees } from "@/lib/supabaseData";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmployeeGoalTarget, GoalAssignmentData } from "@/types/employeeGoalTarget";
 
 const AssignGoalsForm = () => {
   const [startDate, setStartDate] = useState<Date>();
@@ -45,7 +48,7 @@ const AssignGoalsForm = () => {
   const [filteredGoals, setFilteredGoals] = useState<Goal[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<Employee[]>([]);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
-  const [targetValue, setTargetValue] = useState<number | undefined>();
+  const [employeeTargets, setEmployeeTargets] = useState<EmployeeGoalTarget[]>([]);
   const [employeeCommandOpen, setEmployeeCommandOpen] = useState(false);
   const [goalCommandOpen, setGoalCommandOpen] = useState(false);
 
@@ -91,7 +94,6 @@ const AssignGoalsForm = () => {
 
     console.log("Filtering goals for sector:", sector);
     console.log("Available goals before filtering:", goals);
-    console.log("SelectedGoal::", selectedGoal)
 
     const filtered = goals.filter(goal => goal.sector?.toLowerCase() === sector.toLowerCase());
 
@@ -99,6 +101,28 @@ const AssignGoalsForm = () => {
     setFilteredGoals(filtered || []); // Ensure it's always an array
   }, [sector, goals, selectedGoal]);
 
+  // Update employeeTargets when selectedEmployees changes
+  useEffect(() => {
+    // Add newly selected employees to employeeTargets
+    const updatedTargets = [...employeeTargets];
+    
+    // Add any new employees that aren't already in employeeTargets
+    selectedEmployees.forEach(employee => {
+      if (!updatedTargets.some(target => target.employee.id === employee.id)) {
+        updatedTargets.push({
+          employee,
+          targetValue: selectedGoal?.targetValue || 0
+        });
+      }
+    });
+    
+    // Remove any targets for employees that are no longer selected
+    const filteredTargets = updatedTargets.filter(target => 
+      selectedEmployees.some(emp => emp.id === target.employee.id)
+    );
+    
+    setEmployeeTargets(filteredTargets);
+  }, [selectedEmployees, selectedGoal]);
 
   const handleSelectEmployee = (employee: Employee) => {
     setSelectedEmployees((current) => {
@@ -113,31 +137,51 @@ const AssignGoalsForm = () => {
     console.log("Selected goal:", goal);
     setSelectedGoal(goal);
     setGoalCommandOpen(false);
+    
+    // Update target values for all selected employees
+    if (goal) {
+      setEmployeeTargets(prev => 
+        prev.map(target => ({
+          ...target,
+          targetValue: goal.targetValue
+        }))
+      );
+    }
+  };
+
+  const handleEmployeeTargetChange = (employeeId: string, value: number) => {
+    setEmployeeTargets(prev => 
+      prev.map(target => 
+        target.employee.id === employeeId
+          ? { ...target, targetValue: value }
+          : target
+      )
+    );
   };
 
   const getMetricUnitLabel = () => {
-    if (!selectedGoal) return "Target Value";
+    if (!selectedGoal) return "";
 
     switch (selectedGoal.metricType) {
       case "percentage":
-        return "Percentage (%)";
+        return "%";
       case "currency":
-        return "Amount ($)";
+        return "$";
       case "count":
-        return "Count (#)";
+        return "#";
       case "hours":
-        return "Hours (hrs)";
+        return "hrs";
       case "custom":
-        return `Value (${selectedGoal.metricUnit})`;
+        return selectedGoal.metricUnit;
       default:
-        return "Target Value";
+        return "";
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedGoal || !startDate || !endDate || !sector || targetValue === undefined) {
+    if (!selectedGoal || !startDate || !endDate || !sector || employeeTargets.length === 0) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -150,15 +194,27 @@ const AssignGoalsForm = () => {
     setLoading(true);
     
     try {
-      const employeeIds = selectedEmployees.map(emp => emp.id);
-      await assignGoalToEmployees(selectedGoal.id, employeeIds, goalType, targetValue);
+      const assignmentData: GoalAssignmentData = {
+        goalId: selectedGoal.id,
+        goalType: goalType,
+        startDate,
+        endDate,
+        employeeTargets: employeeTargets
+      };
+      
+      await assignGoalToEmployees(
+        selectedGoal.id, 
+        selectedEmployees.map(emp => emp.id), 
+        goalType, 
+        employeeTargets
+      );
       
       toast.success("Goal assigned successfully!");
       
       // Reset form
       setSelectedGoal(null);
       setSelectedEmployees([]);
-      setTargetValue(undefined);
+      setEmployeeTargets([]);
       setStartDate(undefined);
       setEndDate(undefined);
       setSector(undefined);
@@ -173,7 +229,7 @@ const AssignGoalsForm = () => {
   };
 
   return (
-    <DialogContent className="sm:max-w-[600px]">
+    <DialogContent className="sm:max-w-[700px]">
       <DialogHeader>
         <DialogTitle>Assign Goals</DialogTitle>
         <DialogDescription>
@@ -430,23 +486,36 @@ const AssignGoalsForm = () => {
               </div>
             </div>
             
-            {selectedGoal && (
-              <div>
-                <Label htmlFor="targetValue" className="text-sm font-medium">
-                  {getMetricUnitLabel()}
+            {selectedGoal && selectedEmployees.length > 0 && (
+              <div className="mt-4">
+                <Label className="text-sm font-medium mb-2 block">
+                  Individual Target Values
                 </Label>
-                <Input
-                  id="targetValue"
-                  type="number"
-                  placeholder={`Enter target ${getMetricUnitLabel().toLowerCase()}`}
-                  className="mt-1.5"
-                  value={targetValue === undefined ? "" : targetValue}
-                  onChange={(e) => setTargetValue(e.target.value ? Number(e.target.value) : undefined)}
-                  required
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  This target value will be used to calculate progress for this assigned goal
-                </p>
+                <Card>
+                  <CardContent className="pt-4">
+                    <ScrollArea className="h-48 pr-4">
+                      <div className="space-y-3">
+                        {employeeTargets.map((target) => (
+                          <div key={target.employee.id} className="flex items-center justify-between space-x-2">
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{target.employee.name}</p>
+                              <p className="text-xs text-gray-500">{target.employee.position}</p>
+                            </div>
+                            <div className="flex items-center w-1/3">
+                              <Input
+                                type="number"
+                                value={target.targetValue}
+                                onChange={(e) => handleEmployeeTargetChange(target.employee.id, Number(e.target.value))}
+                                className="text-right"
+                              />
+                              <span className="ml-2 text-sm w-8">{getMetricUnitLabel()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>
