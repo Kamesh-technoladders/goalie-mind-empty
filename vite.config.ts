@@ -5,7 +5,7 @@ import * as path from "path";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-
+  
   return {
     server: {
       host: "::",
@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       hmr: {
         protocol: "ws",
+        host: process.env.VITE_HMR_HOST || undefined,
+        port: process.env.VITE_HMR_PORT ? parseInt(process.env.VITE_HMR_PORT) : 24678,
+        clientPort: process.env.VITE_HMR_CLIENT_PORT ? parseInt(process.env.VITE_HMR_CLIENT_PORT) : undefined,
         timeout: 30000,
       },
     },
@@ -23,6 +26,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
+      // Make sure to provide a fallback value for __WS_TOKEN__
+      __WS_TOKEN__: JSON.stringify(process.env.VITE_WS_TOKEN || "development-token"),
       "process.env": env,
     },
     build: {
