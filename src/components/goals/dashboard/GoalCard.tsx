@@ -1,11 +1,13 @@
+
 import React from "react";
-import { Calendar, Users, BarChart3 } from "lucide-react";
+import { Calendar, Users, BarChart3, Clock, Target, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProgressTracker from "@/components/goals/goals/ProgressTracker";
 import AnimatedCard from "@/components/ui/custom/AnimatedCard";
 import { GoalWithDetails } from "@/types/goal";
-import { format } from "date-fns";
+import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Adding this AvatarGroup component since it's not included in shadcn by default
 const AvatarGroup = ({ children, limit = 3, className = "" }: { 
@@ -37,10 +39,9 @@ interface GoalCardProps {
 }
 
 const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
-  console.log('goalsss', goal)
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), "MMM d, yyyy");
+      return format(parseISO(dateString), "MMM d, yyyy");
     } catch (e) {
       return dateString;
     }
@@ -78,27 +79,71 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
     }
   };
 
+  const getGoalTypeIcon = (goalType: string) => {
+    switch (goalType?.toLowerCase()) {
+      case "daily":
+        return <Clock className="h-4 w-4 mr-1" />;
+      case "weekly":
+        return <Calendar className="h-4 w-4 mr-1" />;
+      case "monthly":
+        return <Target className="h-4 w-4 mr-1" />;
+      case "yearly":
+        return <BarChart3 className="h-4 w-4 mr-1" />;
+      default:
+        return <Target className="h-4 w-4 mr-1" />;
+    }
+  };
+
+  const getGoalTypeLabel = () => {
+    if (!goal.assignmentDetails?.goalType) return null;
+    
+    const goalType = goal.assignmentDetails.goalType;
+    return (
+      <Badge variant="outline" className="bg-purple-50 text-purple-800 border-purple-100 flex items-center">
+        {getGoalTypeIcon(goalType)}
+        <span>{goalType}</span>
+      </Badge>
+    );
+  };
+
+  const getTimeRemaining = () => {
+    if (!goal.endDate) return null;
+    
+    try {
+      const endDate = parseISO(goal.endDate);
+      if (endDate < new Date()) {
+        return <span className="text-red-500">Expired</span>;
+      }
+      return formatDistanceToNow(endDate, { addSuffix: true });
+    } catch (e) {
+      return null;
+    }
+  };
+
   return (
     <AnimatedCard
       animation="fade"
       delay={delay}
-      className="bg-white border border-gray-100"
+      className="bg-white border border-gray-100 transition-all hover:shadow-md"
     >
       <div className="flex flex-col h-full">
         <div className="flex justify-between items-start mb-3">
           <Badge variant="outline" className={getSectorColor(goal.sector)}>
             {goal.sector}
           </Badge>
-          {goal.assignmentDetails && (
-            <Badge
-              variant="outline"
-              className={getStatusColor(goal.assignmentDetails.status)}
-            >
-              {goal.assignmentDetails.status
-                .replace("-", " ")
-                .replace(/^\w/, (c) => c.toUpperCase())}
-            </Badge>
-          )}
+          <div className="flex gap-2">
+            {getGoalTypeLabel()}
+            {goal.assignmentDetails && (
+              <Badge
+                variant="outline"
+                className={getStatusColor(goal.assignmentDetails.status)}
+              >
+                {goal.assignmentDetails.status
+                  .replace("-", " ")
+                  .replace(/^\w/, (c) => c.toUpperCase())}
+              </Badge>
+            )}
+          </div>
         </div>
 
         <h3 className="text-lg font-semibold mb-2 line-clamp-1">{goal.name}</h3>
@@ -106,11 +151,23 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
           {goal.description}
         </p>
 
-        <div className="flex items-center text-sm text-gray-500 mb-3">
-          <Calendar className="h-4 w-4 mr-2" />
-          <span>
-            {formatDate(goal.startDate)} - {formatDate(goal.endDate)}
-          </span>
+        <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+          <div className="flex items-center">
+            <Calendar className="h-4 w-4 mr-2" />
+            <span className="line-clamp-1">
+              {formatDate(goal.startDate)} - {formatDate(goal.endDate)}
+            </span>
+          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger className="text-xs font-medium text-blue-600">
+                {getTimeRemaining()}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Goal deadline: {formatDate(goal.endDate)}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         <div className="mt-auto">
@@ -134,30 +191,37 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
           )}
 
           <div className="flex justify-between items-center mt-4">
-            <div className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2 text-gray-400" />
-              <span className="text-sm text-gray-600">
-                {goal.kpis ? goal.kpis.length : 0} KPIs
-              </span>
-            </div>
+            {goal.assignmentDetails?.goalType && (
+              <div className="flex items-center">
+                <Target className="h-4 w-4 mr-2 text-gray-400" />
+                <span className="text-sm text-gray-600">
+                  {goal.assignmentDetails.goalType}
+                </span>
+              </div>
+            )}
 
             {goal.assignedTo && goal.assignedTo.length > 0 && (
-              <AvatarGroup className="justify-end" limit={3}>
-                {goal.assignedTo.map((employee) => (
-                  <Avatar
-                    key={employee.id}
-                    className="h-8 w-8 border-2 border-white"
-                  >
-                    <AvatarImage src={employee.avatar} alt={employee.name} />
-                    <AvatarFallback>
-                      {employee.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </AvatarGroup>
+              <div className="flex items-center">
+                <div className="mr-2 text-xs text-gray-500 whitespace-nowrap">
+                  {goal.assignedTo.length} {goal.assignedTo.length === 1 ? 'employee' : 'employees'}
+                </div>
+                <AvatarGroup className="justify-end" limit={3}>
+                  {goal.assignedTo.map((employee) => (
+                    <Avatar
+                      key={employee.id}
+                      className="h-8 w-8 border-2 border-white"
+                    >
+                      <AvatarImage src={employee.avatar} alt={employee.name} />
+                      <AvatarFallback>
+                        {employee.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                </AvatarGroup>
+              </div>
             )}
           </div>
         </div>

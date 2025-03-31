@@ -26,6 +26,8 @@ const Index = () => {
   const [selectedSector, setSelectedSector] = useState("all");
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
+  const [createGoalDialogOpen, setCreateGoalDialogOpen] = useState(false);
+  const [assignGoalDialogOpen, setAssignGoalDialogOpen] = useState(false);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -56,7 +58,7 @@ const Index = () => {
     };
     
     fetchData();
-  }, []);
+  }, [createGoalDialogOpen, assignGoalDialogOpen]);
   
   const filteredGoals = 
     selectedSector === "all" 
@@ -93,24 +95,24 @@ const Index = () => {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
-              <Dialog>
+              <Dialog open={createGoalDialogOpen} onOpenChange={setCreateGoalDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
                     <Goal className="h-4 w-4" />
                     <span>Create Goal</span>
                   </Button>
                 </DialogTrigger>
-                <CreateGoalForm />
+                <CreateGoalForm onClose={() => setCreateGoalDialogOpen(false)} />
               </Dialog>
               
-              <Dialog>
+              <Dialog open={assignGoalDialogOpen} onOpenChange={setAssignGoalDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     <span>Assign Goals</span>
                   </Button>
                 </DialogTrigger>
-                <AssignGoalsForm />
+                <AssignGoalsForm onClose={() => setAssignGoalDialogOpen(false)} />
               </Dialog>
             </div>
           </div>

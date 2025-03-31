@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,11 @@ import { SectorType, MetricType } from "@/types/goal";
 import { createGoal } from "@/lib/supabaseData";
 import { supabase } from "@/integrations/supabase/client";
 
-const CreateGoalForm = () => {
+interface CreateGoalFormProps {
+  onClose?: () => void;
+}
+
+const CreateGoalForm: React.FC<CreateGoalFormProps> = ({ onClose }) => {
   const [sector, setSector] = useState<SectorType>();
   const [metricType, setMetricType] = useState<MetricType>();
   const [loading, setLoading] = useState(false);
@@ -115,6 +120,11 @@ const CreateGoalForm = () => {
       setSector(undefined);
       setMetricType(undefined);
       setCustomUnit("");
+      
+      // Close the modal after successful creation
+      if (onClose) {
+        onClose();
+      }
       
     } catch (error) {
       console.error("Error creating goal:", error);
@@ -219,6 +229,9 @@ const CreateGoalForm = () => {
         </div>
         
         <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" type="button">Cancel</Button>
+          </DialogClose>
           <Button type="submit" disabled={loading}>
             {loading ? "Creating..." : "Create Goal Template"}
           </Button>

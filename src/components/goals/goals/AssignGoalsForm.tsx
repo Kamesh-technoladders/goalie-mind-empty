@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   DialogContent,
@@ -6,6 +5,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmployeeGoalTarget, GoalAssignmentData } from "@/types/employeeGoalTarget";
 import { supabase } from "@/integrations/supabase/client";
 
-const AssignGoalsForm = () => {
+interface AssignGoalsFormProps {
+  onClose?: () => void;
+}
+
+const AssignGoalsForm: React.FC<AssignGoalsFormProps> = ({ onClose }) => {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [sector, setSector] = useState<SectorType>();
@@ -89,7 +93,6 @@ const AssignGoalsForm = () => {
     fetchData();
   }, []);
   
-
   useEffect(() => {
     if (!sector) {
       setFilteredGoals([]);
@@ -111,7 +114,6 @@ const AssignGoalsForm = () => {
     setFilteredGoals(filtered || []); // Ensure it's always an array
   }, [sector, goals, selectedGoal]);
 
-  // Update employeeTargets when selectedEmployees changes
   useEffect(() => {
     // Add newly selected employees to employeeTargets
     const updatedTargets = [...employeeTargets];
@@ -230,6 +232,11 @@ const AssignGoalsForm = () => {
       setEndDate(undefined);
       setSector(undefined);
       setGoalType('Monthly');
+      
+      // Close the modal after successful submission
+      if (onClose) {
+        onClose();
+      }
       
     } catch (error: any) {
       console.error("Error assigning goal:", error);
@@ -538,6 +545,9 @@ const AssignGoalsForm = () => {
           </div>
           
           <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" type="button">Cancel</Button>
+            </DialogClose>
             <Button type="submit" disabled={loading}>
               {loading ? "Assigning..." : "Assign Goal"}
             </Button>
