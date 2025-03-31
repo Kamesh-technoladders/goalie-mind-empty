@@ -42,6 +42,41 @@ interface GoalCardProps {
 const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
   const navigate = useNavigate();
   
+  // Calculate the total target value across all assigned employees
+  const calculateTotalTarget = () => {
+    if (!goal.assignedTo || goal.assignedTo.length === 0) {
+      return goal.targetValue || 0;
+    }
+    
+    // If there's just one assignment or no detailed assignments
+    if (!Array.isArray(goal.assignedTo) || goal.assignedTo.length <= 1) {
+      return goal.assignmentDetails?.targetValue || goal.targetValue || 0;
+    }
+    
+    // Try to get detailed assignments data if available through an API
+    // This would require the backend to expose all assignments for this goal
+    // For now, we'll just return the assignment target value or goal target value
+    return goal.assignmentDetails?.targetValue || goal.targetValue || 0;
+  };
+  
+  // Calculate the current progress value
+  const calculateCurrentValue = () => {
+    return goal.assignmentDetails?.currentValue || 0;
+  };
+  
+  // Get the total target value
+  const totalTargetValue = calculateTotalTarget();
+  const currentValue = calculateCurrentValue();
+  
+  // Calculate progress percentage
+  const calculateProgress = () => {
+    if (totalTargetValue === 0) return 0;
+    const progress = (currentValue / totalTargetValue) * 100;
+    return Math.min(Math.round(progress), 100);
+  };
+  
+  const progress = calculateProgress();
+  
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), "MMM d, yyyy");
@@ -182,16 +217,16 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
           {goal.assignmentDetails && (
             <div className="mb-3">
               <ProgressTracker
-                progress={goal.assignmentDetails.progress || 0}
+                progress={progress}
                 size="md"
               />
               <div className="mt-2 flex justify-between text-xs text-gray-500">
                 <span>
-                  Current: {goal.assignmentDetails.currentValue || 0}
+                  Current: {currentValue}
                   {goal.metricUnit}
                 </span>
                 <span>
-                  Target: {goal.assignmentDetails.targetValue || 0}
+                  Target: {totalTargetValue}
                   {goal.metricUnit}
                 </span>
               </div>
