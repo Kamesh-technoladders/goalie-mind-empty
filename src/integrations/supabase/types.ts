@@ -107,6 +107,39 @@ export type Database = {
           },
         ]
       }
+      hr_candidates: {
+        Row: {
+          created_at: string
+          email: string
+          github_url: string | null
+          id: string
+          linkedin_url: string | null
+          name: string
+          phone_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          github_url?: string | null
+          id?: string
+          linkedin_url?: string | null
+          name: string
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          github_url?: string | null
+          id?: string
+          linkedin_url?: string | null
+          name?: string
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hr_client_contacts: {
         Row: {
           client_id: string
@@ -1071,16 +1104,21 @@ export type Database = {
           applied_date: string
           applied_from: string | null
           availability: string | null
+          candidate_id: string | null
           career_experience: Json | null
           cover_letter: string | null
           created_at: string
           created_by: string | null
           current_salary: number | null
           education: Json | null
+          education_enhancement_tips: string | null
+          education_score: number | null
+          education_summary: string | null
           email: string | null
           expected_salary: number | null
           experience: string | null
           github: string | null
+          has_validated_resume: boolean | null
           id: string
           job_id: string
           linkedin: string | null
@@ -1091,33 +1129,50 @@ export type Database = {
           name: string
           notice_period: string | null
           organization_id: string | null
+          overall_score: number | null
+          overall_summary: string | null
           phone: string | null
           preferred_location: string | null
+          projects_enhancement_tips: string | null
+          projects_score: number | null
+          projects_summary: string | null
+          report_url: string | null
           resume_filename: string | null
           resume_size: number | null
           resume_upload_date: string | null
           resume_url: string | null
           skill_ratings: Json | null
           skills: string[] | null
+          skills_enhancement_tips: string | null
+          skills_score: number | null
+          skills_summary: string | null
           status: string | null
           sub_status_id: string | null
           updated_at: string
           updated_by: string | null
+          work_experience_enhancement_tips: string | null
+          work_experience_score: number | null
+          work_experience_summary: string | null
         }
         Insert: {
           applied_date?: string
           applied_from?: string | null
           availability?: string | null
+          candidate_id?: string | null
           career_experience?: Json | null
           cover_letter?: string | null
           created_at?: string
           created_by?: string | null
           current_salary?: number | null
           education?: Json | null
+          education_enhancement_tips?: string | null
+          education_score?: number | null
+          education_summary?: string | null
           email?: string | null
           expected_salary?: number | null
           experience?: string | null
           github?: string | null
+          has_validated_resume?: boolean | null
           id?: string
           job_id: string
           linkedin?: string | null
@@ -1128,33 +1183,50 @@ export type Database = {
           name: string
           notice_period?: string | null
           organization_id?: string | null
+          overall_score?: number | null
+          overall_summary?: string | null
           phone?: string | null
           preferred_location?: string | null
+          projects_enhancement_tips?: string | null
+          projects_score?: number | null
+          projects_summary?: string | null
+          report_url?: string | null
           resume_filename?: string | null
           resume_size?: number | null
           resume_upload_date?: string | null
           resume_url?: string | null
           skill_ratings?: Json | null
           skills?: string[] | null
+          skills_enhancement_tips?: string | null
+          skills_score?: number | null
+          skills_summary?: string | null
           status?: string | null
           sub_status_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          work_experience_enhancement_tips?: string | null
+          work_experience_score?: number | null
+          work_experience_summary?: string | null
         }
         Update: {
           applied_date?: string
           applied_from?: string | null
           availability?: string | null
+          candidate_id?: string | null
           career_experience?: Json | null
           cover_letter?: string | null
           created_at?: string
           created_by?: string | null
           current_salary?: number | null
           education?: Json | null
+          education_enhancement_tips?: string | null
+          education_score?: number | null
+          education_summary?: string | null
           email?: string | null
           expected_salary?: number | null
           experience?: string | null
           github?: string | null
+          has_validated_resume?: boolean | null
           id?: string
           job_id?: string
           linkedin?: string | null
@@ -1165,20 +1237,39 @@ export type Database = {
           name?: string
           notice_period?: string | null
           organization_id?: string | null
+          overall_score?: number | null
+          overall_summary?: string | null
           phone?: string | null
           preferred_location?: string | null
+          projects_enhancement_tips?: string | null
+          projects_score?: number | null
+          projects_summary?: string | null
+          report_url?: string | null
           resume_filename?: string | null
           resume_size?: number | null
           resume_upload_date?: string | null
           resume_url?: string | null
           skill_ratings?: Json | null
           skills?: string[] | null
+          skills_enhancement_tips?: string | null
+          skills_score?: number | null
+          skills_summary?: string | null
           status?: string | null
           sub_status_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          work_experience_enhancement_tips?: string | null
+          work_experience_score?: number | null
+          work_experience_summary?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "hr_job_candidates_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hr_job_candidates_created_by_fkey"
             columns: ["created_by"]
