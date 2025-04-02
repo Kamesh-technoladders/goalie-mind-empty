@@ -46,6 +46,22 @@ export const fetchJobById = async (id: string) => {
   return { data, error };
 };
 
+export const fetchJobsAssignedToUser = async (userId: string) => {
+  const { data, error } = await supabase
+    .from("hr_jobs")
+    .select("*")
+    .filter('assigned_to->type', 'eq', 'individual')
+    .filter('assigned_to->id', 'eq', userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(`Error fetching jobs assigned to user ${userId}:`, error);
+    throw error;
+  }
+
+  return { data, error };
+};
+
 export const insertJob = async (jobData: Record<string, any>) => {
   const { data, error } = await supabase
     .from("hr_jobs")

@@ -1317,6 +1317,7 @@ export type Database = {
       hr_jobs: {
         Row: {
           applications: number | null
+          assigned_to: Json | null
           budget: number | null
           budget_type: string | null
           client_details: Json | null
@@ -1349,6 +1350,7 @@ export type Database = {
         }
         Insert: {
           applications?: number | null
+          assigned_to?: Json | null
           budget?: number | null
           budget_type?: string | null
           client_details?: Json | null
@@ -1381,6 +1383,7 @@ export type Database = {
         }
         Update: {
           applications?: number | null
+          assigned_to?: Json | null
           budget?: number | null
           budget_type?: string | null
           client_details?: Json | null

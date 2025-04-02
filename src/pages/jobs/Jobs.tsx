@@ -42,7 +42,8 @@ import {
   createJob,
   updateJob,
   deleteJob,
-  updateJobStatus
+  updateJobStatus,
+  getJobsAssignedToUser
 } from "@/services/jobService";
 import {
   AlertDialog,
@@ -65,8 +66,6 @@ import { useQuery } from "@tanstack/react-query";
 import AssociateToClientModal from "@/components/jobs/job/AssociateToClientModal";
 import { useSelector } from "react-redux";
 
-
-
 const Jobs = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -87,10 +86,12 @@ const Jobs = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [associateModalOpen, setAssociateModalOpen] = useState(false);
   const [clientselectedJob, setClientSelectedJob] = useState<JobData | null>(null);
-  const user = useSelector((state: any) => state.auth.user); // Get user from Redux
-  const organization_id = useSelector((state: any) => state.auth.organization_id); // Get organization_id from Redux
-
   
+  const user = useSelector((state: any) => state.auth.user);
+  const userRole = useSelector((state: any) => state.auth.role);
+  const organization_id = useSelector((state: any) => state.auth.organization_id);
+
+  const isEmployee = userRole === 'employee';
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -117,38 +118,19 @@ const Jobs = () => {
     loadJobs();
   }, [activeTab]);
 
-  // const filteredJobs = mockJobs.filter((job) => {
-  //   if (
-  //     searchQuery &&
-  //     !job.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-  //     !job.department.toLowerCase().includes(searchQuery.toLowerCase()) &&
-  //     !job.jobId.toLowerCase().includes(searchQuery.toLowerCase()) &&
-  //     !job.clientOwner.toLowerCase().includes(searchQuery.toLowerCase()) &&
-  //     !job.location.some(loc => loc.toLowerCase().includes(searchQuery.toLowerCase()))
-  //   ) {
-  //     return false;
-  //   }
-
-  //   for (const [key, value] of Object.entries(filters)) {
-  //     if (value && 
-  //        (key === 'location' 
-  //          ? !job.location.some(loc => loc.includes(value))
-  //          : job[key as keyof typeof job] !== value)
-  //     ) {
-  //       return false;
-  //     }
-  //   }
-
-  //   return true;
-  // });
   const { 
     data: jobs = [], 
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: getAllJobs,
+    queryKey: ['jobs', user?.id, userRole],
+    queryFn: async () => {
+      if (isEmployee && user?.id) {
+        return getJobsAssignedToUser(user.id);
+      }
+      return getAllJobs();
+    },
   });
   
   useEffect(() => {
@@ -157,8 +139,6 @@ const Jobs = () => {
       console.error("Error fetching jobs:", error);
     }
   }, [error]);
-
-
 
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = 
@@ -176,10 +156,9 @@ const Jobs = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
 
-  const activeJobs = mockJobs.filter(job => job.status === "Active" || job.status === "OPEN").length;
-  const pendingJobs = mockJobs.filter(job => job.status === "Pending" || job.status === "HOLD").length;
-  const completedJobs = mockJobs.filter(job => job.status === "Completed" || job.status === "CLOSE").length;
-  const totalJobs = mockJobs.length;
+  const activeJobs = filteredJobs.filter(job => job.status === "Active" || job.status === "OPEN").length;
+  const pendingJobs = filteredJobs.filter(job => job.status === "Pending" || job.status === "HOLD").length;
+  const completedJobs = filteredJobs.filter(job => job.status === "Completed" || job.status === "CLOSE").length;
 
   const handleAssignJob = (job: JobData) => {
     setSelectedJob(job);
@@ -187,8 +166,8 @@ const Jobs = () => {
   };
 
   const handleEditJob = (job: JobData) => {
-    setEditJob(job); // Set the job to edit
-    setIsCreateModalOpen(true); // Open the modal
+    setEditJob(job);
+    setIsCreateModalOpen(true);
   };
 
   const handleDeleteJob = (job: JobData) => {
@@ -199,9 +178,9 @@ const Jobs = () => {
   const handleStatusChange = async (jobId: string, newStatus: string) => {
     try {
       setStatusUpdateLoading(jobId);
-      const updatedJob = await updateJobStatus(jobId, newStatus);
+      await updateJobStatus(jobId, newStatus);
       
-      setMockJobs(jobs => jobs.map(job => job.id === jobId ? updatedJob : job));
+      await refetch();
       toast.success(`Job status updated to ${newStatus}`);
     } catch (error) {
       console.error("Error updating job status:", error);
@@ -211,8 +190,6 @@ const Jobs = () => {
     }
   };
 
-  console.log("jobssssssss::", jobs)
-
   const confirmDeleteJob = async () => {
     if (!jobToDelete) return;
     
@@ -220,7 +197,7 @@ const Jobs = () => {
       setActionLoading(true);
       await deleteJob(jobToDelete.id.toString());
       
-      setMockJobs(jobs => jobs.filter(job => job.id !== jobToDelete.id));
+      await refetch();
       toast.success("Job deleted successfully");
       
       if (paginatedJobs.length === 1 && currentPage > 1) {
@@ -236,67 +213,26 @@ const Jobs = () => {
     }
   };
 
-  // const handleSaveJob = async (jobData: JobData) => {
-  //   try {
-  //     setActionLoading(true);
-  //     let savedJob: JobData;
-      
-  //     if (mockJobs.some(job => job.id === jobData.id)) {
-  //       savedJob = await updateJob(jobData.id.toString(), jobData);
-  //       toast.success("Job updated successfully");
-        
-  //       setMockJobs(prev => prev.map(job => job.id === savedJob.id ? savedJob : job));
-  //     } else {
-  //       savedJob = await createJob(jobData);
-  //       toast.success("Job created successfully");
-        
-  //       setMockJobs(prev => [savedJob, ...prev]);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error saving job:", error);
-  //     toast.error(editJob ? "Failed to update job" : "Failed to create job");
-  //   } finally {
-  //     setActionLoading(false);
-  //     setEditJob(null);
-  //   }
-  // };
-
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditJob(null);
   };
 
-  // New Changes
-
-  
   const handleCreateNewJob = async (newJob: JobData) => {
     try {
       if (editJob) {
-        // If editing, update the job
         await updateJob(editJob.id.toString(), newJob, user.id);
         toast.success("Job updated successfully");
       } else {
-        // If creating, add a new job
         await createJob(newJob, organization_id, user.id);
         toast.success("Job created successfully");
       }
-      await refetch(); // Refetch jobs to update the list
-      setIsCreateModalOpen(false); // Close the modal
-      setEditJob(null); // Reset the edit job state
+      await refetch();
+      setIsCreateModalOpen(false);
+      setEditJob(null);
     } catch (error) {
       console.error("Error saving job:", error);
       toast.error(editJob ? "Failed to update job" : "Failed to create job");
-    }
-  };
-  
-  const handleUpdateJobStatus = async (jobId: string, status: string) => {
-    try {
-      await updateJobStatus(jobId, status);
-      refetch();
-      toast.success(`Job status updated to ${status}`);
-    } catch (error) {
-      console.error("Error updating job status:", error);
-      toast.error("Failed to update job status");
     }
   };
   
@@ -307,20 +243,14 @@ const Jobs = () => {
   
   const handleAssociateToClient = async (updatedJob: JobData) => {
     try {
-      // Call the update job function with the job ID and updated job data
       await updateJob(updatedJob.id, updatedJob, user.id);
-      
-      // Refetch jobs to get the updated list
       await refetch();
-      
       toast.success("Job successfully associated with client");
     } catch (error) {
       console.error("Error associating job with client:", error);
       toast.error("Failed to associate job with client");
     }
   };
-  
-
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -338,7 +268,7 @@ const Jobs = () => {
     }
   };
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center h-[80vh]">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -348,14 +278,6 @@ const Jobs = () => {
   }
 
   const renderTable = (jobs: JobData[]) => {
-    if (loading) {
-      return (
-        <div className="flex justify-center items-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      );
-    }
-  
     if (jobs.length === 0) {
       return (
         <div className="text-center p-12 text-gray-500">
@@ -409,42 +331,51 @@ const Jobs = () => {
                     </Badge>
                   </td>
                   <td className="table-cell">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 px-2 py-0">
-                          {statusUpdateLoading === job.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className={getStatusBadgeClass(job.status)}
-                            >
-                              {job.status}
-                            </Badge>
-                          )}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="center">
-                        <DropdownMenuItem 
-                          className="text-green-600 focus:text-green-600 focus:bg-green-50"
-                          onClick={() => handleStatusChange(job.id, "OPEN")}
-                        >
-                          OPEN
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-yellow-600 focus:text-yellow-600 focus:bg-yellow-50"
-                          onClick={() => handleStatusChange(job.id, "HOLD")}
-                        >
-                          HOLD
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-blue-600 focus:text-blue-600 focus:bg-blue-50"
-                          onClick={() => handleStatusChange(job.id, "CLOSE")}
-                        >
-                          CLOSE
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {isEmployee ? (
+                      <Badge
+                        variant="outline"
+                        className={getStatusBadgeClass(job.status)}
+                      >
+                        {job.status}
+                      </Badge>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 px-2 py-0">
+                            {statusUpdateLoading === job.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className={getStatusBadgeClass(job.status)}
+                              >
+                                {job.status}
+                              </Badge>
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center">
+                          <DropdownMenuItem 
+                            className="text-green-600 focus:text-green-600 focus:bg-green-50"
+                            onClick={() => handleStatusChange(job.id, "OPEN")}
+                          >
+                            OPEN
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-yellow-600 focus:text-yellow-600 focus:bg-yellow-50"
+                            onClick={() => handleStatusChange(job.id, "HOLD")}
+                          >
+                            HOLD
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-blue-600 focus:text-blue-600 focus:bg-blue-50"
+                            onClick={() => handleStatusChange(job.id, "CLOSE")}
+                          >
+                            CLOSE
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </td>
                   <td className="table-cell">
                     {job.assignedTo ? (
@@ -469,76 +400,81 @@ const Jobs = () => {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => handleEditJob(job)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Edit Job</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => handleAssignJob(job)}
-                            >
-                              <UserPlus className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Assign Job</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      {job.jobType === "Internal" && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => openAssociateModal(job)}
-                            >
-                              <HousePlus className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Associate to Client</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      
+                      {!isEmployee && (
+                        <>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditJob(job)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit Job</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={() => handleAssignJob(job)}
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Assign Job</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          {job.jobType === "Internal" && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => openAssociateModal(job)}
+                                  >
+                                    <HousePlus className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Associate to Client</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteJob(job)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete Job</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </>
                       )}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleDeleteJob(job)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Delete Job</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
                     </div>
                   </td>
                 </tr>
@@ -557,13 +493,16 @@ const Jobs = () => {
           <h1 className="text-3xl font-bold mb-1">Job Dashboard</h1>
           <p className="text-gray-500">Manage and track all job postings</p>
         </div>
-        <Button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus size={16} />
-          <span>Create New Job</span>
-        </Button>
+        
+        {!isEmployee && (
+          <Button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus size={16} />
+            <span>Create New Job</span>
+          </Button>
+        )}
       </div>
   
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -584,8 +523,8 @@ const Jobs = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Active Jobs</p>
-              <h3 className="text-3xl font-bold">{filteredJobs.filter(job => job.status === "Active" || job.status === "OPEN").length}</h3>
-              <p className="text-xs text-gray-500 mt-1">{Math.round((filteredJobs.filter(job => job.status === "Active" || job.status === "OPEN").length / filteredJobs.length) * 100) || 0}% of total</p>
+              <h3 className="text-3xl font-bold">{activeJobs}</h3>
+              <p className="text-xs text-gray-500 mt-1">{Math.round((activeJobs / filteredJobs.length) * 100) || 0}% of total</p>
             </div>
             <div className="stat-icon stat-icon-green">
               <Calendar size={22} />
@@ -597,8 +536,8 @@ const Jobs = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Pending Jobs</p>
-              <h3 className="text-3xl font-bold">{filteredJobs.filter(job => job.status === "Pending" || job.status === "HOLD").length}</h3>
-              <p className="text-xs text-gray-500 mt-1">{Math.round((filteredJobs.filter(job => job.status === "Pending" || job.status === "HOLD").length / filteredJobs.length) * 100) || 0}% of total</p>
+              <h3 className="text-3xl font-bold">{pendingJobs}</h3>
+              <p className="text-xs text-gray-500 mt-1">{Math.round((pendingJobs / filteredJobs.length) * 100) || 0}% of total</p>
             </div>
             <div className="stat-icon stat-icon-yellow">
               <Clock size={22} />
@@ -610,8 +549,8 @@ const Jobs = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500 mb-1">Completed Jobs</p>
-              <h3 className="text-3xl font-bold">{filteredJobs.filter(job => job.status === "Completed" || job.status === "CLOSE").length}</h3>
-              <p className="text-xs text-gray-500 mt-1">{Math.round((filteredJobs.filter(job => job.status === "Completed" || job.status === "CLOSE").length / filteredJobs.length) * 100) || 0}% of total</p>
+              <h3 className="text-3xl font-bold">{completedJobs}</h3>
+              <p className="text-xs text-gray-500 mt-1">{Math.round((completedJobs / filteredJobs.length) * 100) || 0}% of total</p>
             </div>
             <div className="stat-icon stat-icon-purple">
               <CheckCircle size={22} />
@@ -620,26 +559,23 @@ const Jobs = () => {
         </Card>
       </div>
   
-  
-  
-     
     <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-      {/* Tabs */}
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 w-full sm:w-80">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="internal" className="flex items-center gap-1">
-            <Briefcase size={14} />
-            <span>Internal</span>
-          </TabsTrigger>
-          <TabsTrigger value="external" className="flex items-center gap-1">
-            <Users size={14} />
-            <span>External</span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {!isEmployee && (
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-3 w-full sm:w-80">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="internal" className="flex items-center gap-1">
+              <Briefcase size={14} />
+              <span>Internal</span>
+            </TabsTrigger>
+            <TabsTrigger value="external" className="flex items-center gap-1">
+              <Users size={14} />
+              <span>External</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
 
-      {/* Search Input */}
       <div className="relative flex-grow">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
         <Input
@@ -650,103 +586,108 @@ const Jobs = () => {
         />
       </div>
 
-      {/* Filter Button */}
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="flex items-center gap-2">
-            <Filter size={16} />
-            <span>Filters</span>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Filter Jobs</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Filter options remain unchanged */}
-          </div>
-          <div className="flex justify-between">
-            <Button 
-              variant="outline" 
-              onClick={() => setFilters({})}
-            >
-              Reset Filters
+      {!isEmployee && (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Filter size={16} />
+              <span>Filters</span>
             </Button>
-            <Button type="submit">Apply Filters</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-
-    {/* Tabs Content */}
-    <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-      <TabsContent value="all" className="space-y-6">
-        {renderTable(filteredJobs)}
-      </TabsContent>
-
-      <TabsContent value="internal" className="space-y-6">
-        {renderTable(filteredJobs.filter(job => job.jobType === "Internal"))}
-      </TabsContent>
-
-      <TabsContent value="external" className="space-y-6">
-        {renderTable(filteredJobs.filter(job => job.jobType === "External"))}
-      </TabsContent>
-    </Tabs>
-
-  
-  <CreateJobModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setEditJob(null); // Reset the edit job state when closing the modal
-        }}
-        onSave={handleCreateNewJob}
-        editJob={editJob} // Pass the job to edit
-      />
-      
-      <AssignJobModal 
-        isOpen={isAssignModalOpen}
-        onClose={() => setIsAssignModalOpen(false)}
-        job={selectedJob}
-      />
-  
-      {clientselectedJob && (
-        <AssociateToClientModal
-          isOpen={associateModalOpen}
-          onClose={() => setAssociateModalOpen(false)}
-          job={clientselectedJob}
-          onAssociate={handleAssociateToClient}
-        />
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Filter Jobs</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              {/* Filter options remain unchanged */}
+            </div>
+            <div className="flex justify-between">
+              <Button 
+                variant="outline" 
+                onClick={() => setFilters({})}
+              >
+                Reset Filters
+              </Button>
+              <Button type="submit">Apply Filters</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
-  
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the job "{jobToDelete?.title}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDeleteJob}
-              disabled={actionLoading}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
+
+    {!isEmployee ? (
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+        <TabsContent value="all" className="space-y-6">
+          {renderTable(filteredJobs)}
+        </TabsContent>
+
+        <TabsContent value="internal" className="space-y-6">
+          {renderTable(filteredJobs.filter(job => job.jobType === "Internal"))}
+        </TabsContent>
+
+        <TabsContent value="external" className="space-y-6">
+          {renderTable(filteredJobs.filter(job => job.jobType === "External"))}
+        </TabsContent>
+      </Tabs>
+    ) : (
+      <div className="space-y-6">
+        {renderTable(filteredJobs)}
+      </div>
+    )}
+  
+    <CreateJobModal 
+      isOpen={isCreateModalOpen} 
+      onClose={() => {
+        setIsCreateModalOpen(false);
+        setEditJob(null);
+      }}
+      onSave={handleCreateNewJob}
+      editJob={editJob}
+    />
+    
+    <AssignJobModal 
+      isOpen={isAssignModalOpen}
+      onClose={() => setIsAssignModalOpen(false)}
+      job={selectedJob}
+    />
+
+    {clientselectedJob && (
+      <AssociateToClientModal
+        isOpen={associateModalOpen}
+        onClose={() => setAssociateModalOpen(false)}
+        job={clientselectedJob}
+        onAssociate={handleAssociateToClient}
+      />
+    )}
+
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete the job "{jobToDelete?.title}". This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={confirmDeleteJob}
+            disabled={actionLoading}
+            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+          >
+            {actionLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Delete"
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </div>
   );
 };
 

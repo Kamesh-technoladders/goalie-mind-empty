@@ -8,7 +8,8 @@ import {
   insertJob,
   updateJobRecord,
   updateJobStatusRecord,
-  deleteJobRecord
+  deleteJobRecord,
+  fetchJobsAssignedToUser
 } from "./supabaseQueries";
 
 
@@ -53,7 +54,20 @@ export const getJobById = async (id: string): Promise<JobData | null> => {
   }
 };
 
-// Create a new job
+// Get jobs assigned to a specific user
+export const getJobsAssignedToUser = async (userId: string): Promise<JobData[]> => {
+  try {
+    const { data } = await fetchJobsAssignedToUser(userId);
+    
+    return Array.isArray(data) 
+      ? data.map(job => transformToJobData(job))
+      : [];
+  } catch (error) {
+    console.error(`Failed to fetch jobs assigned to user ${userId}:`, error);
+    throw error;
+  }
+};
+
 // Create a new job
 export const createJob = async (job: JobData, organization_id: string, created_by: string): Promise<JobData> => {
   try {
