@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
@@ -26,6 +25,8 @@ import { ProgressColumn } from "./ProgressColumn";
 import { Candidates } from "./types/candidate.types";
 import { getCandidatesForJob, createDummyCandidate } from "@/services/candidatesService";
 import { updateCandidateStatus } from "@/services/statusService";
+import SummaryModal from "./SummaryModal";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CandidatesListProps {
   jobId: string;
@@ -36,18 +37,18 @@ interface CandidatesListProps {
   onRefresh: () => Promise<void>;
 }
 
-const CandidatesList = ({ 
-  jobId, 
-  statusFilter, 
+const CandidatesList = ({
+  jobId,
+  statusFilter,
   statusFilters = [],
-  onAddCandidate, 
-  jobdescription, 
-  onRefresh 
+  onAddCandidate,
+  jobdescription,
+  onRefresh,
 }: CandidatesListProps) => {
   // Get user info from Redux state
   const user = useSelector((state: any) => state.auth.user);
   const organizationId = useSelector((state: any) => state.auth.organization_id);
-  
+
   // Fetch candidates
   const { data: candidatesData = [], isLoading, refetch } = useQuery({
     queryKey: ["job-candidates", jobId],
@@ -55,14 +56,21 @@ const CandidatesList = ({
   });
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
+  const [analysisData, setAnalysisData] = useState(null);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+  const [analysisDataAvailable, setAnalysisDataAvailable] = useState<{
+    [key: number]: boolean;
+  }>({});
+
+  console.log("filtered resumes", filteredCandidates);
 
   // Fetch job data
-  const { 
-    data: job, 
-    isLoading: jobLoading, 
-    refetch: refetchJob
+  const {
+    data: job,
+    isLoading: jobLoading,
+    refetch: refetchJob,
   } = useQuery({
-    queryKey: ['job', jobId],
+    queryKey: ["job", jobId],
     queryFn: () => getJobById(jobId || ""),
     enabled: !!jobId,
   });
@@ -73,17 +81,86 @@ const CandidatesList = ({
 
   const recruitmentStages = ["New", "InReview", "Engaged", "Available", "Offered", "Hired"];
 
+  // Check for existing analysis data on mount
+  useEffect(() => {
+    const checkAnalysisData = async () => {
+      const { data, error } = await supabase
+        .from("hr_job_candidates")
+        .select("candidate_id, overall_summary")
+        .eq("job_id", jobId)
+        .not("overall_summary", "is", null);
+
+      if (error) {
+        console.error("Error checking analysis data:", error);
+        return;
+      }
+
+      const availableData: { [key: number]: boolean } = {};
+      data.forEach((item) => {
+        availableData[item.candidate_id] = true;
+      });
+
+      setAnalysisDataAvailable(availableData);
+    };
+
+    checkAnalysisData();
+  }, [jobId]);
+
+  // Fetch Summary Resume
+  const fetchAnalysisData = async (candidateId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from("hr_job_candidates")
+        .select(`
+          overall_score,
+          skills_score,
+          skills_summary,
+          skills_enhancement_tips,
+          work_experience_score,
+          work_experience_summary,
+          work_experience_enhancement_tips,
+          projects_score,
+          projects_summary,
+          projects_enhancement_tips,
+          education_score,
+          education_summary,
+          education_enhancement_tips,
+          overall_summary,
+          report_url
+        `)
+        .eq("job_id", jobId)
+        .eq("candidate_id", candidateId)
+        .single();
+
+      if (error) throw error;
+
+      setAnalysisData(data);
+      setAnalysisDataAvailable((prev) => ({
+        ...prev,
+        [candidateId]: true,
+      }));
+      setIsSummaryModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching analysis data:", error);
+      toast.error("Failed to fetch candidate analysis.");
+      setAnalysisDataAvailable((prev) => ({
+        ...prev,
+        [candidateId]: false,
+      }));
+    }
+  };
+
   // Transform candidates data
   useEffect(() => {
     if (candidatesData.length > 0) {
       const transformedCandidates: Candidate[] = candidatesData.map((candidate) => {
         let statusValue: CandidateStatus = candidate.status as CandidateStatus || "New";
-        
+
         // Handle legacy status mappings
         if (candidate.status === "Screening") statusValue = "New";
         else if (candidate.status === "Interviewing") statusValue = "InReview";
         else if (candidate.status === "Selected") statusValue = "Hired";
-        
+
         const stageIndex = recruitmentStages.indexOf(statusValue);
         const currentStage = statusValue === "Rejected" ? "Rejected" : recruitmentStages[stageIndex >= 0 ? stageIndex : 0];
 
@@ -107,7 +184,6 @@ const CandidatesList = ({
           currentStage,
           completedStages: recruitmentStages.slice(0, stageIndex),
           hasValidatedResume: candidate.hasValidatedResume || false,
-          // Add progress field
           progress: {
             screening: stageIndex >= 0,
             interview: stageIndex >= 1,
@@ -121,7 +197,7 @@ const CandidatesList = ({
           sub_status_id: candidate.sub_status_id,
         };
       });
-      
+
       setCandidates(transformedCandidates);
     }
   }, [candidatesData]);
@@ -129,44 +205,34 @@ const CandidatesList = ({
   // Apply all filters
   useEffect(() => {
     let filtered = [...candidates];
-    
+
     // Apply status filter if specified (tab filter)
     if (statusFilter) {
       filtered = filtered.filter((c) => {
-        // Check if main status name matches the status filter
         if (c.main_status && c.main_status.name === statusFilter) {
           return true;
         }
-        
-        // Legacy status check (for backward compatibility)
         if (c.status === statusFilter) {
           return true;
         }
-        
         return false;
       });
     }
-    
+
     // Apply additional status filters from the filter dialog
     if (statusFilters && statusFilters.length > 0) {
-      filtered = filtered.filter(candidate => {
-        // If no status filters are selected, show all candidates
+      filtered = filtered.filter((candidate) => {
         if (statusFilters.length === 0) return true;
-        
-        // Filter by main status ID
         if (candidate.main_status_id && statusFilters.includes(candidate.main_status_id)) {
           return true;
         }
-        
-        // Filter by sub status ID
         if (candidate.sub_status_id && statusFilters.includes(candidate.sub_status_id)) {
           return true;
         }
-        
         return false;
       });
     }
-    
+
     setFilteredCandidates(filtered);
   }, [candidates, statusFilter, statusFilters]);
 
@@ -176,13 +242,9 @@ const CandidatesList = ({
         toast.error("Invalid candidate data");
         return;
       }
-      
-      const success = await updateCandidateStatus(
-        candidate.id, 
-        value,
-        user?.id // Pass user ID for updated_by field
-      );
-      
+
+      const success = await updateCandidateStatus(candidate.id, value, user?.id);
+
       if (success) {
         toast.success("Status updated successfully");
         await onRefresh();
@@ -190,7 +252,7 @@ const CandidatesList = ({
         toast.error("Failed to update status");
       }
     } catch (error) {
-      console.error('Error updating status:', error);
+      console.error("Error updating status:", error);
       toast.error("Failed to update status");
     }
   };
@@ -198,21 +260,23 @@ const CandidatesList = ({
   const handleValidateResume = async (candidateId: number) => {
     try {
       setValidatingId(candidateId);
-      const candidate = filteredCandidates.find((c) => c.id === candidateId.toString());
+      const candidate = filteredCandidates.find((c) => c.id === candidateId);
       if (!candidate) return;
+
+      // Extract the part of resume_url after "candidate_resumes"
+      const resumeUrlParts = candidate.resume.split("candidate_resumes/");
+      const extractedResumeUrl = resumeUrlParts.length > 1 ? resumeUrlParts[1] : candidate.resume;
 
       const payload = {
         job_id: jobId,
         candidate_id: candidateId.toString(),
-        resume_path: candidate.resume,
+        resume_url: extractedResumeUrl,
         job_description: jobdescription,
-        organization_id: organizationId, // Add organization ID
-        user_id: user?.id // Add user ID for tracking
       };
 
       console.log("Backend data", payload);
 
-      const response = await fetch("http://localhost:5002/api/validate-candidate", {
+      const response = await fetch("http://localhost:5005/api/validate-candidate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -224,11 +288,17 @@ const CandidatesList = ({
         throw new Error("Validation failed");
       }
 
-      const candidateIndex = filteredCandidates.findIndex((c) => c.id === candidateId.toString());
+      // Update candidate's validation status
+      const candidateIndex = filteredCandidates.findIndex((c) => c.id === candidateId);
       if (candidateIndex !== -1) {
         filteredCandidates[candidateIndex].hasValidatedResume = true;
+        setFilteredCandidates([...filteredCandidates]);
+        setAnalysisDataAvailable((prev) => ({
+          ...prev,
+          [candidateId]: true,
+        }));
         toast.success("Resume validated successfully!");
-        refetch();
+        await fetchAnalysisData(candidateId); // Fetch analysis data to confirm
       }
     } catch (error) {
       toast.error("Failed to validate resume");
@@ -239,13 +309,9 @@ const CandidatesList = ({
   };
 
   const handleViewResume = (candidateId: number) => {
-    const candidate = filteredCandidates.find((c) => c.id === candidateId.toString());
+    const candidate = filteredCandidates.find((c) => c.id === candidateId);
     if (candidate?.resume) {
-      // Handle resume URL - could be a string or an object with URL
-      const resumeUrl = typeof candidate.resume === 'string' 
-        ? candidate.resume 
-        : candidate.resume.url;
-      window.open(resumeUrl, "_blank");
+      window.open(candidate.resume, "_blank");
     } else {
       toast.error("Resume not available");
     }
@@ -297,10 +363,10 @@ const CandidatesList = ({
               <TableHead className="w-[300px]">Candidate Name</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead>Profit</TableHead>
-              <TableHead>Testing</TableHead>
               <TableHead>Stage Progress</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[100px] text-center">Validated</TableHead>
+              <TableHead className="w-[100px] text-center">Validate</TableHead>
+              <TableHead>Resume</TableHead>
               <TableHead className="text-right">Action</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
@@ -320,22 +386,17 @@ const CandidatesList = ({
                 <TableCell>{candidate.profit || "N/A"}</TableCell>
                 <TableCell>
                   <div className="truncate">
-                    <ProgressColumn 
-                      progress={candidate.progress} 
+                    <ProgressColumn
+                      progress={candidate.progress}
                       mainStatus={candidate.main_status}
                       subStatus={candidate.sub_status}
                     />
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="w-28">
-                    <StageProgress stages={recruitmentStages} currentStage={candidate.currentStage || "New"} />
-                  </div>
-                </TableCell>
-                <TableCell>
                   <div className="truncate max-w-[120px]">
                     <StatusSelector
-                      value={candidate.sub_status_id || ''}
+                      value={candidate.sub_status_id || ""}
                       onChange={(value: string) => handleStatusChange(value, candidate)}
                       className="h-7 text-xs w-full"
                     />
@@ -344,14 +405,24 @@ const CandidatesList = ({
                 <TableCell className="text-center">
                   <ValidateResumeButton
                     isValidated={candidate.hasValidatedResume || false}
-                    candidateId={parseInt(candidate.id.toString())}
+                    candidateId={candidate.id}
                     onValidate={handleValidateResume}
-                    isLoading={validatingId === parseInt(candidate.id.toString())}
+                    isLoading={validatingId === candidate.id}
                   />
+                  {analysisDataAvailable[candidate.id] && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchAnalysisData(candidate.id)}
+                      className="mt-2"
+                    >
+                      View Summary Report
+                    </Button>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   <ActionButtons
-                    candidateId={parseInt(candidate.id.toString())}
+                    candidateId={candidate.id}
                     onViewResume={handleViewResume}
                     onScheduleInterview={handleScheduleInterview}
                     onViewProfile={handleViewProfile}
@@ -359,7 +430,11 @@ const CandidatesList = ({
                   />
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => handleEditCandidate(candidate)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditCandidate(candidate)}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </TableCell>
@@ -371,15 +446,22 @@ const CandidatesList = ({
 
       {selectedCandidate && (
         <EditCandidateDrawer
-          job={{ 
-            id: jobId, 
+          job={{
+            id: jobId,
             skills: selectedCandidate.skills.map((s) => (typeof s === "string" ? s : s.name)),
-            organization_id: organizationId
+            organization_id: organizationId,
           } as any}
           onCandidateAdded={handleCandidateUpdated}
           candidate={selectedCandidate}
           open={isEditDrawerOpen}
           onOpenChange={setIsEditDrawerOpen}
+        />
+      )}
+
+      {isSummaryModalOpen && analysisData && (
+        <SummaryModal
+          analysisData={analysisData}
+          onClose={() => setIsSummaryModalOpen(false)}
         />
       )}
     </>

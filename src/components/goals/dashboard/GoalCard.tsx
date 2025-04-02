@@ -42,6 +42,8 @@ interface GoalCardProps {
 const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
   const navigate = useNavigate();
   
+console.log("Goaaalssss:", goal)
+
   // Calculate the total target value across all assigned employees
   const calculateTotalTarget = () => {
     if (!goal.assignedTo || goal.assignedTo.length === 0) {

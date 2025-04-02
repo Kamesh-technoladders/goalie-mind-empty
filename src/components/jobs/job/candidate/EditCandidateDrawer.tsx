@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { JobData, CandidateStatus, Candidate } from "@/lib/types";
 import BasicInformationTab from "./BasicInformationTab";
 import SkillInformationTab from "./SkillInformationTab";
-import { createCandidate, updateCandidate, updateCandidateSkillRatings, eidtCandidate, editCandidate } from "@/services/candidateService";
+import { createCandidate, updateCandidate, updateCandidateSkillRatings, editCandidate } from "@/services/candidateService";
 import { useSelector } from "react-redux";
 import { supabase } from "@/integrations/supabase/client";
 import { getJobById } from "@/services/jobService";
@@ -187,9 +187,8 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
       // Ensure skill_ratings is populated
       const skillsToSave = data.skills.length > 0 ? data.skills : [];
   
-      const updatedFrom = user?.user_metadata
-        ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-        : candidate?.appliedFrom || "Unknown";
+      const updatedFrom = user?.id || candidate?.appliedFrom || "Unknown";
+
   
       const payload: CandidateData = {
         id: candidateId || "",
@@ -205,6 +204,7 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
         expectedSalary: candidateData.expectedSalary,
         location: candidateData.currentLocation || candidate?.location || "",
         resumeUrl: candidateData.resume,
+        updatedBy: updatedFrom,
         metadata: {
           currentLocation: candidateData.currentLocation,
           preferredLocations: candidateData.preferredLocations,

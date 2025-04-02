@@ -28,6 +28,8 @@ export interface HrJobCandidate {
   sub_status_id: string | null;
   main_status?: Partial<MainStatus> | null;
   sub_status?: Partial<SubStatus> | null;
+  created_by?: string;
+  updated_by?: string;
 }
 
 export interface CandidateData {
@@ -49,6 +51,8 @@ export interface CandidateData {
   skillRatings?: Array<{ name: string; rating: number }>;
   main_status?: Partial<MainStatus> | null;
   sub_status?: Partial<SubStatus> | null;
+  createdBy?: string;
+  updatedBy?: string;
   progress: {
     screening: boolean;
     interview: boolean;
@@ -144,6 +148,8 @@ export const mapCandidateToDbData = (candidate: CandidateData): Partial<HrJobCan
     applied_from: candidate.appliedFrom || null,
     current_salary: candidate.currentSalary || null,
     expected_salary: candidate.expectedSalary || null,
+    updated_by: candidate.updatedBy,
+    created_by: candidate.createdBy,
   };
 };
 

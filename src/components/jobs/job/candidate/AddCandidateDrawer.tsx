@@ -115,6 +115,8 @@ const handleSaveBasicInfo = async (data: CandidateFormData) => {
       ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
       : "Unknown";
 
+      const createdby = user?.id
+
     // Create a new candidate with basic information
     const candidateData = {
       id: candidateId || "",
@@ -131,6 +133,7 @@ const handleSaveBasicInfo = async (data: CandidateFormData) => {
       location: "",
       appliedFrom,
       resumeUrl: data.resume, // Ensure this is set correctly
+      createdBy: createdby,
       metadata: {
         currentLocation: data.currentLocation,
         preferredLocations: data.preferredLocations,
