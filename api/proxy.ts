@@ -8,6 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('Proxy request body:', req.body);
+    console.log('Request payload:', JSON.stringify(req.body, null, 2));
 
     const backendUrl = 'http://62.72.51.159:5005/api/validate-candidate';
     const response = await fetch(backendUrl, {
