@@ -22,6 +22,7 @@ interface AddClientDialogProps {
 
 const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogProps) => {
   const [activeTab, setActiveTab] = useState("details");
+  const [isSubmittingIntentionally, setIsSubmittingIntentionally] = useState(false); // New flag
   const queryClient = useQueryClient();
   const user = useSelector((state: any) => state.auth.user);
   const organization_id = useSelector((state: any) => state.auth.organization_id);
@@ -39,7 +40,10 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
       internal_contact: "",
       billing_address: { street: "", city: "", state: "", country: "", zipCode: "" },
       shipping_address: { street: "", city: "", state: "", country: "", zipCode: "" },
+      commission_type: undefined,
+      commission_value: undefined,
     },
+    mode: "onChange",
   });
 
   useEffect(() => {
@@ -62,7 +66,7 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
         }
 
         form.reset({
-          display_name: clientData.display_name,
+          display_name: clientData.display_name || "",
           client_name: clientData.client_name || "",
           end_client: clientData.end_client || "",
           contacts: contactsData.length > 0 ? contactsData : [{ name: "", email: "", phone: "", designation: "" }],
@@ -72,6 +76,8 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
           internal_contact: clientData.internal_contact || "",
           billing_address: clientData.billing_address || { street: "", city: "", state: "", country: "", zipCode: "" },
           shipping_address: clientData.shipping_address || { street: "", city: "", state: "", country: "", zipCode: "" },
+          commission_type: clientData.commission_type || undefined,
+          commission_value: clientData.commission_value || undefined,
         });
       };
       fetchClientDetails();
@@ -79,6 +85,12 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
   }, [clientToEdit, form]);
 
   const onSubmit = async (values: ClientFormValues) => {
+    console.log("onSubmit called with values:", values); // Debug log
+    if (!isSubmittingIntentionally) {
+      console.log("Submission blocked: Not intentional");
+      return; // Prevent submission unless explicitly triggered by Save button
+    }
+
     try {
       if (!user || !organization_id) {
         toast.error("Authentication error: Missing user or organization ID");
@@ -96,6 +108,8 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
           internal_contact: values.internal_contact,
           billing_address: values.billing_address,
           shipping_address: values.shipping_address,
+          commission_type: values.commission_type,
+          commission_value: values.commission_value,
           updated_by: user.id,
           status: "active",
         };
@@ -135,6 +149,8 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
           internal_contact: values.internal_contact,
           billing_address: values.billing_address,
           shipping_address: values.shipping_address,
+          commission_type: values.commission_type,
+          commission_value: values.commission_value,
           organization_id,
           created_by: user.id,
           updated_by: user.id,
@@ -173,24 +189,27 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
     } catch (error) {
       console.error("Error saving client:", error);
       toast.error(clientToEdit ? "Failed to update client" : "Failed to add client");
+    } finally {
+      setIsSubmittingIntentionally(false); // Reset flag
     }
   };
 
-  // Define required fields for each tab
   const isDetailsTabValid = () => {
     const values = form.getValues();
-    return (
-      values.display_name.trim() !== "" && // Required
-      values.service_type.length > 0 // At least one service type selected
-    );
+    const isValid = values.display_name.trim() !== "" && values.service_type.length > 0;
+    console.log("Details tab valid:", isValid);
+    return isValid;
   };
 
   const isContactsTabValid = () => {
     const values = form.getValues();
-    return values.contacts.length > 0 && values.contacts.every(contact => contact.name.trim() !== ""); // At least one contact with a name
+    const isValid = values.contacts.length > 0 && values.contacts.every(contact => contact.name.trim() !== "");
+    console.log("Contacts tab valid:", isValid);
+    return isValid;
   };
 
   const handleNext = () => {
+    console.log("handleNext called, current tab:", activeTab); // Debug log
     if (activeTab === "details" && isDetailsTabValid()) {
       setActiveTab("contacts");
     } else if (activeTab === "contacts" && isContactsTabValid()) {
@@ -199,6 +218,19 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
       toast.error("Please fill all required fields before proceeding.");
     }
   };
+
+  const handleSave = () => {
+    console.log("Save button clicked"); // Debug log
+    setIsSubmittingIntentionally(true);
+    form.handleSubmit(onSubmit)();
+  };
+
+  const { isSubmitting, isValid, errors } = form.formState;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("Form Errors:", errors);
+    console.log("Form Values:", form.getValues());
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -209,7 +241,13 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
           </DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              console.log("Form submission prevented"); // Debug log
+            }}
+            className="space-y-2"
+          >
             <div className="max-h-[60vh] overflow-y-auto pr-2">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-3 mb-2">
@@ -238,8 +276,13 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
                 Cancel
               </Button>
               {activeTab === "address" ? (
-                <Button type="submit" size="sm">
-                  {clientToEdit ? "Update" : "Save"}
+                <Button
+                  type="button" // Changed to type="button"
+                  size="sm"
+                  disabled={isSubmitting || !isValid}
+                  onClick={handleSave} // Use handleSave instead of direct submit
+                >
+                  {isSubmitting ? "Saving..." : (clientToEdit ? "Update" : "Save")}
                 </Button>
               ) : (
                 <Button type="button" size="sm" onClick={handleNext}>
@@ -247,6 +290,12 @@ const AddClientDialog = ({ open, onOpenChange, clientToEdit }: AddClientDialogPr
                 </Button>
               )}
             </div>
+            {process.env.NODE_ENV === "development" && (
+              <div className="text-xs text-gray-500 mt-2">
+                Form Valid: {isValid.toString()} | Submitting: {isSubmitting.toString()}
+                <pre>{JSON.stringify(errors, null, 2)}</pre>
+              </div>
+            )}
           </form>
         </Form>
       </DialogContent>

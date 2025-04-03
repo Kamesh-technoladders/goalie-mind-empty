@@ -10,6 +10,13 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "::",
       port: 8080,
+      proxy: {
+        '/api/proxy': {
+          target: 'http://62.72.51.159:5005', // Your backend URL
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/proxy/, '/api/validate-candidate'),
+        },
+      },
       strictPort: true,
       hmr: {
         protocol: "ws",

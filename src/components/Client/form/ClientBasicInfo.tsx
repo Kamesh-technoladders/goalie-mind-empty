@@ -114,7 +114,7 @@ const ClientBasicInfo: React.FC<ClientBasicInfoProps> = ({ form }) => {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm">Currency</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Select Currency" />
@@ -148,7 +148,6 @@ const ClientBasicInfo: React.FC<ClientBasicInfoProps> = ({ form }) => {
             </FormItem>
           )}
         />
-        
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -160,7 +159,7 @@ const ClientBasicInfo: React.FC<ClientBasicInfoProps> = ({ form }) => {
               <FormLabel className="text-sm">Payment Terms</FormLabel>
               <Select
                 onValueChange={(value) => field.onChange(parseInt(value))}
-                defaultValue={field.value?.toString()}
+                value={field.value?.toString()}
               >
                 <FormControl>
                   <SelectTrigger className="h-8 text-sm">
@@ -179,7 +178,7 @@ const ClientBasicInfo: React.FC<ClientBasicInfoProps> = ({ form }) => {
         />
         <FormField
           control={form.control}
-          name="end_client" // New field
+          name="end_client"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-sm">End Client</FormLabel>
@@ -194,14 +193,17 @@ const ClientBasicInfo: React.FC<ClientBasicInfoProps> = ({ form }) => {
             </FormItem>
           )}
         />
-        {showCommissionFields && (
+      </div>
+
+      {showCommissionFields && (
+        <div className="grid grid-cols-2 gap-2">
           <FormField
             control={form.control}
             name="commission_type"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-sm">Commission Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Select Type" />
@@ -216,32 +218,27 @@ const ClientBasicInfo: React.FC<ClientBasicInfoProps> = ({ form }) => {
               </FormItem>
             )}
           />
-        )}
-
-{showCommissionFields && (
-        <FormField
-          control={form.control}
-          name="commission_value"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-sm">Commission Value</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder={form.watch("commission_type") === "percentage" ? "%" : "Amount"}
-                  className="h-8 text-sm"
-                  value={field.value || ""}
-                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : "")}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="commission_value"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm">Commission Value</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder={form.watch("commission_type") === "percentage" ? "%" : "Amount"}
+                    className="h-8 text-sm"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       )}
-      </div>
-
-     
     </div>
   );
 };

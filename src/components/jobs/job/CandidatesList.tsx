@@ -274,7 +274,7 @@ const CandidatesList = ({
   
       console.log("Backend data", payload);
   
-      const response = await fetch("http://62.72.51.159:5005/api/validate-candidate", {
+      const response = await fetch("/api/proxy", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
