@@ -47,20 +47,32 @@ export const fetchJobById = async (id: string) => {
 };
 
 export const fetchJobsAssignedToUser = async (userId: string) => {
-  const { data, error } = await supabase
-    .from("hr_jobs")
-    .select("*")
-    .filter('assigned_to->type', 'eq', 'individual')
-    .filter('assigned_to->id', 'eq', userId)
-    .order("created_at", { ascending: false });
+  try {
+    // Query jobs where assigned_to.id equals userId or contains userId in a comma-separated list
+    const { data, error } = await supabase
+      .from('hr_jobs')
+      .select('*')
+      .or(
+        `assigned_to->>id.eq.${userId},` + // Exact match for single assignment
+        `assigned_to->>id.ilike.%${userId}%` // Pattern match for multiple assignments
+      )
+      .eq('assigned_to->>type', 'individual'); // Only individual assignments
 
-  if (error) {
-    console.error(`Error fetching jobs assigned to user ${userId}:`, error);
+    if (error) throw error;
+
+    // Additional client-side filtering to ensure accuracy
+    const filteredData = data.filter(job => {
+      if (!job.assigned_to || job.assigned_to.type !== 'individual') return false;
+      const assignedIds = job.assigned_to.id.split(',');
+      return assignedIds.includes(userId);
+    });
+
+    return { data: filteredData };
+  } catch (error) {
     throw error;
   }
-
-  return { data, error };
 };
+
 
 export const insertJob = async (jobData: Record<string, any>) => {
   const { data, error } = await supabase

@@ -1,16 +1,15 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/jobs/ui/dialog";
 import { Button } from "@/components/jobs/ui/button";
 import { Label } from "@/components/jobs/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/jobs/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/jobs/ui/select";
-import { IndianRupee, Loader2 } from "lucide-react";
+import { IndianRupee, Loader2, X } from "lucide-react";
 import { Input } from "@/components/jobs/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/jobs/ui/tabs";
 import { toast } from "sonner";
 import { JobData } from "@/lib/types";
-import { fetchEmployees, fetchDepartments, fetchVendors, assignJob } from "@/services/assignmentService";
+import { fetchEmployees, fetchDepartments, fetchVendors, assignJob, fetchJobAssignments } from "@/services/assignmentService";
 import { useSelector } from "react-redux";
 
 interface AssignJobModalProps {
@@ -22,7 +21,7 @@ interface AssignJobModalProps {
 export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
   const [selectedTab, setSelectedTab] = useState("internal");
   const [assignmentType, setAssignmentType] = useState("individual");
-  const [selectedIndividual, setSelectedIndividual] = useState("");
+  const [selectedIndividuals, setSelectedIndividuals] = useState<{ value: string; label: string }[]>([]);
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedVendor, setSelectedVendor] = useState("");
   const [budget, setBudget] = useState("");
@@ -32,12 +31,10 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
   const [departments, setDepartments] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
-  
-  // Get organization_id and user from Redux
+
   const organizationId = useSelector((state: any) => state.auth.organization_id);
   const user = useSelector((state: any) => state.auth.user);
 
-  // Load data when modal opens
   useEffect(() => {
     if (isOpen && organizationId) {
       loadData();
@@ -56,6 +53,11 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
       setEmployees(employeesData);
       setDepartments(departmentsData);
       setVendors(vendorsData);
+
+      if (job?.id) {
+        const existingAssignments = await fetchJobAssignments(job.id);
+        setSelectedIndividuals(existingAssignments || []);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load assignment options");
@@ -64,34 +66,37 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
     }
   };
 
+  const handleEmployeeSelect = (value: string) => {
+    const employee = employees.find(emp => emp.value === value);
+    if (employee && !selectedIndividuals.some(emp => emp.value === value)) {
+      setSelectedIndividuals([...selectedIndividuals, employee]);
+    }
+  };
+
+  const removeEmployee = (value: string) => {
+    setSelectedIndividuals(selectedIndividuals.filter(emp => emp.value !== value));
+  };
+
   const handleSave = async () => {
-    // Validate form before saving
     if (selectedTab === "internal") {
-      if (assignmentType === "individual" && !selectedIndividual) {
-        toast.error("Please select an employee");
+      if (assignmentType === "individual" && selectedIndividuals.length === 0) {
+        toast.error("Please select at least one employee");
         return;
       }
       if (assignmentType === "team" && !selectedTeam) {
         toast.error("Please select a team");
         return;
       }
-      
-      // Get the name of the selected assignment
-      let assignmentName = "";
-      let assignmentId = "";
-      
+
       if (assignmentType === "individual") {
-        assignmentId = selectedIndividual;
-        assignmentName = employees.find(emp => emp.value === selectedIndividual)?.label || "";
+        const assignmentIds = selectedIndividuals.map(emp => emp.value).join(",");
+        const assignmentNames = selectedIndividuals.map(emp => emp.label).join(",");
+        await saveAssignment(assignmentType, assignmentIds, assignmentNames);
       } else {
-        assignmentId = selectedTeam;
-        assignmentName = departments.find(dept => dept.value === selectedTeam)?.label || "";
+        const assignmentName = departments.find(dept => dept.value === selectedTeam)?.label || "";
+        await saveAssignment(assignmentType, selectedTeam, assignmentName);
       }
-      
-      // Save internal assignment
-      await saveAssignment(assignmentType, assignmentId, assignmentName);
     } else {
-      // External assignment
       if (!selectedVendor) {
         toast.error("Please select a vendor");
         return;
@@ -102,8 +107,6 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
       }
       
       const vendorName = vendors.find(vendor => vendor.value === selectedVendor)?.label || "";
-      
-      // Save external assignment
       await saveAssignment("vendor", selectedVendor, vendorName, budget, budgetType);
     }
   };
@@ -131,7 +134,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
   const handleReset = () => {
     setSelectedTab("internal");
     setAssignmentType("individual");
-    setSelectedIndividual("");
+    setSelectedIndividuals([]);
     setSelectedTeam("");
     setSelectedVendor("");
     setBudget("");
@@ -154,12 +157,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
           </div>
         ) : (
           <>
-            <Tabs 
-              defaultValue="internal" 
-              className="mt-4" 
-              value={selectedTab}
-              onValueChange={setSelectedTab}
-            >
+            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mt-4">
               <TabsList className="grid grid-cols-2 w-full">
                 <TabsTrigger value="internal">Internal Assignment</TabsTrigger>
                 <TabsTrigger value="external">External Assignment</TabsTrigger>
@@ -175,15 +173,14 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                     <RadioGroupItem value="individual" id="individual" />
                     <div className="grid gap-1.5 w-full">
                       <Label htmlFor="individual" className="font-medium">
-                        Assign to Individual
+                        Assign to Individual(s)
                       </Label>
                       <Select
-                        value={selectedIndividual}
-                        onValueChange={setSelectedIndividual}
+                        onValueChange={handleEmployeeSelect}
                         disabled={assignmentType !== "individual"}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select an employee" />
+                          <SelectValue placeholder="Select employees" />
                         </SelectTrigger>
                         <SelectContent>
                           {employees.length > 0 ? (
@@ -199,6 +196,24 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                           )}
                         </SelectContent>
                       </Select>
+                      {selectedIndividuals.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {selectedIndividuals.map((employee) => (
+                            <div
+                              key={employee.value}
+                              className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-sm"
+                            >
+                              {employee.label}
+                              <button
+                                onClick={() => removeEmployee(employee.value)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -239,10 +254,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                 <div className="grid gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="vendor">Vendor Selection</Label>
-                    <Select
-                      value={selectedVendor}
-                      onValueChange={setSelectedVendor}
-                    >
+                    <Select value={selectedVendor} onValueChange={setSelectedVendor}>
                       <SelectTrigger className="w-full" id="vendor">
                         <SelectValue placeholder="Select a vendor" />
                       </SelectTrigger>
@@ -261,7 +273,6 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                       </SelectContent>
                     </Select>
                   </div>
-                  
                   <div className="grid gap-2">
                     <Label htmlFor="budget">Budget</Label>
                     <div className="flex items-center gap-2">
@@ -278,10 +289,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                           onChange={(e) => setBudget(e.target.value)}
                         />
                       </div>
-                      <Select
-                        value={budgetType}
-                        onValueChange={setBudgetType}
-                      >
+                      <Select value={budgetType} onValueChange={setBudgetType}>
                         <SelectTrigger className="w-28">
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>

@@ -30,6 +30,7 @@ export interface HrJobCandidate {
   sub_status?: Partial<SubStatus> | null;
   created_by?: string;
   updated_by?: string;
+  has_validated_resume?: boolean;
 }
 
 export interface CandidateData {
@@ -123,11 +124,12 @@ export const mapDbCandidateToData = (candidate: HrJobCandidate): CandidateData =
     location: candidate.location ?? undefined,
     main_status: candidate.main_status || undefined,
     sub_status: candidate.sub_status || undefined,
+    hasValidatedResume: candidate.has_validated_resume || false,
     progress,
   };
 };
 
-// Rest of the file (mapCandidateToDbData, getCandidatesByJobId, etc.) remains unchanged
+// Rest of the file (mapCandidateToDbData, getCandidaftesByJobId, etc.) remains unchanged
 // ... [Your other functions here] ...
 
 export const mapCandidateToDbData = (candidate: CandidateData): Partial<HrJobCandidate> => {
@@ -179,6 +181,8 @@ export const getCandidatesByJobId = async (jobId: string): Promise<CandidateData
         location, 
         main_status_id, 
         sub_status_id,
+        has_validated_resume,
+        overall_score,
         main_status:job_statuses!main_status_id (
           id,
           name,
@@ -342,6 +346,24 @@ export const deleteCandidate = async (id: string): Promise<void> => {
     }
   } catch (error) {
     console.error(`Failed to delete candidate with ID ${id}:`, error);
+    throw error;
+  }
+};
+
+// Update only the has_validated_resume field for a candidate
+export const updateCandidateValidationStatus = async (candidateId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('hr_job_candidates')
+      .update({ has_validated_resume: true })
+      .eq('id', candidateId);
+
+    if (error) {
+      console.error("Error updating candidate validation status:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error(`Failed to update validation status for candidate with ID ${candidateId}:`, error);
     throw error;
   }
 };

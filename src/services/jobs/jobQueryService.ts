@@ -68,6 +68,7 @@ export const getJobsAssignedToUser = async (userId: string): Promise<JobData[]> 
   }
 };
 
+
 // Create a new job
 export const createJob = async (job: JobData, organization_id: string, created_by: string): Promise<JobData> => {
   try {

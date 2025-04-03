@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -69,7 +68,49 @@ export const fetchVendors = async (organizationId: string) => {
   }
 };
 
-// Assign a job to an individual, team, or vendor
+// Fetch existing job assignments
+export const fetchJobAssignments = async (jobId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('hr_jobs')
+      .select('assigned_to')
+      .eq('id', jobId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data?.assigned_to) return [];
+
+    const assignedTo = data.assigned_to;
+    if (assignedTo.type === 'individual') {
+      // Split the IDs and fetch employee names
+      const employeeIds = assignedTo.id.split(',');
+      const { data: employees, error: empError } = await supabase
+        .from('hr_employees')
+        .select('id, first_name, last_name')
+        .in('id', employeeIds);
+
+      if (empError) throw empError;
+
+      return employees.map(emp => ({
+        value: emp.id,
+        label: `${emp.first_name} ${emp.last_name}`
+      }));
+    }
+
+    return [{
+      value: assignedTo.id,
+      label: assignedTo.name
+    }];
+  } catch (error) {
+    console.error("Error fetching job assignments:", error);
+    throw error;
+  }
+};
+
+// Assign a job to an individual(s), team, or vendor
 export const assignJob = async (
   jobId: string, 
   assignmentType: 'individual' | 'team' | 'vendor', 
@@ -83,8 +124,8 @@ export const assignJob = async (
     const assignmentData = {
       assigned_to: {
         type: assignmentType,
-        id: assignmentId,
-        name: assignmentName
+        id: assignmentId,  // For individual, this will be comma-separated IDs
+        name: assignmentName  // For individual, this will be comma-separated names
       },
       updated_by: userId
     };

@@ -14,10 +14,9 @@ import {
 } from "@/components/jobs/ui/table";
 import { StatusSelector } from "./StatusSelector";
 import ValidateResumeButton from "./candidate/ValidateResumeButton";
-import ActionButtons from "./candidate/ActionButtons";
 import StageProgress from "./candidate/StageProgress";
 import EmptyState from "./candidate/EmptyState";
-import { Pencil } from "lucide-react";
+import { Pencil, Eye, Download, FileText, Phone, Calendar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditCandidateDrawer from "@/components/jobs/job/candidate/EditCandidateDrawer";
 import { getJobById } from "@/services/jobService";
@@ -27,6 +26,7 @@ import { getCandidatesForJob, createDummyCandidate } from "@/services/candidates
 import { updateCandidateStatus } from "@/services/statusService";
 import SummaryModal from "./SummaryModal";
 import { supabase } from "@/integrations/supabase/client";
+import { updateCandidateValidationStatus } from "@/services/candidateService";
 
 interface CandidatesListProps {
   jobId: string;
@@ -45,11 +45,9 @@ const CandidatesList = ({
   jobdescription,
   onRefresh,
 }: CandidatesListProps) => {
-  // Get user info from Redux state
   const user = useSelector((state: any) => state.auth.user);
   const organizationId = useSelector((state: any) => state.auth.organization_id);
 
-  // Fetch candidates
   const { data: candidatesData = [], isLoading, refetch } = useQuery({
     queryKey: ["job-candidates", jobId],
     queryFn: () => getCandidatesByJobId(jobId),
@@ -57,6 +55,7 @@ const CandidatesList = ({
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
   const [analysisData, setAnalysisData] = useState(null);
+  const [candidateAnalysisData, setCandidateAnalysisData] = useState<{ [key: number]: any }>({});
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [analysisDataAvailable, setAnalysisDataAvailable] = useState<{
     [key: number]: boolean;
@@ -64,7 +63,6 @@ const CandidatesList = ({
 
   console.log("filtered resumes", filteredCandidates);
 
-  // Fetch job data
   const {
     data: job,
     isLoading: jobLoading,
@@ -81,12 +79,11 @@ const CandidatesList = ({
 
   const recruitmentStages = ["New", "InReview", "Engaged", "Available", "Offered", "Hired"];
 
-  // Check for existing analysis data on mount
   useEffect(() => {
     const checkAnalysisData = async () => {
       const { data, error } = await supabase
         .from("hr_job_candidates")
-        .select("candidate_id, overall_summary")
+        .select("candidate_id, overall_summary, overall_score")
         .eq("job_id", jobId)
         .not("overall_summary", "is", null);
 
@@ -96,17 +93,19 @@ const CandidatesList = ({
       }
 
       const availableData: { [key: number]: boolean } = {};
+      const analysisDataTemp: { [key: number]: any } = {};
       data.forEach((item) => {
         availableData[item.candidate_id] = true;
+        analysisDataTemp[item.candidate_id] = { overall_score: item.overall_score };
       });
 
       setAnalysisDataAvailable(availableData);
+      setCandidateAnalysisData((prev) => ({ ...prev, ...analysisDataTemp }));
     };
 
     checkAnalysisData();
   }, [jobId]);
 
-  // Fetch Summary Resume
   const fetchAnalysisData = async (candidateId: number) => {
     try {
       const { data, error } = await supabase
@@ -135,6 +134,10 @@ const CandidatesList = ({
       if (error) throw error;
 
       setAnalysisData(data);
+      setCandidateAnalysisData((prev) => ({
+        ...prev,
+        [candidateId]: data,
+      }));
       setAnalysisDataAvailable((prev) => ({
         ...prev,
         [candidateId]: true,
@@ -150,13 +153,11 @@ const CandidatesList = ({
     }
   };
 
-  // Transform candidates data
   useEffect(() => {
     if (candidatesData.length > 0) {
       const transformedCandidates: Candidate[] = candidatesData.map((candidate) => {
         let statusValue: CandidateStatus = candidate.status as CandidateStatus || "New";
 
-        // Handle legacy status mappings
         if (candidate.status === "Screening") statusValue = "New";
         else if (candidate.status === "Interviewing") statusValue = "InReview";
         else if (candidate.status === "Selected") statusValue = "Hired";
@@ -202,11 +203,9 @@ const CandidatesList = ({
     }
   }, [candidatesData]);
 
-  // Apply all filters
   useEffect(() => {
     let filtered = [...candidates];
 
-    // Apply status filter if specified (tab filter)
     if (statusFilter) {
       filtered = filtered.filter((c) => {
         if (c.main_status && c.main_status.name === statusFilter) {
@@ -219,7 +218,6 @@ const CandidatesList = ({
       });
     }
 
-    // Apply additional status filters from the filter dialog
     if (statusFilters && statusFilters.length > 0) {
       filtered = filtered.filter((candidate) => {
         if (statusFilters.length === 0) return true;
@@ -257,38 +255,44 @@ const CandidatesList = ({
     }
   };
 
+  
   const handleValidateResume = async (candidateId: number) => {
     try {
       setValidatingId(candidateId);
       const candidate = filteredCandidates.find((c) => c.id === candidateId);
       if (!candidate) return;
-
-      // Extract the part of resume_url after "candidate_resumes"
+  
       const resumeUrlParts = candidate.resume.split("candidate_resumes/");
       const extractedResumeUrl = resumeUrlParts.length > 1 ? resumeUrlParts[1] : candidate.resume;
-
+  
       const payload = {
         job_id: jobId,
         candidate_id: candidateId.toString(),
         resume_url: extractedResumeUrl,
         job_description: jobdescription,
       };
-
+  
       console.log("Backend data", payload);
-
-      const response = await fetch("http://localhost:5005/api/validate-candidate", {
+  
+      const response = await fetch("http://62.72.51.159:5005/api/validate-candidate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
-
+  
       if (!response.ok) {
         throw new Error("Validation failed");
       }
-
-      // Update candidate's validation status
+  
+      // Update the backend with has_validated_resume = true
+      await updateCandidateValidationStatus(candidateId.toString());
+  
+      // Refetch the candidates data to reflect the updated status
+      await refetch();
+  
+      // Update local state (optional, since refetch will handle it)
       const candidateIndex = filteredCandidates.findIndex((c) => c.id === candidateId);
       if (candidateIndex !== -1) {
         filteredCandidates[candidateIndex].hasValidatedResume = true;
@@ -298,7 +302,7 @@ const CandidatesList = ({
           [candidateId]: true,
         }));
         toast.success("Resume validated successfully!");
-        await fetchAnalysisData(candidateId); // Fetch analysis data to confirm
+        await fetchAnalysisData(candidateId);
       }
     } catch (error) {
       toast.error("Failed to validate resume");
@@ -365,10 +369,9 @@ const CandidatesList = ({
               <TableHead>Profit</TableHead>
               <TableHead>Stage Progress</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[100px] text-center">Validate</TableHead>
-              <TableHead>Resume</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
+              <TableHead className="w-[100px]">Validate</TableHead>
+              <TableHead className="w-[60px]">Action</TableHead>
+              {/* <TableHead className="w-[50px]"></TableHead> */}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -408,28 +411,80 @@ const CandidatesList = ({
                     candidateId={candidate.id}
                     onValidate={handleValidateResume}
                     isLoading={validatingId === candidate.id}
+                    overallScore={candidateAnalysisData[candidate.id]?.overall_score}
                   />
-                  {analysisDataAvailable[candidate.id] && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchAnalysisData(candidate.id)}
-                      className="mt-2"
-                    >
-                      View Summary Report
-                    </Button>
-                  )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <ActionButtons
-                    candidateId={candidate.id}
-                    onViewResume={handleViewResume}
-                    onScheduleInterview={handleScheduleInterview}
-                    onViewProfile={handleViewProfile}
-                    onCall={handleCall}
-                  />
+                  <div className="flex gap-1 justify-start">
+                    {/* <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewProfile(candidate.id)}
+                      title="View Profile"
+                    >
+                      <User className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleScheduleInterview(candidate.id)}
+                      title="Schedule Interview"
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCall(candidate.id)}
+                      title="Call"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </Button> */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewResume(candidate.id)}
+                      title="View Resume"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (candidate.resume) {
+                          const link = document.createElement('a');
+                          link.href = candidate.resume;
+                          link.download = `${candidate.name}_resume.pdf`;
+                          link.click();
+                        } else {
+                          toast.error("Resume not available for download");
+                        }
+                      }}
+                      title="Download Resume"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditCandidate(candidate)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                    {analysisDataAvailable[candidate.id] && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => fetchAnalysisData(candidate.id)}
+                        title="View Summary Report"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell>
+                {/* <TableCell>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -437,7 +492,7 @@ const CandidatesList = ({
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                </TableCell>
+                </TableCell> */}
               </TableRow>
             ))}
           </TableBody>
@@ -469,3 +524,5 @@ const CandidatesList = ({
 };
 
 export default CandidatesList;
+
+// 

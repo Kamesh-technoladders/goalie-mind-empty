@@ -1,25 +1,27 @@
-
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import { JobData } from "@/lib/types";
-import { 
-  Building, 
-  DollarSign, 
-  CalendarDays, 
-  Clock, 
+import {
+  Building,
+  DollarSign,
+  CalendarDays,
+  Clock,
   Users,
-  Briefcase
+  Briefcase,
+  Banknote,
+  IndianRupee,
+  CircleUser,
 } from "lucide-react";
 import { formatDisplayValue } from "./utils/formatUtils";
-
+ 
 interface JobDetailsRightCardProps {
   job: JobData;
 }
-
+ 
 const JobDetailsRightCard = ({ job }: JobDetailsRightCardProps) => {
   return (
     <Card className="h-full shadow-md">
@@ -28,64 +30,64 @@ const JobDetailsRightCard = ({ job }: JobDetailsRightCardProps) => {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Company / Client Name */}
-        <InfoItem 
+        <InfoItem
           icon={<Building className="text-blue-500" />}
           title="Company Name"
           value={formatDisplayValue(job.clientDetails?.clientName || job.clientOwner)}
         />
-        
+       
         {/* Client Budget - Admin Only */}
-        <InfoItem 
-          icon={<DollarSign className="text-green-500" />}
+        <InfoItem
+          icon={<Banknote className="text-green-500" />}
           title="Client Budget (Admin)"
           value={formatDisplayValue(job.clientDetails?.clientBudget)}
           isAdmin={true}
         />
-        
+       
         {/* HR Budget */}
-        <InfoItem 
-          icon={<DollarSign className="text-emerald-500" />}
+        <InfoItem
+          icon={<IndianRupee className="text-emerald-500" />}
           title="Budget (HR)"
           value={formatDisplayValue(job.budgets?.hrBudget)}
         />
-        
+       
         {/* Vendor Budget */}
-        <InfoItem 
-          icon={<DollarSign className="text-teal-500" />}
+        <InfoItem
+          icon={<IndianRupee className="text-teal-500" />}
           title="Vendor Budget"
           value={formatDisplayValue(job.budgets?.vendorBudget)}
         />
-        
+       
         {/* End Client */}
-        <InfoItem 
-          icon={<Building className="text-indigo-500" />}
+        <InfoItem
+          icon={<CircleUser className="text-indigo-500" />}
           title="End Client"
           value={formatDisplayValue(job.clientDetails?.endClient)}
         />
-        
+       
         {/* Posted Date */}
-        <InfoItem 
+        <InfoItem
           icon={<CalendarDays className="text-amber-500" />}
           title="Date Posted"
           value={formatDisplayValue(job.postedDate)}
         />
-        
+       
         {/* Due Date */}
-        <InfoItem 
+        <InfoItem
           icon={<Clock className="text-red-500" />}
           title="Due Date"
           value={formatDisplayValue(job.dueDate)}
         />
-        
+       
         {/* Department */}
-        <InfoItem 
+        <InfoItem
           icon={<Users className="text-purple-500" />}
           title="Department"
           value={formatDisplayValue(job.department)}
         />
-        
+       
         {/* Submission Type */}
-        <InfoItem 
+        <InfoItem
           icon={<Briefcase className="text-gray-500" />}
           title="Submission Type"
           value={formatDisplayValue(job.submissionType)}
@@ -94,23 +96,23 @@ const JobDetailsRightCard = ({ job }: JobDetailsRightCardProps) => {
     </Card>
   );
 };
-
+ 
 interface InfoItemProps {
   icon: React.ReactNode;
   title: string;
   value: string;
   isAdmin?: boolean;
 }
-
+ 
 const InfoItem = ({ icon, title, value, isAdmin = false }: InfoItemProps) => {
   // Mock authorization check
   const isAuthorized = true; // In a real app, this would be from auth context
-  
+ 
   // If it's admin-only and user is not authorized, don't show
   if (isAdmin && !isAuthorized) {
     return null;
   }
-  
+ 
   return (
     <div>
       <div className="flex items-center gap-2 mb-1">
@@ -121,5 +123,5 @@ const InfoItem = ({ icon, title, value, isAdmin = false }: InfoItemProps) => {
     </div>
   );
 };
-
+ 
 export default JobDetailsRightCard;

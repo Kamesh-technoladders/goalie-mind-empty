@@ -285,6 +285,8 @@ const Jobs = () => {
         </div>
       );
     }
+
+    console.log("jobsfor individual",jobs)
   
     return (
       <div className="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm animate-scale-in">
@@ -311,7 +313,9 @@ const Jobs = () => {
                 <tr key={job.id} className="hover:bg-gray-50 transition">
                   <td className="table-cell">
                     <div className="flex flex-col">
-                      <span className="font-medium">{job.title}</span>
+                    <Link to={`/jobs/${job.id}`} className="font-medium text-blue-600 hover:underline">
+      {job.title}
+    </Link>
                       <span className="text-xs text-gray-500">
                         {job.jobId}, {job.hiringMode}
                       </span>
@@ -378,8 +382,8 @@ const Jobs = () => {
                     )}
                   </td>
                   <td className="table-cell">
-                    {job.assignedTo ? (
-                      <span>{job.assignedTo.name}</span>
+                    {job.assigned_to ? (
+                      <span>{job.assigned_to.name}</span> // Updated to use assigned_to
                     ) : (
                       <span className="text-gray-400 text-sm">Not assigned</span>
                     )}
@@ -559,135 +563,135 @@ const Jobs = () => {
         </Card>
       </div>
   
-    <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-      {!isEmployee && (
-        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 w-full sm:w-80">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="internal" className="flex items-center gap-1">
-              <Briefcase size={14} />
-              <span>Internal</span>
-            </TabsTrigger>
-            <TabsTrigger value="external" className="flex items-center gap-1">
-              <Users size={14} />
-              <span>External</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+        {!isEmployee && (
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-3 w-full sm:w-80">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="internal" className="flex items-center gap-1">
+                <Briefcase size={14} />
+                <span>Internal</span>
+              </TabsTrigger>
+              <TabsTrigger value="external" className="flex items-center gap-1">
+                <Users size={14} />
+                <span>External</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
 
-      <div className="relative flex-grow">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-        <Input
-          placeholder="Search for jobs..."
-          className="pl-10 h-10"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Input
+            placeholder="Search for jobs..."
+            className="pl-10 h-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-      {!isEmployee && (
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter size={16} />
-              <span>Filters</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Filter Jobs</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {/* Filter options remain unchanged */}
-            </div>
-            <div className="flex justify-between">
-              <Button 
-                variant="outline" 
-                onClick={() => setFilters({})}
-              >
-                Reset Filters
+        {!isEmployee && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Filter size={16} />
+                <span>Filters</span>
               </Button>
-              <Button type="submit">Apply Filters</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
-
-    {!isEmployee ? (
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsContent value="all" className="space-y-6">
-          {renderTable(filteredJobs)}
-        </TabsContent>
-
-        <TabsContent value="internal" className="space-y-6">
-          {renderTable(filteredJobs.filter(job => job.jobType === "Internal"))}
-        </TabsContent>
-
-        <TabsContent value="external" className="space-y-6">
-          {renderTable(filteredJobs.filter(job => job.jobType === "External"))}
-        </TabsContent>
-      </Tabs>
-    ) : (
-      <div className="space-y-6">
-        {renderTable(filteredJobs)}
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Filter Jobs</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                {/* Filter options remain unchanged */}
+              </div>
+              <div className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFilters({})}
+                >
+                  Reset Filters
+                </Button>
+                <Button type="submit">Apply Filters</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-    )}
+
+      {!isEmployee ? (
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <TabsContent value="all" className="space-y-6">
+            {renderTable(filteredJobs)}
+          </TabsContent>
+
+          <TabsContent value="internal" className="space-y-6">
+            {renderTable(filteredJobs.filter(job => job.jobType === "Internal"))}
+          </TabsContent>
+
+          <TabsContent value="external" className="space-y-6">
+            {renderTable(filteredJobs.filter(job => job.jobType === "External"))}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="space-y-6">
+          {renderTable(filteredJobs)}
+        </div>
+      )}
   
-    <CreateJobModal 
-      isOpen={isCreateModalOpen} 
-      onClose={() => {
-        setIsCreateModalOpen(false);
-        setEditJob(null);
-      }}
-      onSave={handleCreateNewJob}
-      editJob={editJob}
-    />
-    
-    <AssignJobModal 
-      isOpen={isAssignModalOpen}
-      onClose={() => setIsAssignModalOpen(false)}
-      job={selectedJob}
-    />
-
-    {clientselectedJob && (
-      <AssociateToClientModal
-        isOpen={associateModalOpen}
-        onClose={() => setAssociateModalOpen(false)}
-        job={clientselectedJob}
-        onAssociate={handleAssociateToClient}
+      <CreateJobModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditJob(null);
+        }}
+        onSave={handleCreateNewJob}
+        editJob={editJob}
       />
-    )}
+      
+      <AssignJobModal 
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        job={selectedJob}
+      />
 
-    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete the job "{jobToDelete?.title}". This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={confirmDeleteJob}
-            disabled={actionLoading}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-          >
-            {actionLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
-              </>
-            ) : (
-              "Delete"
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </div>
+      {clientselectedJob && (
+        <AssociateToClientModal
+          isOpen={associateModalOpen}
+          onClose={() => setAssociateModalOpen(false)}
+          job={clientselectedJob}
+          onAssociate={handleAssociateToClient}
+        />
+      )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the job "{jobToDelete?.title}". This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteJob}
+              disabled={actionLoading}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };
 

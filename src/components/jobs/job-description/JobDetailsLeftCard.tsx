@@ -1,24 +1,23 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { JobData, Candidate } from "@/lib/types";
-import { 
-  Briefcase, 
-  MapPin, 
+import {
+  Briefcase,
+  MapPin,
   Users,
   CalendarClock,
 } from "lucide-react";
 import { formatBulletPoints } from "./utils/formatUtils";
-
+ 
 interface JobDetailsLeftCardProps {
   job: JobData;
   candidates: Candidate[];
 }
-
+ 
 const JobDetailsLeftCard = ({ job, candidates }: JobDetailsLeftCardProps) => {
   const bulletPoints = formatBulletPoints(job.description || "");
-  
+ 
   return (
     <Card className="h-full shadow-md">
       <CardContent className="pt-6">
@@ -39,32 +38,46 @@ const JobDetailsLeftCard = ({ job, candidates }: JobDetailsLeftCardProps) => {
                 </Badge>
               </div>
             </div>
-            
+           
             {/* Client and Location */}
-            <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 text-gray-600 mt-2">
-              <div className="flex items-center gap-1">
+            <div className="flex flex-col  gap-2 text-gray-600 mt-2 text:sm font-normal">
+            <div className="flex flex-row justify-between items-center gap-4 whitespace-nowrap overflow-x-auto">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <Briefcase size={16} />
                 <span>{job.clientDetails?.clientName || job.clientOwner}</span>
               </div>
+              {/* {job.location && job.location.length > 0 && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <MapPin size={16} />
+                  <span>{job.location.join(", ")}</span>
+                </div>
+              )} */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Users size={16} />
+                <span>{candidates.length} Applications</span>
+              </div>
+              </div>
+              <div className="flex flex-row justify-between items-center gap-4 whitespace-nowrap overflow-x-auto">
+              {/* <div className="flex items-center gap-1 flex-shrink-0">
+                <Users size={16} />
+                <span>{candidates.length} Applications</span>
+              </div> */}
               {job.location && job.location.length > 0 && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <MapPin size={16} />
                   <span>{job.location.join(", ")}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1">
-                <Users size={16} />
-                <span>{candidates.length} Applications</span>
-              </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <CalendarClock size={16} />
                 <span>Posted on {job.postedDate}</span>
               </div>
             </div>
+            </div>
           </div>
-          
+         
           <Separator />
-          
+         
           {/* Assigned To Section */}
           {job.assignedTo && (
             <div>
@@ -82,7 +95,7 @@ const JobDetailsLeftCard = ({ job, candidates }: JobDetailsLeftCardProps) => {
               </div>
             </div>
           )}
-          
+         
           {/* Skills Section */}
           <div>
             <h2 className="text-sm font-medium text-gray-500 mb-2">Required Skills</h2>
@@ -98,22 +111,22 @@ const JobDetailsLeftCard = ({ job, candidates }: JobDetailsLeftCardProps) => {
               )}
             </div>
           </div>
-          
+         
           {/* Experience Section */}
           {job.experience && (
             <div>
               <h2 className="text-sm font-medium text-gray-500 mb-2">Experience Required</h2>
               <p>
-                {job.experience.min 
-                  ? `${job.experience.min.years} years ${job.experience.min.months} months` 
+                {job.experience.min
+                  ? `${job.experience.min.years} years ${job.experience.min.months} months`
                   : "Not specified"}
                 {job.experience.max && ` to ${job.experience.max.years} years ${job.experience.max.months} months`}
               </p>
             </div>
           )}
-          
+         
           <Separator />
-          
+         
           {/* Job Description Section */}
           <div>
             <h2 className="text-sm font-medium text-gray-500 mb-3">Job Description</h2>
@@ -132,5 +145,5 @@ const JobDetailsLeftCard = ({ job, candidates }: JobDetailsLeftCardProps) => {
     </Card>
   );
 };
-
+ 
 export default JobDetailsLeftCard;

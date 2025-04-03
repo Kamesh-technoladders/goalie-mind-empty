@@ -140,6 +140,7 @@ export interface JobData {
   assignedTo?: {
     type: "individual" | "team" | "vendor";
     name: string;
+    id: string;
   };
   budgets?: {
     clientBudget?: string;
