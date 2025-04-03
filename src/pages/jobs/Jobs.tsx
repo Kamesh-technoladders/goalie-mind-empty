@@ -1,3 +1,4 @@
+import React from "react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -65,6 +66,62 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import AssociateToClientModal from "@/components/jobs/job/AssociateToClientModal";
 import { useSelector } from "react-redux";
+import moment from 'moment';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/jobs/ui/avatar"; // Assuming you have an Avatar component
+import { fetchEmployeesByIds } from "@/services/jobs/supabaseQueries";
+
+// Adding this AvatarGroup component since it's not included in shadcn by default
+
+const AvatarGroup = ({ 
+  children, 
+  limit = 3, 
+  className = "",
+  employees = [], // Add employees prop to pass full list
+}: { 
+  children: React.ReactNode; 
+  limit?: number; 
+  className?: string;
+  employees?: { id: string; first_name: string; last_name: string; profile_picture_url?: string }[];
+}) => {
+  const childrenArray = React.Children.toArray(children);
+  const limitedChildren = childrenArray.slice(0, limit);
+  const excess = childrenArray.length - limit;
+
+  return (
+    <div className={`flex -space-x-2 ${className}`}>
+      {limitedChildren}
+      {excess > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Avatar className="h-8 w-8 border-2 border-white cursor-pointer">
+              <AvatarFallback className="bg-gray-200 text-gray-700 text-xs font-medium">
+                +{excess}
+              </AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            {employees.map((employee) => {
+              const fullName = `${employee.first_name} ${employee.last_name}`;
+              return (
+                <DropdownMenuItem key={employee.id} className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={employee.profile_picture_url || ""} alt={fullName} />
+                    <AvatarFallback>
+                      {employee.first_name[0]}
+                      {employee.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{fullName}</span>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
+};
+
 
 const Jobs = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -159,6 +216,10 @@ const Jobs = () => {
   const activeJobs = filteredJobs.filter(job => job.status === "Active" || job.status === "OPEN").length;
   const pendingJobs = filteredJobs.filter(job => job.status === "Pending" || job.status === "HOLD").length;
   const completedJobs = filteredJobs.filter(job => job.status === "Completed" || job.status === "CLOSE").length;
+
+  const daysSinceCreated = (createdDate: string) => {
+    return moment(createdDate).fromNow();
+  };
 
   const handleAssignJob = (job: JobData) => {
     setSelectedJob(job);
@@ -277,6 +338,84 @@ const Jobs = () => {
     );
   }
 
+
+
+// Add this function inside the Jobs component, before the renderTable function
+
+const renderAssignedToCell = async (assignedTo: { id: string; name: string; type: string } | null) => {
+
+
+  if (!assignedTo || assignedTo.type !== "individual") {
+
+    return <span className="text-gray-400 text-sm">Not assigned</span>;
+  }
+
+  const ids = assignedTo.id.split(",");
+  const names = assignedTo.name.split(",");
+
+
+  try {
+    const { data: employees } = await fetchEmployeesByIds(ids);
+
+
+    if (!employees || employees.length === 0) {
+
+      return <span className="text-gray-400 text-sm">Not assigned</span>;
+    }
+
+    const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+    const orderedEmployees = ids
+      .map(id => employeeMap.get(id))
+      .filter(emp => emp !== undefined);
+
+    return (
+      <AvatarGroup className="justify-start" limit={3} employees={orderedEmployees}>
+        {orderedEmployees.map((employee) => {
+          const fullName = `${employee.first_name} ${employee.last_name}`;
+          return (
+            <TooltipProvider key={employee.id}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-8 w-8 border-2 border-white">
+                    <AvatarImage src={employee.profile_picture_url || ""} alt={fullName} />
+                    <AvatarFallback>
+                      {employee.first_name[0]}
+                      {employee.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{fullName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        })}
+      </AvatarGroup>
+    );
+  } catch (error) {
+    console.error("renderAssignedToCell - Error fetching assigned employees:", error);
+    return <span className="text-red-500 text-sm">Error loading assignees</span>;
+  }
+};
+const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string; type: string } | null }) => {
+  const [content, setContent] = useState<JSX.Element | null>(null);
+
+  useEffect(() => {
+    
+    const loadContent = async () => {
+      const renderedContent = await renderAssignedToCell(assignedTo);
+      
+      setContent(renderedContent);
+    };
+    loadContent();
+  }, [assignedTo]);
+
+  return content || <span className="text-gray-400 text-sm">Loading...</span>;
+};
+
+
+
   const renderTable = (jobs: JobData[]) => {
     if (jobs.length === 0) {
       return (
@@ -285,8 +424,8 @@ const Jobs = () => {
         </div>
       );
     }
+    console.log("jobs", jobs)
 
-    console.log("jobsfor individual",jobs)
   
     return (
       <div className="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm animate-scale-in">
@@ -301,8 +440,10 @@ const Jobs = () => {
                   </div>
                 </th>
                 <th scope="col" className="table-header-cell">Client Owner</th>
+                <th scope="col" className="table-header-cell">Posted By</th>
                 <th scope="col" className="table-header-cell">Created Date</th>
-                <th scope="col" className="table-header-cell">Submission</th>
+                {/* <th scope="col" className="table-header-cell">Submission</th> */}
+                <th scope="col" className="table-header-cell">No. of Candidates</th>
                 <th scope="col" className="table-header-cell">Status</th>
                 <th scope="col" className="table-header-cell">Assigned To</th>
                 <th scope="col" className="table-header-cell">Actions</th>
@@ -321,9 +462,22 @@ const Jobs = () => {
                       </span>
                     </div>
                   </td>
-                  <td className="table-cell">{job.clientOwner}</td>
-                  <td className="table-cell">{job.postedDate}</td>
                   <td className="table-cell">
+  <div className="flex flex-col">
+    <span className=" text-gray-800">{job.clientOwner}</span>
+    <div className="flex items-center">
+      <Badge 
+        variant="outline" 
+        className="bg-purple-100 text-purple-800 hover:bg-purple-200 rounded-full text-sm inline-flex items-center"
+      >
+        {job.clientDetails?.pointOfContact || 'N/A'} {/* Display 'N/A' if pointOfContact is not available */}
+      </Badge>
+    </div>
+  </div>
+</td>
+<td className="table-cell">{job.createdBy?.first_name} {job.createdBy?.last_name}</td>
+                  <td className="table-cell">{job.postedDate} ({daysSinceCreated(job.postedDate)})</td>
+                  {/* <td className="table-cell">
                     <Badge
                       variant="outline"
                       className={`
@@ -333,7 +487,8 @@ const Jobs = () => {
                     >
                       {job.submissionType}
                     </Badge>
-                  </td>
+                  </td> */}
+                  <td className="table-cell text-center">{job?.numberOfCandidates}</td>
                   <td className="table-cell">
                     {isEmployee ? (
                       <Badge
@@ -345,7 +500,7 @@ const Jobs = () => {
                     ) : (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 px-2 py-0">
+                          <Button variant="transparent" className="h-8 px-2 py-0">
                             {statusUpdateLoading === job.id ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-1" />
                             ) : (
@@ -381,13 +536,9 @@ const Jobs = () => {
                       </DropdownMenu>
                     )}
                   </td>
-                  <td className="table-cell">
-                    {job.assigned_to ? (
-                      <span>{job.assigned_to.name}</span> // Updated to use assigned_to
-                    ) : (
-                      <span className="text-gray-400 text-sm">Not assigned</span>
-                    )}
-                  </td>
+                  <td className="table-cell w-auto min-w-[120px] max-w-[200px]">
+  <AssignedToCell assignedTo={job.assigned_to} />
+</td>
                   <td className="table-cell">
                     <div className="flex space-x-2">
                       <TooltipProvider>

@@ -73,7 +73,7 @@ export const fetchJobAssignments = async (jobId: string) => {
   try {
     const { data, error } = await supabase
       .from('hr_jobs')
-      .select('assigned_to')
+      .select('assigned_to, budget, budget_type')
       .eq('id', jobId)
       .single();
 
@@ -81,11 +81,20 @@ export const fetchJobAssignments = async (jobId: string) => {
       throw error;
     }
 
-    if (!data?.assigned_to) return [];
+    const assignedTo = data?.assigned_to;
+    // Use top-level fields if present, fall back to assigned_to for old data
+    const budget = data?.budget ?? assignedTo?.budget ?? null;
+    const budgetType = data?.budget_type ?? assignedTo?.budgetType ?? null;
 
-    const assignedTo = data.assigned_to;
+    if (!assignedTo) {
+      return {
+        assignments: [],
+        budget,
+        budgetType
+      };
+    }
+
     if (assignedTo.type === 'individual') {
-      // Split the IDs and fetch employee names
       const employeeIds = assignedTo.id.split(',');
       const { data: employees, error: empError } = await supabase
         .from('hr_employees')
@@ -94,23 +103,32 @@ export const fetchJobAssignments = async (jobId: string) => {
 
       if (empError) throw empError;
 
-      return employees.map(emp => ({
+      const assignments = employees.map(emp => ({
         value: emp.id,
         label: `${emp.first_name} ${emp.last_name}`
       }));
+
+      return {
+        assignments,
+        budget,
+        budgetType
+      };
     }
 
-    return [{
-      value: assignedTo.id,
-      label: assignedTo.name
-    }];
+    return {
+      assignments: [{
+        value: assignedTo.id,
+        label: assignedTo.name
+      }],
+      budget,
+      budgetType
+    };
   } catch (error) {
     console.error("Error fetching job assignments:", error);
     throw error;
   }
 };
 
-// Assign a job to an individual(s), team, or vendor
 export const assignJob = async (
   jobId: string, 
   assignmentType: 'individual' | 'team' | 'vendor', 
@@ -124,16 +142,14 @@ export const assignJob = async (
     const assignmentData = {
       assigned_to: {
         type: assignmentType,
-        id: assignmentId,  // For individual, this will be comma-separated IDs
-        name: assignmentName  // For individual, this will be comma-separated names
+        id: assignmentId,
+        name: assignmentName
       },
-      updated_by: userId
+      budget: budget ? Number(budget) : null,  // Save to top-level column
+      budget_type: budgetType || null,        // Save to top-level column
+      updated_by: userId,
+      updated_at: new Date().toISOString()
     };
-
-    if (assignmentType === 'vendor' && budget) {
-      assignmentData.assigned_to.budget = budget;
-      assignmentData.assigned_to.budgetType = budgetType;
-    }
 
     const { data, error } = await supabase
       .from('hr_jobs')

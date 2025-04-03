@@ -108,6 +108,7 @@ const GoalDetail: React.FC = () => {
   const navigate = useNavigate();
   const [goal, setGoal] = useState<GoalWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
 
   useEffect(() => {
     const fetchGoalData = async () => {

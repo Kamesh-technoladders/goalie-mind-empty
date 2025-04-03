@@ -3,8 +3,12 @@ import { JobData } from "@/lib/types";
 import { DbJob } from "./types";
 
 // Transform DB job record to application JobData model
+// jobDataTransformer.ts
 export const transformToJobData = (jobRecord: any): JobData => {
-  return {
+  console.log("transformToJobData - Job record:", jobRecord); // Log raw input
+  console.log("transformToJobData - Assigned_to from raw:", jobRecord.assigned_to); // Log assigned_to specifically
+
+  const transformedJob: JobData = {
     id: jobRecord.id,
     jobId: jobRecord.job_id,
     title: jobRecord.title,
@@ -24,10 +28,15 @@ export const transformToJobData = (jobRecord: any): JobData => {
     description: jobRecord.description || undefined,
     descriptionBullets: jobRecord.description_bullets || [],
     clientDetails: jobRecord.client_details || undefined,
-    noticePeriod: jobRecord.notice_period || undefined, 
+    noticePeriod: jobRecord.notice_period || undefined,
     numberOfCandidates: jobRecord.number_of_candidates || 0,
     organization: jobRecord.organization_id,
+    createdBy: jobRecord.created_by,
+    assigned_to: jobRecord.assigned_to || null, // Explicitly map assigned_to
   };
+
+  console.log("transformToJobData - Transformed job:", transformedJob); // Log transformed output
+  return transformedJob;
 };
 
 // Transform application JobData to DB job format

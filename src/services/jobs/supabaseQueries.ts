@@ -2,10 +2,15 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Basic query functions for hr_jobs table
+// supabaseQueries.ts
 export const fetchAllJobs = async () => {
   const { data, error } = await supabase
     .from("hr_jobs")
-    .select("*")
+    .select(`
+      *,
+      created_by:hr_employees!hr_jobs_created_by_fkey (first_name, last_name),
+      assigned_to
+    `) // Ensure assigned_to is included
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -13,13 +18,14 @@ export const fetchAllJobs = async () => {
     throw error;
   }
 
+  console.log("fetchAllJobs - Raw data:", data); // Add this to debug raw data
   return { data, error };
 };
 
 export const fetchJobsByType = async (jobType: string) => {
   const { data, error } = await supabase
     .from("hr_jobs")
-    .select("*")
+    .select("*,  created_by:hr_employees!hr_jobs_created_by_fkey (first_name, last_name)")
     .eq("job_type_category", jobType)
     .order("created_at", { ascending: false });
 
@@ -145,4 +151,20 @@ export const shareJob = async (jobId) => {
     return { success: false, error };
   }
   return { success: true, data };
+};
+
+// assigned employees table display function
+
+export const fetchEmployeesByIds = async (employeeIds: string[]) => {
+  const { data, error } = await supabase
+    .from("hr_employees")
+    .select("id, first_name, last_name, profile_picture_url")
+    .in("id", employeeIds);
+
+  if (error) {
+    console.error("Error fetching employees:", error);
+    throw error;
+  }
+
+  return { data, error };
 };

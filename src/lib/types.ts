@@ -142,6 +142,11 @@ export interface JobData {
     name: string;
     id: string;
   };
+  assigned_to?: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
   budgets?: {
     clientBudget?: string;
     hrBudget?: string;
@@ -153,6 +158,10 @@ export interface JobData {
   clientProjectId?: string; 
   numberOfCandidates?: number;
   organization?: string;
+  createdBy?:{
+    first_name?: string;
+    last_name?: string;
+  };
 }
 
 export interface Candidate {

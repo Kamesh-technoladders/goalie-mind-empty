@@ -14,14 +14,19 @@ import {
 
 
 // Get all jobs
+// jobService.ts (or wherever getAllJobs is defined)
 export const getAllJobs = async (): Promise<JobData[]> => {
   try {
     const { data } = await fetchAllJobs();
+    console.log("getAllJobs - Raw data before transform:", data); // Log raw data before transformation
     
     // Convert raw data to job data
-    return Array.isArray(data) 
+    const transformedData = Array.isArray(data) 
       ? data.map(job => transformToJobData(job))
       : [];
+    
+    console.log("getAllJobs - Transformed data:", transformedData); // Log transformed data
+    return transformedData;
   } catch (error) {
     console.error("Failed to fetch jobs:", error);
     throw error;

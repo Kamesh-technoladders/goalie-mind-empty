@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { JobData } from "@/lib/types";
 import { fetchEmployees, fetchDepartments, fetchVendors, assignJob, fetchJobAssignments } from "@/services/assignmentService";
 import { useSelector } from "react-redux";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AssignJobModalProps {
   isOpen: boolean;
@@ -53,10 +54,38 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
       setEmployees(employeesData);
       setDepartments(departmentsData);
       setVendors(vendorsData);
-
+  
       if (job?.id) {
-        const existingAssignments = await fetchJobAssignments(job.id);
-        setSelectedIndividuals(existingAssignments || []);
+        const assignmentData = await fetchJobAssignments(job.id);
+        console.log("Fetched assignment data:", assignmentData); // Debug log
+        
+        const assignedTo = (await supabase.from('hr_jobs').select('assigned_to').eq('id', job.id).single()).data?.assigned_to;
+        console.log("Assigned to from direct query:", assignedTo); // Debug log
+  
+        if (assignedTo) {
+          if (assignedTo.type === 'individual') {
+            setSelectedTab("internal");
+            setAssignmentType("individual");
+            setSelectedIndividuals(assignmentData.assignments || []);
+          } else if (assignedTo.type === 'team') {
+            setSelectedTab("internal");
+            setAssignmentType("team");
+            setSelectedTeam(assignedTo.id);
+          } else if (assignedTo.type === 'vendor') {
+            setSelectedTab("external");
+            setSelectedVendor(assignedTo.id);
+          }
+        }
+
+        // Set budget and budgetType regardless of assignedTo
+        if (assignmentData.budget !== null && assignmentData.budget !== undefined) {
+          setBudget(assignmentData.budget.toString());
+          console.log("Setting budget:", assignmentData.budget.toString());
+        }
+        if (assignmentData.budgetType) {
+          setBudgetType(assignmentData.budgetType);
+          console.log("Setting budgetType:", assignmentData.budgetType);
+        }
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -77,7 +106,19 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
     setSelectedIndividuals(selectedIndividuals.filter(emp => emp.value !== value));
   };
 
+  const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "" || (/^\d*$/.test(value) && Number(value) >= 0)) {
+      setBudget(value);
+    }
+  };
+
   const handleSave = async () => {
+    if (!budget || Number(budget) <= 0) {
+      toast.error("Please enter a valid budget greater than 0");
+      return;
+    }
+
     if (selectedTab === "internal") {
       if (assignmentType === "individual" && selectedIndividuals.length === 0) {
         toast.error("Please select at least one employee");
@@ -91,18 +132,14 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
       if (assignmentType === "individual") {
         const assignmentIds = selectedIndividuals.map(emp => emp.value).join(",");
         const assignmentNames = selectedIndividuals.map(emp => emp.label).join(",");
-        await saveAssignment(assignmentType, assignmentIds, assignmentNames);
+        await saveAssignment(assignmentType, assignmentIds, assignmentNames, budget, budgetType);
       } else {
         const assignmentName = departments.find(dept => dept.value === selectedTeam)?.label || "";
-        await saveAssignment(assignmentType, selectedTeam, assignmentName);
+        await saveAssignment(assignmentType, selectedTeam, assignmentName, budget, budgetType);
       }
     } else {
       if (!selectedVendor) {
         toast.error("Please select a vendor");
-        return;
-      }
-      if (!budget) {
-        toast.error("Please enter a budget");
         return;
       }
       
@@ -125,7 +162,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
       onClose();
     } catch (error) {
       console.error("Error assigning job:", error);
-      toast.error("Failed to assign job");
+      toast.error("Failed to assign job. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -141,8 +178,13 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
     setBudgetType("LPA");
   };
 
+  const handleClose = () => {
+    handleReset();
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="text-xl">
@@ -159,8 +201,8 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
           <>
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mt-4">
               <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="internal">Internal Assignment</TabsTrigger>
-                <TabsTrigger value="external">External Assignment</TabsTrigger>
+                <TabsTrigger value="internal" disabled={loading}>Internal Assignment</TabsTrigger>
+                <TabsTrigger value="external" disabled={loading}>External Assignment</TabsTrigger>
               </TabsList>
               
               <TabsContent value="internal" className="space-y-4 pt-4">
@@ -168,6 +210,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                   value={assignmentType}
                   onValueChange={setAssignmentType}
                   className="flex flex-col space-y-4"
+                  disabled={loading}
                 >
                   <div className="flex items-start space-x-2">
                     <RadioGroupItem value="individual" id="individual" />
@@ -177,7 +220,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                       </Label>
                       <Select
                         onValueChange={handleEmployeeSelect}
-                        disabled={assignmentType !== "individual"}
+                        disabled={assignmentType !== "individual" || loading}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select employees" />
@@ -207,6 +250,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                               <button
                                 onClick={() => removeEmployee(employee.value)}
                                 className="text-red-500 hover:text-red-700"
+                                disabled={loading}
                               >
                                 <X className="h-4 w-4" />
                               </button>
@@ -226,7 +270,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                       <Select
                         value={selectedTeam}
                         onValueChange={setSelectedTeam}
-                        disabled={assignmentType !== "team"}
+                        disabled={assignmentType !== "team" || loading}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select a team" />
@@ -248,13 +292,43 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                     </div>
                   </div>
                 </RadioGroup>
+                <div className="grid gap-2">
+                  <Label htmlFor="budget-internal">Budget</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-grow">
+                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <IndianRupee className="h-4 w-4 text-gray-500" />
+                      </div>
+                      <Input
+                        id="budget-internal"
+                        type="number"
+                        placeholder="Enter budget amount"
+                        className="pl-9"
+                        value={budget}
+                        onChange={handleBudgetChange}
+                        disabled={loading}
+                        min="0"
+                      />
+                    </div>
+                    <Select value={budgetType} onValueChange={setBudgetType} disabled={loading}>
+                      <SelectTrigger className="w-28">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="LPA">LPA</SelectItem>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                        <SelectItem value="Hourly">Hourly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="external" className="space-y-4 pt-4">
                 <div className="grid gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="vendor">Vendor Selection</Label>
-                    <Select value={selectedVendor} onValueChange={setSelectedVendor}>
+                    <Select value={selectedVendor} onValueChange={setSelectedVendor} disabled={loading}>
                       <SelectTrigger className="w-full" id="vendor">
                         <SelectValue placeholder="Select a vendor" />
                       </SelectTrigger>
@@ -274,22 +348,24 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="budget">Budget</Label>
+                    <Label htmlFor="budget-external">Budget</Label>
                     <div className="flex items-center gap-2">
                       <div className="relative flex-grow">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                           <IndianRupee className="h-4 w-4 text-gray-500" />
                         </div>
                         <Input
-                          id="budget"
+                          id="budget-external"
                           type="number"
                           placeholder="Enter budget amount"
                           className="pl-9"
                           value={budget}
-                          onChange={(e) => setBudget(e.target.value)}
+                          onChange={handleBudgetChange}
+                          disabled={loading}
+                          min="0"
                         />
                       </div>
-                      <Select value={budgetType} onValueChange={setBudgetType}>
+                      <Select value={budgetType} onValueChange={setBudgetType} disabled={loading}>
                         <SelectTrigger className="w-28">
                           <SelectValue placeholder="Type" />
                         </SelectTrigger>
@@ -306,7 +382,7 @@ export function AssignJobModal({ isOpen, onClose, job }: AssignJobModalProps) {
             </Tabs>
             
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={onClose} disabled={loading}>
+              <Button variant="outline" onClick={handleClose} disabled={loading}>
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={loading}>
