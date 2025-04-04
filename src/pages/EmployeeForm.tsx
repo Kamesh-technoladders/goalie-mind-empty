@@ -195,6 +195,28 @@ const initialFormData: EmployeeFormData = {
   }
 };
 
+
+//validation function
+
+const VALIDATIONS = {
+  phone: /^(?:\+91)?[6-9]\d{9}$/, // Starts with 6-9, 10 digits, optional +91
+  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Basic email format
+  aadhar: /^\d{12}$/, // 12 digits
+  pan: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, // 5 letters, 4 digits, 1 letter
+  uan: /^\d{12}$/, // 12 digits
+  esic: /^\d{10,17}$/, // 10-17 digits (adjust as needed)
+};
+
+// Add error state type
+interface FormErrors {
+  phone?: string;
+  email?: string;
+  aadharNumber?: string;
+  panNumber?: string;
+  uanNumber?: string;
+  esicNumber?: string;
+}
+
 const EmployeeForm = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -207,6 +229,7 @@ const EmployeeForm = () => {
   const countries = Country.getAllCountries();
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
+  const [errors, setErrors] = useState<FormErrors>({});
   const organizationId = useSelector((state: any) => state.auth.organization_id);
     // Experience modal state
     const [showExperienceModal, setShowExperienceModal] = useState(false);
@@ -483,12 +506,12 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
     fetchDepartments();
   }, [formData.department]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  // const handleInputChange = (field: string, value: string) => {
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     [field]: value
+  //   }));
+  // };
 
   // const handleNestedInputChange = (parentField: string, field: string, value: string) => {
   //   setFormData(prev => ({
@@ -537,265 +560,265 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
     setActiveTab(value);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setLoading(true);
     
-    try {
+  //   try {
       
-      const employeeData = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        employee_id: formData.employeeId,
-        department_id: formData.department || null,
-        position: formData.position,
-        date_of_birth: formData.dateOfBirth,
-        gender: formData.gender,
-        marital_status: formData.maritalStatus,
-        blood_group: formData.bloodGroup,
-        employment_status: formData.employmentStatus,
-        aadhar_number: formData.aadharNumber,
-        pan_number: formData.panNumber,
-        esic_number: formData.esicNumber,
-        uan_number: formData.uanNumber,
-        aadhar_url: formData.aadharUrl,
-        pan_url: formData.panUrl,
-        esic_url: formData.esicUrl,
-        uan_url: formData.uanUrl,
-        organization_id: organizationId,
-        profile_picture_url: formData.profilePictureUrl
-      };
+  //     const employeeData = {
+  //       first_name: formData.firstName,
+  //       last_name: formData.lastName,
+  //       email: formData.email,
+  //       phone: formData.phone,
+  //       employee_id: formData.employeeId,
+  //       department_id: formData.department || null,
+  //       position: formData.position,
+  //       date_of_birth: formData.dateOfBirth,
+  //       gender: formData.gender,
+  //       marital_status: formData.maritalStatus,
+  //       blood_group: formData.bloodGroup,
+  //       employment_status: formData.employmentStatus,
+  //       aadhar_number: formData.aadharNumber,
+  //       pan_number: formData.panNumber,
+  //       esic_number: formData.esicNumber,
+  //       uan_number: formData.uanNumber,
+  //       aadhar_url: formData.aadharUrl,
+  //       pan_url: formData.panUrl,
+  //       esic_url: formData.esicUrl,
+  //       uan_url: formData.uanUrl,
+  //       organization_id: organizationId,
+  //       profile_picture_url: formData.profilePictureUrl
+  //     };
       
-      let employeeId = id;
+  //     let employeeId = id;
       
-      if (isEditing) {
-        const { error: updateError } = await supabase
-          .from('hr_employees')
-          .update(employeeData)
-          .eq('id', id);
+  //     if (isEditing) {
+  //       const { error: updateError } = await supabase
+  //         .from('hr_employees')
+  //         .update(employeeData)
+  //         .eq('id', id);
           
-        if (updateError) throw updateError;
-      } else {
-        const { data: newEmployee, error: insertError } = await supabase
-          .from('hr_employees')
-          .insert(employeeData)
-          .select();
+  //       if (updateError) throw updateError;
+  //     } else {
+  //       const { data: newEmployee, error: insertError } = await supabase
+  //         .from('hr_employees')
+  //         .insert(employeeData)
+  //         .select();
           
-        if (insertError) throw insertError;
+  //       if (insertError) throw insertError;
         
-        employeeId = newEmployee[0].id;
-      }
+  //       employeeId = newEmployee[0].id;
+  //     }
       
-      if (employeeId) {
-        const presentAddressData = {
-          employee_id: employeeId,
-          type: 'present',
-          address_line1: formData.presentAddress.addressLine1,
-          country: formData.presentAddress.country,
-          state: formData.presentAddress.state,
-          city: formData.presentAddress.city,
-          zip_code: formData.presentAddress.zipCode,
-          organization_id: organizationId
-        };
+  //     if (employeeId) {
+  //       const presentAddressData = {
+  //         employee_id: employeeId,
+  //         type: 'present',
+  //         address_line1: formData.presentAddress.addressLine1,
+  //         country: formData.presentAddress.country,
+  //         state: formData.presentAddress.state,
+  //         city: formData.presentAddress.city,
+  //         zip_code: formData.presentAddress.zipCode,
+  //         organization_id: organizationId
+  //       };
         
-        const { data: existingPresentAddress } = await supabase
-          .from('hr_employee_addresses')
-          .select('id')
-          .eq('employee_id', employeeId)
-          .eq('type', 'present')
-          .maybeSingle();
+  //       const { data: existingPresentAddress } = await supabase
+  //         .from('hr_employee_addresses')
+  //         .select('id')
+  //         .eq('employee_id', employeeId)
+  //         .eq('type', 'present')
+  //         .maybeSingle();
         
-        if (existingPresentAddress) {
-          await supabase
-            .from('hr_employee_addresses')
-            .update(presentAddressData)
-            .eq('id', existingPresentAddress.id);
-        } else {
-          await supabase
-            .from('hr_employee_addresses')
-            .insert(presentAddressData);
-        }
+  //       if (existingPresentAddress) {
+  //         await supabase
+  //           .from('hr_employee_addresses')
+  //           .update(presentAddressData)
+  //           .eq('id', existingPresentAddress.id);
+  //       } else {
+  //         await supabase
+  //           .from('hr_employee_addresses')
+  //           .insert(presentAddressData);
+  //       }
         
-        const permanentAddressData = {
-          employee_id: employeeId,
-          type: 'permanent',
-          address_line1: formData.permanentAddress.addressLine1,
-          country: formData.permanentAddress.country,
-          state: formData.permanentAddress.state,
-          city: formData.permanentAddress.city,
-          zip_code: formData.permanentAddress.zipCode,
-          organization_id: organizationId
-        };
+  //       const permanentAddressData = {
+  //         employee_id: employeeId,
+  //         type: 'permanent',
+  //         address_line1: formData.permanentAddress.addressLine1,
+  //         country: formData.permanentAddress.country,
+  //         state: formData.permanentAddress.state,
+  //         city: formData.permanentAddress.city,
+  //         zip_code: formData.permanentAddress.zipCode,
+  //         organization_id: organizationId
+  //       };
         
-        const { data: existingPermanentAddress } = await supabase
-          .from('hr_employee_addresses')
-          .select('id')
-          .eq('employee_id', employeeId)
-          .eq('type', 'permanent')
-          .maybeSingle();
+  //       const { data: existingPermanentAddress } = await supabase
+  //         .from('hr_employee_addresses')
+  //         .select('id')
+  //         .eq('employee_id', employeeId)
+  //         .eq('type', 'permanent')
+  //         .maybeSingle();
         
-        if (existingPermanentAddress) {
-          await supabase
-            .from('hr_employee_addresses')
-            .update(permanentAddressData)
-            .eq('id', existingPermanentAddress.id);
-        } else {
-          await supabase
-            .from('hr_employee_addresses')
-            .insert(permanentAddressData);
-        }
+  //       if (existingPermanentAddress) {
+  //         await supabase
+  //           .from('hr_employee_addresses')
+  //           .update(permanentAddressData)
+  //           .eq('id', existingPermanentAddress.id);
+  //       } else {
+  //         await supabase
+  //           .from('hr_employee_addresses')
+  //           .insert(permanentAddressData);
+  //       }
         
-        if (isEditing) {
-          await supabase
-            .from('hr_employee_emergency_contacts')
-            .delete()
-            .eq('employee_id', employeeId);
-        }
+  //       if (isEditing) {
+  //         await supabase
+  //           .from('hr_employee_emergency_contacts')
+  //           .delete()
+  //           .eq('employee_id', employeeId);
+  //       }
         
-        const emergencyContactsData = formData.emergencyContacts.map(contact => ({
-          employee_id: employeeId,
-          relationship: contact.relationship,
-          name: contact.name,
-          phone: contact.phone,
-          organization_id: organizationId
-        }));
+  //       const emergencyContactsData = formData.emergencyContacts.map(contact => ({
+  //         employee_id: employeeId,
+  //         relationship: contact.relationship,
+  //         name: contact.name,
+  //         phone: contact.phone,
+  //         organization_id: organizationId
+  //       }));
         
-        if (emergencyContactsData.length > 0) {
-          await supabase
-            .from('hr_employee_emergency_contacts')
-            .insert(emergencyContactsData);
-        }
+  //       if (emergencyContactsData.length > 0) {
+  //         await supabase
+  //           .from('hr_employee_emergency_contacts')
+  //           .insert(emergencyContactsData);
+  //       }
         
-        if (isEditing) {
-          await supabase
-            .from('hr_employee_family_details')
-            .delete()
-            .eq('employee_id', employeeId);
-        }
+  //       if (isEditing) {
+  //         await supabase
+  //           .from('hr_employee_family_details')
+  //           .delete()
+  //           .eq('employee_id', employeeId);
+  //       }
         
-        const familyMembersData = formData.familyMembers.map(member => ({
-          employee_id: employeeId,
-          relationship: member.relationship,
-          name: member.name,
-          occupation: member.occupation,
-          phone: member.phone,
-          organization_id: organizationId
-        }));
+  //       const familyMembersData = formData.familyMembers.map(member => ({
+  //         employee_id: employeeId,
+  //         relationship: member.relationship,
+  //         name: member.name,
+  //         occupation: member.occupation,
+  //         phone: member.phone,
+  //         organization_id: organizationId
+  //       }));
         
-        if (familyMembersData.length > 0) {
-          await supabase
-            .from('hr_employee_family_details')
-            .insert(familyMembersData);
-        }
+  //       if (familyMembersData.length > 0) {
+  //         await supabase
+  //           .from('hr_employee_family_details')
+  //           .insert(familyMembersData);
+  //       }
         
-        if (isEditing) {
-          await supabase
-            .from('hr_employee_education')
-            .delete()
-            .eq('employee_id', employeeId);
-        }
+  //       if (isEditing) {
+  //         await supabase
+  //           .from('hr_employee_education')
+  //           .delete()
+  //           .eq('employee_id', employeeId);
+  //       }
         
-        const educationData = formData.education.map(edu => ({
-          employee_id: employeeId,
-          type: edu.type,
-          institute: edu.institute,
-          year_completed: edu.year_completed ? `${edu.year_completed}-01-01` : null,
-          document_url: edu.documentUrl,
-          organization_id: organizationId
-        }));
+  //       const educationData = formData.education.map(edu => ({
+  //         employee_id: employeeId,
+  //         type: edu.type,
+  //         institute: edu.institute,
+  //         year_completed: edu.year_completed ? `${edu.year_completed}-01-01` : null,
+  //         document_url: edu.documentUrl,
+  //         organization_id: organizationId
+  //       }));
         
-        if (educationData.length > 0) {
-          await supabase
-            .from('hr_employee_education')
-            .insert(educationData);
-        }
+  //       if (educationData.length > 0) {
+  //         await supabase
+  //           .from('hr_employee_education')
+  //           .insert(educationData);
+  //       }
         
-        if (isEditing) {
-          await supabase
-            .from('hr_employee_experiences')
-            .delete()
-            .eq('employee_id', employeeId);
-        }
+  //       if (isEditing) {
+  //         await supabase
+  //           .from('hr_employee_experiences')
+  //           .delete()
+  //           .eq('employee_id', employeeId);
+  //       }
         
-        const experiencesData = formData.experiences.map((exp) => ({
-          employee_id: employeeId,
-          company: exp.company,
-          job_title: exp.position,
-          location: exp.location,
-          start_date: exp.startDate,
-          end_date: exp.endDate,
-          employment_type: exp.jobType,
-          offer_letter_url: exp.offerLetterUrl,
-          separation_letter_url: exp.separationLetterUrl,
-          payslip_1_url: exp.payslip_1_url || "", // Map individual payslip URLs
-          payslip_2_url: exp.payslip_2_url || "",
-          payslip_3_url: exp.payslip_3_url || "",
-          hike_letter_url: exp.hikeLetterUrl,
-          no_separation_letter_reason: exp.noSeparationLetterReason,
-          no_payslip_reason: exp.noPayslipReason,
-          organization_id: organizationId,
-        }));
+  //       const experiencesData = formData.experiences.map((exp) => ({
+  //         employee_id: employeeId,
+  //         company: exp.company,
+  //         job_title: exp.position,
+  //         location: exp.location,
+  //         start_date: exp.startDate,
+  //         end_date: exp.endDate,
+  //         employment_type: exp.jobType,
+  //         offer_letter_url: exp.offerLetterUrl,
+  //         separation_letter_url: exp.separationLetterUrl,
+  //         payslip_1_url: exp.payslip_1_url || "", // Map individual payslip URLs
+  //         payslip_2_url: exp.payslip_2_url || "",
+  //         payslip_3_url: exp.payslip_3_url || "",
+  //         hike_letter_url: exp.hikeLetterUrl,
+  //         no_separation_letter_reason: exp.noSeparationLetterReason,
+  //         no_payslip_reason: exp.noPayslipReason,
+  //         organization_id: organizationId,
+  //       }));
         
         
-        if (experiencesData.length > 0) {
-          await supabase
-            .from('hr_employee_experiences')
-            .insert(experiencesData);
-        }
+  //       if (experiencesData.length > 0) {
+  //         await supabase
+  //           .from('hr_employee_experiences')
+  //           .insert(experiencesData);
+  //       }
         
-        const bankDetailsData = {
-          employee_id: employeeId,
-          account_holder_name: formData.bankDetails.accountHolderName,
-          account_number: formData.bankDetails.accountNumber,
-          bank_name: formData.bankDetails.bankName,
-          branch_name: formData.bankDetails.branchName,
-          country: formData.bankDetails.country,
-          state: formData.bankDetails.state,
-          city: formData.bankDetails.city,
-          branch_address: formData.bankDetails.branchAddress,
-          ifsc_code: formData.bankDetails.ifscCode,
-          account_type: formData.bankDetails.accountType,
-          document_url: formData.bankDetails.documentUrl,
-          organization_id: organizationId,
-          zip_code: formData.bankDetails.zipCode,
-        };
+  //       const bankDetailsData = {
+  //         employee_id: employeeId,
+  //         account_holder_name: formData.bankDetails.accountHolderName,
+  //         account_number: formData.bankDetails.accountNumber,
+  //         bank_name: formData.bankDetails.bankName,
+  //         branch_name: formData.bankDetails.branchName,
+  //         country: formData.bankDetails.country,
+  //         state: formData.bankDetails.state,
+  //         city: formData.bankDetails.city,
+  //         branch_address: formData.bankDetails.branchAddress,
+  //         ifsc_code: formData.bankDetails.ifscCode,
+  //         account_type: formData.bankDetails.accountType,
+  //         document_url: formData.bankDetails.documentUrl,
+  //         organization_id: organizationId,
+  //         zip_code: formData.bankDetails.zipCode,
+  //       };
         
-        const { data: existingBankDetails } = await supabase
-          .from('hr_employee_bank_details')
-          .select('id')
-          .eq('employee_id', employeeId)
-          .maybeSingle();
+  //       const { data: existingBankDetails } = await supabase
+  //         .from('hr_employee_bank_details')
+  //         .select('id')
+  //         .eq('employee_id', employeeId)
+  //         .maybeSingle();
         
-        if (existingBankDetails) {
-          await supabase
-            .from('hr_employee_bank_details')
-            .update(bankDetailsData)
-            .eq('id', existingBankDetails.id);
-        } else {
-          await supabase
-            .from('hr_employee_bank_details')
-            .insert(bankDetailsData);
-        }
+  //       if (existingBankDetails) {
+  //         await supabase
+  //           .from('hr_employee_bank_details')
+  //           .update(bankDetailsData)
+  //           .eq('id', existingBankDetails.id);
+  //       } else {
+  //         await supabase
+  //           .from('hr_employee_bank_details')
+  //           .insert(bankDetailsData);
+  //       }
         
-        toast.success(`Employee ${isEditing ? 'updated' : 'added'} successfully`);
-        if (activeTab === "documents") {
-          navigate('/employee'); // Navigate to /employee
-        } else {
-          // Move to the next tab
-          const nextTab = getNextTab(activeTab);
-          setActiveTab(nextTab);
-        }
-      }
+  //       toast.success(`Employee ${isEditing ? 'updated' : 'added'} successfully`);
+  //       if (activeTab === "documents") {
+  //         navigate('/employee'); // Navigate to /employee
+  //       } else {
+  //         // Move to the next tab
+  //         const nextTab = getNextTab(activeTab);
+  //         setActiveTab(nextTab);
+  //       }
+  //     }
       
-    } catch (error: any) {
-      console.error("Error saving employee data:", error);
-      toast.error(`Failed to ${isEditing ? 'update' : 'add'} employee: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //   } catch (error: any) {
+  //     console.error("Error saving employee data:", error);
+  //     toast.error(`Failed to ${isEditing ? 'update' : 'add'} employee: ${error.message}`);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const getNextTab = (currentTab: string) => {
     const tabs = ["personal", "address", "contact", "education", "bank", "documents"];
@@ -1068,6 +1091,329 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
       setUploadingFile(null); // Hide loader
     }
   };
+
+  // Validation function
+  const validateField = (field: keyof FormErrors, value: string): string | undefined => {
+    switch (field) {
+      case "phone":
+        if (!value) return "Phone number is required";
+        if (!VALIDATIONS.phone.test(value)) return "Enter a valid 10-digit phone number (e.g., 9876543210 or +919876543210)";
+        break;
+      case "email":
+        if (!value) return "Email is required";
+        if (!VALIDATIONS.email.test(value)) return "Enter a valid email address";
+        break;
+      case "aadharNumber":
+        if (value && !VALIDATIONS.aadhar.test(value)) return "Aadhar number must be 12 digits";
+        break;
+      case "panNumber":
+        if (value && !VALIDATIONS.pan.test(value)) return "PAN number must be in format AAAAA9999A";
+        break;
+      case "uanNumber":
+        if (value && !VALIDATIONS.uan.test(value)) return "UAN number must be 12 digits";
+        break;
+      case "esicNumber":
+        if (value && !VALIDATIONS.esic.test(value)) return "ESIC number must be 10-17 digits";
+        break;
+      default:
+        return undefined;
+    }
+  };
+
+  // Handle input change with validation
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    // Validate on change
+    const error = validateField(field as keyof FormErrors, value);
+    setErrors((prev) => ({ ...prev, [field]: error }));
+  };
+
+  // Validate all fields on submit
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    const fieldsToValidate: (keyof FormErrors)[] = [
+      "phone",
+      "email",
+      "aadharNumber",
+      "panNumber",
+      "uanNumber",
+      "esicNumber",
+    ];
+
+    fieldsToValidate.forEach((field) => {
+      const error = validateField(field, formData[field] || "");
+      if (error) newErrors[field] = error;
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0; // Return true if no errors
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form before submitting.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      
+      const employeeData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        employee_id: formData.employeeId,
+        department_id: formData.department || null,
+        position: formData.position,
+        date_of_birth: formData.dateOfBirth,
+        gender: formData.gender,
+        marital_status: formData.maritalStatus,
+        blood_group: formData.bloodGroup,
+        employment_status: formData.employmentStatus,
+        aadhar_number: formData.aadharNumber,
+        pan_number: formData.panNumber,
+        esic_number: formData.esicNumber,
+        uan_number: formData.uanNumber,
+        aadhar_url: formData.aadharUrl,
+        pan_url: formData.panUrl,
+        esic_url: formData.esicUrl,
+        uan_url: formData.uanUrl,
+        organization_id: organizationId,
+        profile_picture_url: formData.profilePictureUrl
+      };
+      
+      let employeeId = id;
+      
+      if (isEditing) {
+        const { error: updateError } = await supabase
+          .from('hr_employees')
+          .update(employeeData)
+          .eq('id', id);
+          
+        if (updateError) throw updateError;
+      } else {
+        const { data: newEmployee, error: insertError } = await supabase
+          .from('hr_employees')
+          .insert(employeeData)
+          .select();
+          
+        if (insertError) throw insertError;
+        
+        employeeId = newEmployee[0].id;
+      }
+      
+      if (employeeId) {
+        const presentAddressData = {
+          employee_id: employeeId,
+          type: 'present',
+          address_line1: formData.presentAddress.addressLine1,
+          country: formData.presentAddress.country,
+          state: formData.presentAddress.state,
+          city: formData.presentAddress.city,
+          zip_code: formData.presentAddress.zipCode,
+          organization_id: organizationId
+        };
+        
+        const { data: existingPresentAddress } = await supabase
+          .from('hr_employee_addresses')
+          .select('id')
+          .eq('employee_id', employeeId)
+          .eq('type', 'present')
+          .maybeSingle();
+        
+        if (existingPresentAddress) {
+          await supabase
+            .from('hr_employee_addresses')
+            .update(presentAddressData)
+            .eq('id', existingPresentAddress.id);
+        } else {
+          await supabase
+            .from('hr_employee_addresses')
+            .insert(presentAddressData);
+        }
+        
+        const permanentAddressData = {
+          employee_id: employeeId,
+          type: 'permanent',
+          address_line1: formData.permanentAddress.addressLine1,
+          country: formData.permanentAddress.country,
+          state: formData.permanentAddress.state,
+          city: formData.permanentAddress.city,
+          zip_code: formData.permanentAddress.zipCode,
+          organization_id: organizationId
+        };
+        
+        const { data: existingPermanentAddress } = await supabase
+          .from('hr_employee_addresses')
+          .select('id')
+          .eq('employee_id', employeeId)
+          .eq('type', 'permanent')
+          .maybeSingle();
+        
+        if (existingPermanentAddress) {
+          await supabase
+            .from('hr_employee_addresses')
+            .update(permanentAddressData)
+            .eq('id', existingPermanentAddress.id);
+        } else {
+          await supabase
+            .from('hr_employee_addresses')
+            .insert(permanentAddressData);
+        }
+        
+        if (isEditing) {
+          await supabase
+            .from('hr_employee_emergency_contacts')
+            .delete()
+            .eq('employee_id', employeeId);
+        }
+        
+        const emergencyContactsData = formData.emergencyContacts.map(contact => ({
+          employee_id: employeeId,
+          relationship: contact.relationship,
+          name: contact.name,
+          phone: contact.phone,
+          organization_id: organizationId
+        }));
+        
+        if (emergencyContactsData.length > 0) {
+          await supabase
+            .from('hr_employee_emergency_contacts')
+            .insert(emergencyContactsData);
+        }
+        
+        if (isEditing) {
+          await supabase
+            .from('hr_employee_family_details')
+            .delete()
+            .eq('employee_id', employeeId);
+        }
+        
+        const familyMembersData = formData.familyMembers.map(member => ({
+          employee_id: employeeId,
+          relationship: member.relationship,
+          name: member.name,
+          occupation: member.occupation,
+          phone: member.phone,
+          organization_id: organizationId
+        }));
+        
+        if (familyMembersData.length > 0) {
+          await supabase
+            .from('hr_employee_family_details')
+            .insert(familyMembersData);
+        }
+        
+        if (isEditing) {
+          await supabase
+            .from('hr_employee_education')
+            .delete()
+            .eq('employee_id', employeeId);
+        }
+        
+        const educationData = formData.education.map(edu => ({
+          employee_id: employeeId,
+          type: edu.type,
+          institute: edu.institute,
+          year_completed: edu.year_completed ? `${edu.year_completed}-01-01` : null,
+          document_url: edu.documentUrl,
+          organization_id: organizationId
+        }));
+        
+        if (educationData.length > 0) {
+          await supabase
+            .from('hr_employee_education')
+            .insert(educationData);
+        }
+        
+        if (isEditing) {
+          await supabase
+            .from('hr_employee_experiences')
+            .delete()
+            .eq('employee_id', employeeId);
+        }
+        
+        const experiencesData = formData.experiences.map((exp) => ({
+          employee_id: employeeId,
+          company: exp.company,
+          job_title: exp.position,
+          location: exp.location,
+          start_date: exp.startDate,
+          end_date: exp.endDate,
+          employment_type: exp.jobType,
+          offer_letter_url: exp.offerLetterUrl,
+          separation_letter_url: exp.separationLetterUrl,
+          payslip_1_url: exp.payslip_1_url || "", // Map individual payslip URLs
+          payslip_2_url: exp.payslip_2_url || "",
+          payslip_3_url: exp.payslip_3_url || "",
+          hike_letter_url: exp.hikeLetterUrl,
+          no_separation_letter_reason: exp.noSeparationLetterReason,
+          no_payslip_reason: exp.noPayslipReason,
+          organization_id: organizationId,
+        }));
+        
+        
+        if (experiencesData.length > 0) {
+          await supabase
+            .from('hr_employee_experiences')
+            .insert(experiencesData);
+        }
+        
+        const bankDetailsData = {
+          employee_id: employeeId,
+          account_holder_name: formData.bankDetails.accountHolderName,
+          account_number: formData.bankDetails.accountNumber,
+          bank_name: formData.bankDetails.bankName,
+          branch_name: formData.bankDetails.branchName,
+          country: formData.bankDetails.country,
+          state: formData.bankDetails.state,
+          city: formData.bankDetails.city,
+          branch_address: formData.bankDetails.branchAddress,
+          ifsc_code: formData.bankDetails.ifscCode,
+          account_type: formData.bankDetails.accountType,
+          document_url: formData.bankDetails.documentUrl,
+          organization_id: organizationId,
+          zip_code: formData.bankDetails.zipCode,
+        };
+        
+        const { data: existingBankDetails } = await supabase
+          .from('hr_employee_bank_details')
+          .select('id')
+          .eq('employee_id', employeeId)
+          .maybeSingle();
+        
+        if (existingBankDetails) {
+          await supabase
+            .from('hr_employee_bank_details')
+            .update(bankDetailsData)
+            .eq('id', existingBankDetails.id);
+        } else {
+          await supabase
+            .from('hr_employee_bank_details')
+            .insert(bankDetailsData);
+        }
+        
+        toast.success(`Employee ${isEditing ? 'updated' : 'added'} successfully`);
+        if (activeTab === "documents") {
+          navigate('/employee'); // Navigate to /employee
+        } else {
+          // Move to the next tab
+          const nextTab = getNextTab(activeTab);
+          setActiveTab(nextTab);
+        }
+      }
+      
+    } catch (error: any) {
+      console.error("Error saving employee data:", error);
+      toast.error(`Failed to ${isEditing ? "update" : "add"} employee: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
   
 
   return (
@@ -1107,7 +1453,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
     {/* Compact Form Fields */}
     <div className="grid grid-cols-2 md:grid-cols-3 gap-5 w-full">
       <div className="max-w-xs">
-        <Label htmlFor="firstName">First Name</Label>
+        <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
         <Input
           type="text"
           id="firstName"
@@ -1117,7 +1463,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
         />
       </div>
       <div className="max-w-xs">
-        <Label htmlFor="lastName">Last Name</Label>
+        <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
         <Input
           type="text"
           id="lastName"
@@ -1127,7 +1473,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
         />
       </div>
       <div className="max-w-xs">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
         <Input
           type="email"
           id="email"
@@ -1135,9 +1481,10 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
           onChange={(e) => handleInputChange("email", e.target.value)}
           required
         />
+        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
       </div>
       <div className="max-w-xs">
-        <Label htmlFor="phone">Phone</Label>
+        <Label htmlFor="phone">Phone <span className="text-red-500">*</span></Label>
         <Input
           type="tel"
           id="phone"
@@ -1145,6 +1492,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
           onChange={(e) => handleInputChange("phone", e.target.value)}
           required
         />
+        {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
       </div>
       <div className="max-w-xs">
         <Label htmlFor="employeeId">Employee ID</Label>
@@ -1606,7 +1954,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
           <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
             {/* Course Name */}
             <div className="space-y-1">
-              <Label className="text-xs">Exam/Course*</Label>
+              <Label className="text-xs">Exam/Course<span className="text-red-500">*</span></Label>
               <Input
                 value={edu.type}
                 readOnly={index < 3}
@@ -1618,7 +1966,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
 
             {/* Institute Name */}
             <div className="space-y-1">
-              <Label className="text-xs">Institute*</Label>
+              <Label className="text-xs">Institute<span className="text-red-500">*</span></Label>
               <Input
                 value={edu.institute || ""}
                 onChange={(e) => handleEducationChange(index, "institute", e.target.value)}
@@ -1629,7 +1977,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
 
             {/* Completed Year */}
             <div className="space-y-1">
-              <Label className="text-xs">Year*</Label>
+              <Label className="text-xs">Year<span className="text-red-500">*</span></Label>
               <Input
                 type="number"
                 value={edu.year_completed || ""}
@@ -1918,7 +2266,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="accountHolderName">Name as in Bank</Label>
+                    <Label htmlFor="accountHolderName">Name as in Bank <span className="text-red-500">*</span></Label>
                     <Input
                         type="text"
                         id="accountHolderName"
@@ -1928,7 +2276,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="accountNumber">Account Number</Label>
+                    <Label htmlFor="accountNumber">Account Number <span className="text-red-500">*</span></Label>
                     <Input
                         type="text"
                         id="accountNumber"
@@ -1938,7 +2286,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="bankName">Bank Name</Label>
+                    <Label htmlFor="bankName">Bank Name <span className="text-red-500">*</span></Label>
                     <Input
                         type="text"
                         id="bankName"
@@ -1958,7 +2306,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ifscCode">IFSC Code</Label>
+                    <Label htmlFor="ifscCode">IFSC Code <span className="text-red-500">*</span></Label>
                     <Input
                         type="text"
                         id="ifscCode"
@@ -2085,7 +2433,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
       {['aadhar', 'pan', 'uan', 'esic'].map((docType) => (
         <div key={docType} className="space-y-2">
           <Label htmlFor={`${docType}Number`}>
-            {docType.toUpperCase()} Number
+            {docType.toUpperCase()} Number <span className="text-red-500">*</span>
           </Label>
           <div className="flex gap-3">
             <Input
@@ -2094,7 +2442,9 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
               value={formData[`${docType}Number`] || ''}
               onChange={(e) =>
                 handleInputChange(`${docType}Number`, e.target.value)
+                
               }
+              required
             />
             <div className="relative">
               <input
@@ -2113,6 +2463,9 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
               </Label>
             </div>
           </div>
+          {errors[`${docType}Number`] && (
+                            <p className="text-red-500 text-xs mt-1">{errors[`${docType}Number`]}</p>
+                          )}
 
           {/* View Document Link */}
           {formData[`${docType}Url`] && (
@@ -2125,7 +2478,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
               >
                 <File className="h-4 w-4" />
                 View {docType.toUpperCase()} Document
-              </a>
+              </a>  
             </div>
           )}
         </div>
@@ -2257,7 +2610,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="space-y-2">
-                    <Label htmlFor="offerLetter">Offer Letter*</Label>
+                    <Label htmlFor="offerLetter">Offer Letter<span className="text-red-500">*</span></Label>
                     <div className="flex gap-3 items-center">
                       <div className="relative">
                       <input
@@ -2294,7 +2647,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
                 
                 <div className="flex justify-between items-center">
                   <div className="space-y-2">
-                    <Label htmlFor="separationLetter">Separation Letter*</Label>
+                    <Label htmlFor="separationLetter">Separation Letter<span className="text-red-500">*</span></Label>
                     <div className="flex gap-3 items-center">
                       <div className="relative">
                         <input
@@ -2380,7 +2733,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
                         }
                       }}
                     />
-                    <Label htmlFor="noPayslip" className="text-sm">Payslip</Label>
+                    <Label htmlFor="noPayslip" className="text-sm">Payslip </Label>
                   </div>
                 </div>
                 
@@ -2399,7 +2752,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
                 {!noPayslip && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="payslip2">Payslip 2*</Label>
+                      <Label htmlFor="payslip2">Payslip 2<span className="text-red-500">*</span></Label>
                       <div className="flex gap-3 items-center">
                         <div className="relative">
                         <input
@@ -2420,7 +2773,7 @@ const [selectedDepartment, setSelectedDepartment] = useState(formData.department
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="payslip3">Payslip 3*</Label>
+                      <Label htmlFor="payslip3">Payslip 3<span className="text-red-500">*</span></Label>
                       <div className="flex gap-3 items-center">
                         <div className="relative">
                         <input

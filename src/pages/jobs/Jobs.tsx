@@ -457,9 +457,14 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
                     <Link to={`/jobs/${job.id}`} className="font-medium text-blue-600 hover:underline">
       {job.title}
     </Link>
-                      <span className="text-xs text-gray-500">
-                        {job.jobId}, {job.hiringMode}
-                      </span>
+    <span className="text-xs text-gray-500 flex space-x-2">
+  <Badge variant="outline" className="bg-amber-100 text-amber-800 text-[10px] ">
+    {job.jobId}
+  </Badge>
+  <Badge variant="outline" className="bg-teal-100 text-teal-800 text-[10px]">
+    {job.hiringMode}
+  </Badge>
+</span>
                     </div>
                   </td>
                   <td className="table-cell">
@@ -468,7 +473,7 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
     <div className="flex items-center">
       <Badge 
         variant="outline" 
-        className="bg-purple-100 text-purple-800 hover:bg-purple-200 rounded-full text-sm inline-flex items-center"
+        className="bg-purple-100 text-purple-800 hover:bg-purple-200 rounded-full text-xs inline-flex items-center"
       >
         {job.clientDetails?.pointOfContact || 'N/A'} {/* Display 'N/A' if pointOfContact is not available */}
       </Badge>
@@ -488,7 +493,9 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
                       {job.submissionType}
                     </Badge>
                   </td> */}
-                  <td className="table-cell text-center">{job?.numberOfCandidates}</td>
+                  <td className="table-cell text-center">
+                  {Array.isArray(job.candidate_count) ? job.candidate_count[0]?.count || 0 : job.candidate_count?.count || 0}
+                </td>
                   <td className="table-cell">
                     {isEmployee ? (
                       <Badge
@@ -744,10 +751,10 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
         {!isEmployee && (
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
+              {/* <Button variant="outline" className="flex items-center gap-2">
                 <Filter size={16} />
                 <span>Filters</span>
-              </Button>
+              </Button> */}
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>

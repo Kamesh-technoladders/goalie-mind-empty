@@ -162,6 +162,7 @@ export interface JobData {
     first_name?: string;
     last_name?: string;
   };
+  candidate_count?: { count: number } | null;
 }
 
 export interface Candidate {

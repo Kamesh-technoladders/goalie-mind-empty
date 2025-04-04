@@ -5,9 +5,7 @@ import { DbJob } from "./types";
 // Transform DB job record to application JobData model
 // jobDataTransformer.ts
 export const transformToJobData = (jobRecord: any): JobData => {
-  console.log("transformToJobData - Job record:", jobRecord); // Log raw input
-  console.log("transformToJobData - Assigned_to from raw:", jobRecord.assigned_to); // Log assigned_to specifically
-
+ 
   const transformedJob: JobData = {
     id: jobRecord.id,
     jobId: jobRecord.job_id,
@@ -32,10 +30,11 @@ export const transformToJobData = (jobRecord: any): JobData => {
     numberOfCandidates: jobRecord.number_of_candidates || 0,
     organization: jobRecord.organization_id,
     createdBy: jobRecord.created_by,
-    assigned_to: jobRecord.assigned_to || null, // Explicitly map assigned_to
+    assigned_to: jobRecord.assigned_to || null, 
+    candidate_count: jobRecord.candidate_count,
   };
 
-  console.log("transformToJobData - Transformed job:", transformedJob); // Log transformed output
+ 
   return transformedJob;
 };
 
