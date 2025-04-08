@@ -106,9 +106,20 @@ const CandidatesTabsSection = ({
       return localCandidates.length;
     }
     
-    return localCandidates.filter(c => 
-      c.main_status_id === statusId
+    if (statusId === "career-page") {
+      return localCandidates.filter(c => 
+        c.appliedFrom === "Candidate"
+      ).length;
+    }
+    
+    // Check for both main and sub-statuses if applicable
+    const count = localCandidates.filter(c => 
+      c.main_status_id === statusId || c.sub_status_id === statusId
     ).length;
+  
+    console.log(`Count for status ${statusId}: ${count}`); // Debugging line
+    console.log(`Checking count for status ID: ${statusId}`); // Debugging line
+    return count;
   };
 
   const fetchCandidates = async () => {
@@ -199,6 +210,7 @@ const CandidatesTabsSection = ({
                   {status.name} ({getStatusCount(status.id)})
                 </TabsTrigger>
               ))}
+              
             </TabsList>
             <div className="flex items-center gap-2 ml-4">
               {/* Filter Button */}
@@ -273,6 +285,18 @@ const CandidatesTabsSection = ({
             onAddCandidate={onAddCandidate} 
             onRefresh={fetchCandidates}
             statusFilters={appliedFilters}
+          />
+        </TabsContent>
+        
+        {/* Career Page tab */}
+        <TabsContent value="career-page" className="mt-0">
+          <CandidatesList 
+            jobId={jobId} 
+            jobdescription={jobdescription} 
+            onAddCandidate={onAddCandidate} 
+            onRefresh={fetchCandidates}
+            statusFilters={appliedFilters}
+            isCareerPage={true}
           />
         </TabsContent>
         

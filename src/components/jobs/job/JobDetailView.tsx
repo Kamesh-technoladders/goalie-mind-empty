@@ -21,6 +21,7 @@ const JobDetailView = ({ job, candidates, onCandidateAdded }: JobDetailViewProps
   const handleOpenCandidateModal = () => {
     setIsCandidateModalOpen(true);
   };
+  
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

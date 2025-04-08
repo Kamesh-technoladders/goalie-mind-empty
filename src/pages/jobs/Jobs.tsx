@@ -69,6 +69,7 @@ import { useSelector } from "react-redux";
 import moment from 'moment';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/jobs/ui/avatar"; // Assuming you have an Avatar component
 import { fetchEmployeesByIds } from "@/services/jobs/supabaseQueries";
+import Loader from "@/components/ui/Loader";
 
 // Adding this AvatarGroup component since it's not included in shadcn by default
 
@@ -93,8 +94,8 @@ const AvatarGroup = ({
       {excess > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Avatar className="h-8 w-8 border-2 border-white cursor-pointer">
-              <AvatarFallback className="bg-gray-200 text-gray-700 text-xs font-medium">
+            <Avatar className="h-6 w-6 border-2 border-white cursor-pointer">
+              <AvatarFallback className="bg-gray-200 text-gray-700 text-[8px] font-medium">
                 +{excess}
               </AvatarFallback>
             </Avatar>
@@ -332,8 +333,7 @@ const Jobs = () => {
   if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center h-[80vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-xl text-gray-500">Loading jobs...</span>
+        <Loader size={60} className="border-[6px]" />
       </div>
     );
   }
@@ -439,7 +439,7 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
                     <ArrowUpDown size={14} />
                   </div>
                 </th>
-                <th scope="col" className="table-header-cell">Client Owner</th>
+                <th scope="col" className="table-header-cell">Client</th>
                 <th scope="col" className="table-header-cell">Posted By</th>
                 <th scope="col" className="table-header-cell">Created Date</th>
                 {/* <th scope="col" className="table-header-cell">Submission</th> */}
@@ -454,16 +454,28 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
                 <tr key={job.id} className="hover:bg-gray-50 transition">
                   <td className="table-cell">
                     <div className="flex flex-col">
-                    <Link to={`/jobs/${job.id}`} className="font-medium text-blue-600 hover:underline">
+                    <Link to={`/jobs/${job.id}`} className="font-medium text-black-600 hover:underline">
       {job.title}
     </Link>
     <span className="text-xs text-gray-500 flex space-x-2">
-  <Badge variant="outline" className="bg-amber-100 text-amber-800 text-[10px] ">
+  <Badge variant="outline" className="bg-purple-100 text-purple-800 hover:bg-purple-200 rounded-full text-[10px] ">
     {job.jobId}
   </Badge>
-  <Badge variant="outline" className="bg-teal-100 text-teal-800 text-[10px]">
+  <Badge variant="outline" className="bg-purple-100 text-purple-800 hover:bg-purple-200 rounded-full text-[10px]">
     {job.hiringMode}
   </Badge>
+  <Badge
+      variant="outline"
+      className={`rounded-full text-[10px] ${
+        job.jobType === 'Internal'
+          ? 'bg-amber-100 text-amber-800 hover:bg-blue-200'
+          : job.jobType === 'External'
+          ? 'bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
+          : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+      }`}
+    >
+      {job.jobType === 'External' ? 'Client Side' : job.jobType}
+    </Badge>
 </span>
                     </div>
                   </td>
@@ -493,9 +505,20 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
                       {job.submissionType}
                     </Badge>
                   </td> */}
-                  <td className="table-cell text-center">
-                  {Array.isArray(job.candidate_count) ? job.candidate_count[0]?.count || 0 : job.candidate_count?.count || 0}
-                </td>
+                <td
+  className={`table-cell text-center ${
+    (Array.isArray(job.candidate_count)
+      ? job.candidate_count[0]?.count
+      : job.candidate_count?.count) === 0
+      ? "text-red-500"
+      : ""
+  }`}
+>
+  {Array.isArray(job.candidate_count)
+    ? job.candidate_count[0]?.count || 0
+    : job.candidate_count?.count || 0}
+</td>
+
                   <td className="table-cell">
                     {isEmployee ? (
                       <Badge

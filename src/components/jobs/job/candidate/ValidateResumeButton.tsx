@@ -1,15 +1,16 @@
-import React from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSelector } from "react-redux";
+import ProgressScoreBar from "@/components/ui/ProgressScoreBar";
+import Lottie from "lottie-react";
+import rainbowLoader from "@/assets/animations/rainbowloader.json";
 
 interface ValidateResumeButtonProps {
   isValidated: boolean;
   candidateId: number;
   onValidate: (candidateId: number, userId?: string) => void;
   isLoading?: boolean;
-  overallScore?: number; // Score out of 100
+  overallScore?: number;
 }
 
 const ValidateResumeButton = ({
@@ -22,31 +23,49 @@ const ValidateResumeButton = ({
   const user = useSelector((state: any) => state.auth.user);
   const userId = user?.id || null;
 
+  // ✅ Case 1: Show score bar if validated with score
+  if (isValidated && overallScore !== undefined) {
+    return (
+      <div className="w-[100px]">
+        <ProgressScoreBar
+          score={overallScore}
+          color="bg-purple text-white"
+          showLabel
+        />
+      </div>
+    );
+  }
+
+  // ✅ Case 2: Show Lottie loader full width when loading
+  if (isLoading) {
+    return (
+      <div className="w-[100px] flex items-center justify-center">
+        <Lottie
+          animationData={rainbowLoader}
+          loop
+          style={{
+            height: 20,
+            width: 100,
+            background: "transparent",
+          }}
+        />
+      </div>
+    );
+  }
+
+  // ✅ Case 3: Button (validated with no score OR not validated)
   return (
     <Button
       variant={isValidated ? "outline" : "default"}
       size="sm"
       onClick={() => !isValidated && onValidate(candidateId, userId)}
-      disabled={isValidated || isLoading}
+      disabled={isValidated}
       className={cn(
-        isValidated && overallScore !== undefined && "bg-green-100 text-green-800 border-green-300",
-        isValidated && overallScore === undefined && "text-gray-600 border-gray-300"
+        "h-6 min-w-[100px] px-2 text-sm border-none",
+        isValidated && "text-gray-600 bg-gray-100"
       )}
     >
-      {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : isValidated ? (
-        <>
-          {/* <CheckCircle2 className="h-4 w-4 mr-1" /> */}
-          {overallScore !== undefined ? (
-            <span>{overallScore} / 100</span> // Display score as is, out of 100
-          ) : (
-            "Validated"
-          )}
-        </>
-      ) : (
-        "Validate"
-      )}
+      {isValidated ? "Validated" : "Validate"}
     </Button>
   );
 };

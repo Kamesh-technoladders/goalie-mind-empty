@@ -255,7 +255,6 @@ const CandidatesList = ({
     }
   };
 
-  
   const handleValidateResume = async (candidateId: number) => {
     try {
       setValidatingId(candidateId);
@@ -274,6 +273,7 @@ const CandidatesList = ({
   
       console.log("Backend data", payload);
   
+      // Step 1: Trigger the validation process
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: {
@@ -286,13 +286,46 @@ const CandidatesList = ({
         throw new Error("Validation failed");
       }
   
-      // Update the backend with has_validated_resume = true
+      // Step 2: Poll the backend for the overall_score
+      let overallScore = null;
+      let attempts = 0;
+      const maxAttempts = 20; // Adjust based on expected max time (e.g., 20 attempts * 5 seconds = 100 seconds)
+      const interval = 5000; // Poll every 5 seconds
+  
+      while (!overallScore && attempts < maxAttempts) {
+        const { data, error } = await supabase
+          .from("hr_job_candidates")
+          .select("overall_score")
+          .eq("job_id", jobId)
+          .eq("candidate_id", candidateId)
+          .single();
+  
+        if (error && error.code !== "PGRST116") {
+          // Ignore "no rows found" error (PGRST116)
+          throw error;
+        }
+  
+        if (data && data.overall_score !== null) {
+          overallScore = data.overall_score;
+          break;
+        }
+  
+        // Wait for the next polling interval
+        await new Promise((resolve) => setTimeout(resolve, interval));
+        attempts++;
+      }
+  
+      if (!overallScore) {
+        throw new Error("Overall score not set within the expected time");
+      }
+  
+      // Step 3: Update the backend with has_validated_resume = true
       await updateCandidateValidationStatus(candidateId.toString());
   
-      // Refetch the candidates data to reflect the updated status
+      // Step 4: Refetch the candidates data to reflect the updated status
       await refetch();
   
-      // Update local state (optional, since refetch will handle it)
+      // Step 5: Update local state (optional, since refetch will handle it)
       const candidateIndex = filteredCandidates.findIndex((c) => c.id === candidateId);
       if (candidateIndex !== -1) {
         filteredCandidates[candidateIndex].hasValidatedResume = true;
@@ -369,7 +402,7 @@ const CandidatesList = ({
               <TableHead>Profit</TableHead>
               <TableHead>Stage Progress</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[100px]">Validate</TableHead>
+              <TableHead>Validate</TableHead>
               <TableHead className="w-[60px]">Action</TableHead>
               {/* <TableHead className="w-[50px]"></TableHead> */}
             </TableRow>
@@ -405,15 +438,29 @@ const CandidatesList = ({
                     />
                   </div>
                 </TableCell>
-                <TableCell className="text-center">
-                  <ValidateResumeButton
-                    isValidated={candidate.hasValidatedResume || false}
-                    candidateId={candidate.id}
-                    onValidate={handleValidateResume}
-                    isLoading={validatingId === candidate.id}
-                    overallScore={candidateAnalysisData[candidate.id]?.overall_score}
-                  />
-                </TableCell>
+                <TableCell className="px-2">
+  <div className="flex items-center gap-2">
+    <ValidateResumeButton
+      isValidated={candidate.hasValidatedResume || false}
+      candidateId={candidate.id}
+      onValidate={handleValidateResume}
+      isLoading={validatingId === candidate.id}
+      overallScore={candidateAnalysisData[candidate.id]?.overall_score}
+    />
+    {analysisDataAvailable[candidate.id] && (
+      <Button
+        variant="ghost1"
+        size="xs"
+        onClick={() => fetchAnalysisData(candidate.id)}
+        title="View Summary Report"
+        className="p-1"
+      >
+        <FileText className="h-4 w-4" />
+      </Button>
+    )}
+  </div>
+</TableCell>
+
                 <TableCell className="text-right">
                   <div className="flex gap-1 justify-start">
                     {/* <Button
@@ -472,16 +519,7 @@ const CandidatesList = ({
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                    {analysisDataAvailable[candidate.id] && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fetchAnalysisData(candidate.id)}
-                        title="View Summary Report"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    )}
+                   
                   </div>
                 </TableCell>
                 {/* <TableCell>

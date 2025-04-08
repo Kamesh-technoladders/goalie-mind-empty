@@ -162,7 +162,7 @@ export const ProgressColumn = ({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 w-4">
       <div className="flex items-center gap-0.5">
         {allStatuses.map((stage, index) => {
           // Check if this stage corresponds to the current main status
@@ -180,7 +180,7 @@ export const ProgressColumn = ({
                   <TooltipTrigger asChild>
                     <div className="group relative cursor-pointer transition-all duration-150">
                       <div
-                        className="h-1.5 w-3 rounded-sm transition-all hover:opacity-80"
+                        className="h-1.5 w-7 rounded-sm transition-all hover:opacity-80"
                         style={{ 
                           backgroundColor: shouldColor ? stageColor : "#e5e7eb",
                           height: isCurrentMainStage ? "8px" : "6px"
@@ -235,7 +235,7 @@ export const ProgressColumn = ({
       {/* Current Stage Indicator */}
       <div className="flex items-center gap-1.5">
         <div 
-          className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
+          className="w-4 h-2 rounded-full flex-shrink-0 animate-pulse"
           style={{
             backgroundColor: subStatus?.color || mainStatus?.color || getStageColor({
               name: currentStage,

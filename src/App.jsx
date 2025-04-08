@@ -29,6 +29,7 @@ import Career from "./pages/careerPage/Index";
 import CareerJobDetail from "./pages/careerPage/JobDetail";
 import CareerJobApplication from "./pages/careerPage/JobApplication";
 import StatusSettings from "./pages/jobs/StatusSettings";
+import ResumeAnalysisDetailView from "./pages/jobs/ResumeAnalysisDetailView";
 
 function App() {
   return (
@@ -86,6 +87,7 @@ function App() {
             {/* Jobs */}
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:id" element={<JobView />} />
+            <Route path="/resume-analysis/:candidateId" element={<ResumeAnalysisDetailView />} />
             <Route path="/jobs/:id/description" element={<JobDescription />} />
             <Route path="/jobs/edit/:id" element={<JobDescription />} />
             <Route path="/jobstatuses" element={<StatusSettings />} />

@@ -49,6 +49,18 @@
   }
 }
 
+@layer utilities {
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .custom-spin {
+    animation: spin 0.8s linear infinite;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -114,7 +126,30 @@
   .bg-gradient-custom {
     background: linear-gradient(to right, var(--bg-button), rgba(178, 153, 252, 0.6));
   }
+
+  .bg-purple{
+    background-color: oklch(62.7% 0.265 303.9);
+  }
+
+  .bg-purple-hover{
+    background-color: #b343b5;
+  }
   
+  .purple-text-color{
+    color: oklch(62.7% 0.265 303.9);
+  }
+  .purple-text-color:hover {
+    color: oklch(62.7% 0.265 303.9);
+  }
+
+  .purple-gradient {
+    background-image: linear-gradient(to right, var(--tw-gradient-stops));
+    --tw-gradient-from: #7B43F1 var(--tw-gradient-from-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+    --tw-gradient-to: rgb(180 75 203 / 0.8) var(--tw-gradient-to-position);
+  }
+  
+
 }
 
 @font-face {

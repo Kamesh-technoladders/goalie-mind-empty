@@ -24,41 +24,46 @@ interface TimelineEvent {
   candidate?: {
     name: string;
   };
+  creator?: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 const RecentActivityCard = ({ candidates, onAddCandidate }: RecentActivityCardProps) => {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
+
+  console.log("CandidateActivity", candidates)
   
   // Fetch latest timeline events
   useEffect(() => {
     const fetchTimelineEvents = async () => {
       if (candidates.length === 0) return;
-      
+
       setLoading(true);
       try {
-        // Get candidate IDs
+        // Get candidate IDs (ensure these are UUIDs)
         const candidateIds = candidates.map(c => c.id).filter(Boolean);
+        console.log("Candidate IDs:", candidateIds);
         
         if (candidateIds.length === 0) {
           setTimelineEvents([]);
           return;
         }
         
-        // Fix: Using string values for IDs to avoid UUID parsing issues
-        const validCandidateIds = candidateIds.map(id => String(id));
-        
-        // Fetch timeline events for these candidates with proper string IDs
+        // Fetch timeline events for these candidates
         const { data, error } = await supabase
-          .from('hr_candidate_timeline')
-          .select(`
-            *,
-            candidate:hr_job_candidates!hr_candidate_timeline_candidate_id_fkey(name)
-          `)
-          .in('candidate_id', validCandidateIds)
-          .order('created_at', { ascending: false })
-          .limit(5);
-        
+        .from('hr_candidate_timeline')
+        .select(`
+          *,
+          candidate:hr_job_candidates(name),
+          creator:hr_employees(first_name, last_name)
+        `)
+        .in('candidate_id', candidateIds)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
         if (error) throw error;
         
         setTimelineEvents(data as TimelineEvent[]);
@@ -125,57 +130,59 @@ const RecentActivityCard = ({ candidates, onAddCandidate }: RecentActivityCardPr
 
   return (
     <Card className="md:col-span-1">
-      <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">
-          <Clock className="mr-2" size={18} />
-          Recent Activity
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-2">
-        {loading ? (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-          </div>
-        ) : timelineEvents.length > 0 ? (
-          <div className="space-y-4">
-            {timelineEvents.map((event) => (
-              <div key={event.id} className="border-l-2 border-blue-400 pl-4 py-1">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                  <span className="text-xs text-gray-500">{getFormattedTime(event.created_at)}</span>
-                </div>
-                <h3 className="font-medium">{event.candidate?.name || 'Candidate'}</h3>
-                <p className="text-sm text-gray-500">
-                  {getEventDescription(event)}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {new Date(event.created_at).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-400">
-                  By {event.created_by || 'System'}
-                </p>
+    <CardHeader className="pb-2 pt-4">
+      <CardTitle className="text-lg font-semibold text-gray-800 flex items-center">
+        <Clock className="mr-2" size={18} />
+        Recent Activity
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="pt-2">
+      {loading ? (
+        <div className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        </div>
+      ) : timelineEvents.length > 0 ? (
+        // SCROLLABLE container
+        <div className="space-y-4 max-h-60 overflow-y-auto pr-1">
+          {timelineEvents.map((event) => (
+            <div key={event.id} className="border-l-2 border-blue-400 pl-4 py-1">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                <span className="text-xs text-gray-500">{getFormattedTime(event.created_at)}</span>
               </div>
-            ))}
-          </div>
-        ) : candidates.length > 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            No recent activity found
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-40">
-            <p className="text-gray-500 mb-4">No candidates added yet</p>
-            <Button 
-              size="sm" 
-              id="add-candidate-btn"
-              onClick={onAddCandidate}
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Candidate
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <h3 className="font-medium">{event.candidate?.name || 'Candidate'}</h3>
+              <p className="text-sm text-gray-500">
+                {getEventDescription(event)}
+              </p>
+              <p className="text-xs text-gray-400">
+                {new Date(event.created_at).toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-400">
+                By {event.creator ? `${event.creator.first_name} ${event.creator.last_name}` : 'System'}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : candidates.length > 0 ? (
+        <div className="text-center py-6 text-gray-500">
+          No recent activity found
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center h-40">
+          <p className="text-gray-500 mb-4">No candidates added yet</p>
+          <Button 
+            size="sm" 
+            id="add-candidate-btn"
+            onClick={onAddCandidate}
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add Candidate
+          </Button>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+  
   );
 };
 

@@ -1,105 +1,269 @@
-
-import { Users, CheckCircle2, FileText, Calendar } from "lucide-react";
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/jobs/ui/card";
-import { Badge } from "@/components/jobs/ui/badge";
-import { JobData, Candidate } from "@/lib/types";
 
-interface SubmissionOverviewCardProps {
-  job: JobData;
-  candidates: Candidate[];
-}
+// Register Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
-const SubmissionOverviewCard = ({ job, candidates }: SubmissionOverviewCardProps) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "bg-green-100 text-green-800";
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "Completed":
-        return "bg-blue-100 text-blue-800";
-      case "OPEN":
-        return "bg-green-100 text-green-800";
-      case "HOLD":
-        return "bg-orange-100 text-orange-800";
-      case "CLOSE":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+// Static data for demonstration
+const staticJob = {
+  postedDate: "2025-03-15",
+  status: "OPEN",
+};
+
+const staticCandidates = [
+  { id: 1, status: "Screening" },
+  { id: 2, status: "Screening" },
+  { id: 3, status: "Interviewing" },
+  { id: 4, status: "Selected" },
+  { id: 5, status: "Screening" },
+];
+
+const SubmissionOverviewCard = () => {
+  // Calculate data for the pie chart using static data
+  const internalSubmissions = staticCandidates.filter(c => c.status === "Screening").length; // 3
+  const clientSubmissions = staticCandidates.filter(c => c.status === "Interviewing").length; // 1
+  const joined = staticCandidates.filter(c => c.status === "Selected").length; // 1
+  const interviewed = 0; // Static value
+  const offer = 0; // Static value
+
+  // Pie chart data
+  const data = {
+    labels: ["Internal Submission", "Client Submission", "Interviewed", "Joined", "Offer"],
+    datasets: [
+      {
+        data: [internalSubmissions, clientSubmissions, interviewed, joined, offer],
+        backgroundColor: [
+          "oklch(62.7% 0.265 303.9)", // Purple from your CSS
+          "#7B43F1", // Gradient start
+          "#b343b5", // Purple hover
+          "rgb(180 75 203 / 0.8)", // Gradient end
+          "#D1C4E9", // Light purple for contrast
+        ],
+        borderWidth: 1,
+        borderColor: "#ffffff",
+      },
+    ],
+  };
+
+  // Pie chart options for a modern look
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "bottom" as const,
+        labels: {
+          color: "#4B5563", // Gray-600 for text
+          font: {
+            size: 14,
+          },
+        },
+      },
+      tooltip: {
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        titleFont: { size: 16 },
+        bodyFont: { size: 14 },
+        padding: 10,
+      },
+    },
+    maintainAspectRatio: false,
   };
 
   return (
-    <Card className="md:col-span-1">
+    <Card className="md:col-span-1  shadow-lg">
       <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-lg font-semibold text-amber-600 flex items-center">
-          <FileText className="mr-2" size={18} />
+        <CardTitle className="text-lg font-semibold purple-text-color flex items-center">
+          <svg
+            className="mr-2"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6M5 17h14"
+            />
+          </svg>
           Submission Overview
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
-        <ul className="space-y-3">
-          <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Users size={16} className="mr-2 text-blue-500" />
-              <span>Internal Submission:</span>
-            </div>
-            <Badge variant="outline" className="bg-blue-50">
-              {candidates.filter(c => c.status === "Screening").length}
-            </Badge>
-          </li>
-          <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Users size={16} className="mr-2 text-green-500" />
-              <span>Client Submission:</span>
-            </div>
-            <Badge variant="outline" className="bg-green-50">
-              {candidates.filter(c => c.status === "Interviewing").length}
-            </Badge>
-          </li>
-          <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <CheckCircle2 size={16} className="mr-2 text-amber-500" />
-              <span>Interviewed:</span>
-            </div>
-            <Badge variant="outline" className="bg-amber-50">0</Badge>
-          </li>
-          <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Users size={16} className="mr-2 text-indigo-500" />
-              <span>Joined:</span>
-            </div>
-            <Badge variant="outline" className="bg-indigo-50">
-              {candidates.filter(c => c.status === "Selected").length}
-            </Badge>
-          </li>
-          <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <FileText size={16} className="mr-2 text-emerald-500" />
-              <span>Offer:</span>
-            </div>
-            <Badge variant="outline" className="bg-emerald-50">0</Badge>
-          </li>
-          <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Calendar size={16} className="mr-2 text-red-500" />
-              <span>Posted Date:</span>
-            </div>
-            <span className="font-medium">{job.postedDate}</span>
-          </li>
-          <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Calendar size={16} className="mr-2 text-purple-500" />
-              <span>Job Status:</span>
-            </div>
-            <Badge className={getStatusColor(job.status)}>
-              {job.status}
-            </Badge>
-          </li>
-        </ul>
+        <div className="h-64">
+          <Pie data={data} options={options} />
+        </div>
+        <div className="mt-4 flex justify-between items-center">
+          <span className="text-sm text-gray-500 flex items-center">
+            <svg
+              className="mr-2 text-purple-500"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            Posted: {staticJob.postedDate}
+          </span>
+          <span
+            className={`text-sm font-medium px-2 py-1 rounded-full ${
+              staticJob.status === "OPEN"
+                ? "bg-green-100 text-green-800"
+                : staticJob.status === "HOLD"
+                ? "bg-orange-100 text-orange-800"
+                : "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {staticJob.status}
+          </span>
+        </div>
       </CardContent>
     </Card>
   );
 };
 
 export default SubmissionOverviewCard;
+
+
+
+// Real Data count
+
+// import { Pie } from "react-chartjs-2";
+// import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/jobs/ui/card";
+// import { JobData, Candidate } from "@/lib/types";
+
+// // Register Chart.js components
+// ChartJS.register(ArcElement, Tooltip, Legend);
+
+// interface SubmissionOverviewCardProps {
+//   job: JobData;
+//   candidates: Candidate[];
+// }
+
+// const SubmissionOverviewCard = ({ job, candidates }: SubmissionOverviewCardProps) => {
+//   // Calculate data for the pie chart
+//   const internalSubmissions = candidates.filter(c => c.status === "Screening").length;
+//   const clientSubmissions = candidates.filter(c => c.status === "Interviewing").length;
+//   const joined = candidates.filter(c => c.status === "Selected").length;
+//   const interviewed = 0; // Hardcoded as in original
+//   const offer = 0; // Hardcoded as in original
+
+//   // Pie chart data
+//   const data = {
+//     labels: ["Internal Submission", "Client Submission", "Interviewed", "Joined", "Offer"],
+//     datasets: [
+//       {
+//         data: [internalSubmissions, clientSubmissions, interviewed, joined, offer],
+//         backgroundColor: [
+//           "oklch(62.7% 0.265 303.9)", // Purple from your CSS
+//           "#7B43F1", // Gradient start
+//           "#b343b5", // Purple hover
+//           "rgb(180 75 203 / 0.8)", // Gradient end
+//           "#D1C4E9", // Light purple for contrast
+//         ],
+//         borderWidth: 1,
+//         borderColor: "#ffffff",
+//       },
+//     ],
+//   };
+
+//   // Pie chart options for a modern look
+//   const options = {
+//     responsive: true,
+//     plugins: {
+//       legend: {
+//         position: "bottom" as const,
+//         labels: {
+//           color: "#4B5563", // Gray-600 for text
+//           font: {
+//             size: 14,
+//           },
+//         },
+//       },
+//       tooltip: {
+//         backgroundColor: "rgba(0, 0, 0, 0.8)",
+//         titleFont: { size: 16 },
+//         bodyFont: { size: 14 },
+//         padding: 10,
+//       },
+//     },
+//     maintainAspectRatio: false,
+//   };
+
+//   return (
+//     <Card className="md:col-span-1  shadow-lg">
+//       <CardHeader className="pb-2 pt-4">
+//         <CardTitle className="text-lg font-semibold purple-text-color flex items-center">
+//           <svg
+//             className="mr-2"
+//             width="18"
+//             height="18"
+//             fill="none"
+//             stroke="currentColor"
+//             viewBox="0 0 24 24"
+//             xmlns="http://www.w3.org/2000/svg"
+//           >
+//             <path
+//               strokeLinecap="round"
+//               strokeLinejoin="round"
+//               strokeWidth="2"
+//               d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6M5 17h14"
+//             />
+//           </svg>
+//           Submission Overview
+//         </CardTitle>
+//       </CardHeader>
+//       <CardContent className="pt-2">
+//         <div className="h-64">
+//           <Pie data={data} options={options} />
+//         </div>
+//         <div className="mt-4 flex justify-between items-center">
+//           <span className="text-sm text-gray-500 flex items-center">
+//             <svg
+//               className="mr-2 text-purple-500"
+//               width="16"
+//               height="16"
+//               fill="none"
+//               stroke="currentColor"
+//               viewBox="0 0 24 24"
+//               xmlns="http://www.w3.org/2000/svg"
+//             >
+//               <path
+//                 strokeLinecap="round"
+//                 strokeLinejoin="round"
+//                 strokeWidth="2"
+//                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+//               />
+//             </svg>
+//             Posted: {job.postedDate}
+//           </span>
+//           <span
+//             className={`text-sm font-medium px-2 py-1 rounded-full ${
+//               job.status === "OPEN"
+//                 ? "bg-green-100 text-green-800"
+//                 : job.status === "HOLD"
+//                 ? "bg-orange-100 text-orange-800"
+//                 : "bg-gray-100 text-gray-800"
+//             }`}
+//           >
+//             {job.status}
+//           </span>
+//         </div>
+//       </CardContent>
+//     </Card>
+//   );
+// };
+
+// export default SubmissionOverviewCard;

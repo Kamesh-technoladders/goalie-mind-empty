@@ -11,9 +11,9 @@ interface JobOverviewCardProps {
 
 const JobOverviewCard = ({ job, candidates }: JobOverviewCardProps) => {
   return (
-    <Card className="md:col-span-1">
+    <Card className="md:col-span-1 purple-gradient">
       <CardHeader className="pb-2 pt-4">
-        <CardTitle className="text-lg font-semibold text-green-700 flex items-center">
+        <CardTitle className="text-lg font-semibold text-white flex items-center">
           <Briefcase className="mr-2" size={18} />
           Job Overview
         </CardTitle>
@@ -21,43 +21,43 @@ const JobOverviewCard = ({ job, candidates }: JobOverviewCardProps) => {
       <CardContent className="pt-2">
         <ul className="space-y-3">
           <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <FileText size={16} className="mr-2 text-blue-500" />
-              <span>Job Title:</span>
+            <div className="flex items-center text-sm text-white">
+              <FileText size={16} className="mr-2 text-white" />
+              <span className="text-sm">Job Title:</span>
             </div>
-            <span className="font-medium text-right">{job.title}</span>
+            <span className="font-small text-sm text-right text-white">{job.title}</span>
           </li>
           <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Briefcase size={16} className="mr-2 text-purple-500" />
+            <div className="flex items-center text-sm text-white">
+              <Briefcase size={16} className="mr-2 text-white" />
               <span>Job ID:</span>
             </div>
-            <span className="font-medium text-right">{job.jobId}</span>
+            <span className="font-small text-sm text-right text-white">{job.jobId}</span>
           </li>
           <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Clock size={16} className="mr-2 text-amber-500" />
+            <div className="flex items-center text-sm text-white">
+              <Clock size={16} className="mr-2 text-white" />
               <span>Hiring Mode:</span>
             </div>
-            <span className="font-medium text-right">{job.hiringMode}</span>
+            <span className="font-small text-sm text-right text-white">{job.hiringMode}</span>
           </li>
           <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <User size={16} className="mr-2 text-indigo-500" />
+            <div className="flex items-center text-sm text-white">
+              <User size={16} className="mr-2 text-white" />
               <span>Job Type:</span>
             </div>
-            <span className="font-medium text-right">{job.type}</span>
+            <span className="font-small text-sm text-right text-white">{job.type}</span>
           </li>
           <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Briefcase size={16} className="mr-2 text-emerald-500" />
+            <div className="flex items-center text-sm text-white">
+              <Briefcase size={16} className="mr-2 text-white" />
               <span>Client Name:</span>
             </div>
-            <span className="font-medium text-right">{job.clientDetails?.clientName || job.clientOwner}</span>
+            <span className="font-small text-sm text-right text-white">{job.clientDetails?.clientName || job.clientOwner}</span>
           </li>
           <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <MapPin size={16} className="mr-2 text-red-500" />
+            <div className="flex items-center text-sm text-white">
+              <MapPin size={16} className="mr-2 text-white" />
               <span>Job Location:</span>
             </div>
             <div className="text-right">
@@ -71,11 +71,11 @@ const JobOverviewCard = ({ job, candidates }: JobOverviewCardProps) => {
             </div>
           </li>
           <li className="flex items-start justify-between">
-            <div className="flex items-center text-sm text-gray-500">
-              <Users size={16} className="mr-2 text-cyan-500" />
+            <div className="flex items-center text-sm text-white">
+              <Users size={16} className="mr-2 text-white" />
               <span>Candidates Required:</span>
             </div>
-            <Badge>{candidates.length}</Badge>
+            <Badge className="bg-white text-black">{candidates.length}</Badge>
           </li>
         </ul>
       </CardContent>
