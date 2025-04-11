@@ -40,6 +40,8 @@ export type CandidateFormData = {
   preferredLocations: string[];
   totalExperience: number;
   relevantExperience: number;
+  totalExperienceMonths?: number;
+  relevantExperienceMonths?: number;
   experience?: string; 
   resume: string | null; 
   skills: Array<{
@@ -72,10 +74,12 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
       phone: "",
       currentLocation: "",
       preferredLocations: [],
-      totalExperience: 0,
-      relevantExperience: 0,
-      currentSalary: 0,
-      expectedSalary: 0,
+      totalExperience: undefined, // Changed to undefined
+    totalExperienceMonths: undefined,
+    relevantExperience: undefined, // Changed to undefined
+    relevantExperienceMonths: undefined,
+    currentSalary: undefined, // Changed to undefined
+    expectedSalary: undefined,
       resume: null,
       skills: []
     }
@@ -83,7 +87,7 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
 
   const skillsForm = useForm<CandidateFormData>({
     defaultValues: {
-      skills: job.skills?.map(skill => ({ name: skill, rating: 3 })) || []
+      skills: job.skills?.map(skill => ({ name: skill, rating: 0 })) || []
     }
   });
   
@@ -117,12 +121,19 @@ const handleSaveBasicInfo = async (data: CandidateFormData) => {
 
       const createdby = user?.id
 
+      // Format experience string to include months
+      const formatExperience = (years: number, months?: number) => {
+        const yearsStr = years > 0 ? `${years} year${years === 1 ? "" : "s"}` : "";
+        const monthsStr = months && months > 0 ? `${months} month${months === 1 ? "" : "s"}` : "";
+        return [yearsStr, monthsStr].filter(Boolean).join(" and ") || "0 years";
+      };
+
     // Create a new candidate with basic information
     const candidateData = {
       id: candidateId || "",
       name: `${data.firstName} ${data.lastName}`,
       status: "Screening" as CandidateStatus,
-      experience: `${data.totalExperience} years`,
+      experience: formatExperience(data.totalExperience, data.totalExperienceMonths),
       matchScore: 0,
       appliedDate: new Date().toISOString().split('T')[0],
       skills: [],
@@ -138,7 +149,9 @@ const handleSaveBasicInfo = async (data: CandidateFormData) => {
         currentLocation: data.currentLocation,
         preferredLocations: data.preferredLocations,
         totalExperience: data.totalExperience,
+        totalExperienceMonths: data.totalExperienceMonths, // Added
         relevantExperience: data.relevantExperience,
+        relevantExperienceMonths: data.relevantExperienceMonths,
         currentSalary: data.currentSalary,
         expectedSalary: data.expectedSalary,
         resume_url: data.resume, // Optional: include in metadata as well

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Tooltip,
@@ -5,7 +6,7 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { Progress } from "./types/candidate.types";
+import { Progress } from "@/lib/types";
 import { fetchAllStatuses } from "@/services/statusService";
 import { toast } from "sonner";
 
@@ -54,13 +55,13 @@ const getStageColor = (
   
   // Default fallback colors if no custom color is provided
   const defaultColors: Record<string, string> = {
-    'Screening': '#1E88E5',
-    'Interview': '#E65100',
-    'Offer': '#FFA000',
-    'Hired': '#00897B',
-    'Joined': '#2E7D32',
-    'Rejected': '#D32F2F',
-    'Not Started': '#9CA3AF'
+    'New': '#3b82f6',      // Blue
+    'Processed': '#8b5cf6', // Purple
+    'Interview': '#f59e0b', // Amber
+    'Offered': '#10b981',  // Emerald
+    'Joined': '#059669',   // Green
+    'Rejected': '#D32F2F', // Red
+    'Not Started': '#9CA3AF' // Gray
   };
   
   return defaultColors[stage.name] || '#9CA3AF';
@@ -81,10 +82,13 @@ export const ProgressColumn = ({
       try {
         setLoading(true);
         const data = await fetchAllStatuses();
-        // Sort by display_order to ensure correct sequence
-        const sortedData = data.sort((a, b) => 
-          (a.display_order || 0) - (b.display_order || 0)
-        );
+        // Ensure we have our 5-stage pipeline loaded and sorted correctly
+        const pipelineOrder = ['New', 'Processed', 'Interview', 'Offered', 'Joined'];
+        const sortedData = [...data].sort((a, b) => {
+          const aIndex = pipelineOrder.indexOf(a.name);
+          const bIndex = pipelineOrder.indexOf(b.name);
+          return aIndex - bIndex;
+        });
         setAllStatuses(sortedData);
       } catch (error) {
         console.error("Error loading statuses:", error);
@@ -125,7 +129,7 @@ export const ProgressColumn = ({
   // Format the display status text
   const getStatusDisplayText = (): string => {
     if (mainStatus && subStatus) {
-      return `${mainStatus.name} (${subStatus.name})`;
+      return `${mainStatus.name}${subStatus.name ? ` (${subStatus.name})` : ''}`;
     } else if (currentStatus) {
       return currentStatus;
     }

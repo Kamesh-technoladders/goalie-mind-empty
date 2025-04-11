@@ -23,6 +23,8 @@ const ValidateResumeButton = ({
   const user = useSelector((state: any) => state.auth.user);
   const userId = user?.id || null;
 
+  
+
   // ✅ Case 1: Show score bar if validated with score
   if (isValidated && overallScore !== undefined) {
     return (

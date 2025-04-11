@@ -21,6 +21,8 @@ import {
 import MultiLocationSelector from "./MultiLocationSelector";
 import { CandidateFormData } from "./AddCandidateDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { FileText } from "lucide-react";
+
 
 interface BasicInformationTabProps {
   form: UseFormReturn<CandidateFormData>;
@@ -28,13 +30,26 @@ interface BasicInformationTabProps {
   onCancel: () => void;
 }
 
-// Sample location options - in a real app, this would come from an API
 const LOCATION_OPTIONS = [
   "New York", "San Francisco", "Chicago", "Los Angeles", "Boston",
   "Seattle", "Austin", "Denver", "Miami", "Washington DC",
   "Bangalore", "Hyderabad", "Chennai", "Mumbai", "Delhi",
   "London", "Berlin", "Paris", "Tokyo", "Sydney"
 ];
+
+// Helper function to format number in INR style (e.g., 1,23,456)
+const formatINR = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "decimal",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+
+const preprocessNumber = (val: unknown) => {
+  if (val === "" || val === null || val === undefined) return undefined;
+  const number = Number(val);
+  return isNaN(number) ? undefined : number;
+};
 
 // Form validation schema
 const basicInfoSchema = z.object({
@@ -44,10 +59,29 @@ const basicInfoSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   currentLocation: z.string().min(1, "Current location is required"),
   preferredLocations: z.array(z.string()).min(1, "At least one preferred location is required"),
-  totalExperience: z.coerce.number().min(0, "Total experience cannot be negative"),
-  relevantExperience: z.coerce.number().min(0, "Relevant experience cannot be negative"),
-  currentSalary: z.coerce.number().min(0, "Current salary cannot be negative"),
-  expectedSalary: z.coerce.number().min(0, "Expected salary cannot be negative"),
+  totalExperience: z
+    .preprocess(preprocessNumber, z.number().min(0, "Cannot be negative"))
+    .optional(),
+
+  totalExperienceMonths: z
+    .preprocess(preprocessNumber, z.number().min(0).max(11, "Max 11 months"))
+    .optional(),
+
+  relevantExperience: z
+    .preprocess(preprocessNumber, z.number().min(0, "Cannot be negative"))
+    .optional(),
+
+  relevantExperienceMonths: z
+    .preprocess(preprocessNumber, z.number().min(0).max(11, "Max 11 months"))
+    .optional(),
+
+  currentSalary: z
+    .preprocess(preprocessNumber, z.number().min(0, "Cannot be negative"))
+    .optional(),
+
+  expectedSalary: z
+    .preprocess(preprocessNumber, z.number().min(0, "Cannot be negative"))
+    .optional(),
   resume: z.string().url("Resume URL is required"),
   skills: z.array(z.object({
     name: z.string(),
@@ -63,7 +97,6 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
     
     const filePath = `resumes/${Date.now()}_${file.name}`;
   
-    // Upload the file to Supabase storage
     const { data, error } = await supabase.storage
       .from("candidate_resumes")
       .upload(filePath, file, {
@@ -76,22 +109,23 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
       return;
     }
   
-    // Get the public URL
     const { data: { publicUrl } } = supabase.storage
-    .from("candidate_resumes")
-    .getPublicUrl(filePath);
+      .from("candidate_resumes")
+      .getPublicUrl(filePath);
 
-  // Store the resume URL in the form instead of the file object
-  if (publicUrl) {
-    form.setValue("resume", publicUrl); // Ensure this line is executed
-  }
+    if (publicUrl) {
+      form.setValue("resume", publicUrl);
+    }
   };
+
+  // Watch salary fields for formatting
+  const currentSalary = form.watch("currentSalary");
+  const expectedSalary = form.watch("expectedSalary");
   
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSaveAndNext)} className="space-y-4 py-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* First Name */}
           <FormField
             control={form.control}
             name="firstName"
@@ -106,7 +140,6 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
             )}
           />
           
-          {/* Last Name */}
           <FormField
             control={form.control}
             name="lastName"
@@ -123,7 +156,6 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Email */}
           <FormField
             control={form.control}
             name="email"
@@ -138,7 +170,6 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
             )}
           />
           
-          {/* Phone */}
           <FormField
             control={form.control}
             name="phone"
@@ -155,7 +186,6 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Current Location */}
           <FormField
             control={form.control}
             name="currentLocation"
@@ -184,7 +214,6 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
             )}
           />
           
-          {/* Preferred Locations */}
           <FormField
             control={form.control}
             name="preferredLocations"
@@ -205,30 +234,45 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Total Experience */}
           <FormField
             control={form.control}
             name="totalExperience"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Total Experience (years) <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>Total Experience (years)</FormLabel>
                 <FormControl>
-                  <Input type="number" min="0" step="0.5" {...field} />
+                <Input
+  type="number"
+  min="0"
+  step="1"
+  value={field.value ?? ""}
+  onChange={(e) => field.onChange(e.target.value)}
+  placeholder="Enter years"
+/>
+
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
           
-          {/* Relevant Experience */}
           <FormField
             control={form.control}
-            name="relevantExperience"
+            name="totalExperienceMonths"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Relevant Experience (years) <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>Total Experience (months)</FormLabel>
                 <FormControl>
-                  <Input type="number" min="0" step="0.5" {...field} />
+                <Input
+  type="number"
+  min="0"
+  max="11"
+  step="1"
+  value={field.value === undefined || isNaN(field.value) ? "" : field.value}
+  onChange={(e) => field.onChange(e.target.value)}
+  placeholder="0-11"
+/>
+
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -237,30 +281,45 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Current Salary */}
           <FormField
             control={form.control}
-            name="currentSalary"
+            name="relevantExperience"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Current Salary <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>Relevant Experience (years)</FormLabel>
                 <FormControl>
-                  <Input type="number" min="0" {...field} />
+                <Input
+  type="number"
+  min="0"
+  step="1"
+  value={field.value ?? ""}
+  onChange={(e) => field.onChange(e.target.value)}
+  placeholder="Enter years"
+/>
+
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
           
-          {/* Expected Salary */}
           <FormField
             control={form.control}
-            name="expectedSalary"
+            name="relevantExperienceMonths"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Expected Salary <span className="text-red-500">*</span></FormLabel>
+                <FormLabel>Relevant Experience (months)</FormLabel>
                 <FormControl>
-                  <Input type="number" min="0" {...field} />
+                <Input
+  type="number"
+  min="0"
+  max="11"
+  step="1"
+  value={field.value === undefined || isNaN(field.value) ? "" : field.value}
+  onChange={(e) => field.onChange(e.target.value)}
+  placeholder="0-11"
+/>
+
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -268,29 +327,97 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
           />
         </div>
         
-        {/* Resume Upload */}
-        <FormField
-          control={form.control}
-          name="resume"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Resume <span className="text-red-500">*</span></FormLabel>
-              <FormControl>
-                <Input 
-                  type="file" 
-                  accept=".pdf,.doc,.docx" 
-                  onChange={handleFileChange}
-                />
-              </FormControl>
-              {field.value && (
-                <p className="text-sm text-green-600">Uploaded: {field.value}</p>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="currentSalary"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Current Salary</FormLabel>
+                <FormControl>
+                <Input
+  type="number"
+  min="0"
+  value={field.value === undefined || isNaN(field.value) ? "" : field.value}
+  onChange={(e) => field.onChange(e.target.value)}
+  placeholder="Enter salary in LPA"
+/>
+
+                </FormControl>
+                {currentSalary !== undefined && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    ₹ {formatINR(currentSalary)}
+                  </p>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="expectedSalary"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Expected Salary</FormLabel>
+                <FormControl>
+                <Input
+  type="number"
+  min="0"
+  value={field.value === undefined || isNaN(field.value) ? "" : field.value}
+  onChange={(e) => field.onChange(e.target.value)}
+  placeholder="Enter salary in LPA"
+/>
+
+                </FormControl>
+                {expectedSalary !== undefined && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    ₹ {formatINR(expectedSalary)}
+                  </p>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
-        {/* Action Buttons */}
+        <FormField
+  control={form.control}
+  name="resume"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>
+        Resume <span className="text-red-500">*</span>
+      </FormLabel>
+      <FormControl>
+        <Input
+          type="file"
+          accept=".pdf,.doc,.docx"
+          onChange={handleFileChange}
+        />
+      </FormControl>
+
+      {field.value && (
+  <div className="flex items-center text-sm mt-1 gap-1">
+    <FileText size={16} className="purple-text-color" />
+    <a
+      href={field.value}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="purple-text-color underline"
+    >
+      View Resume
+    </a>
+  </div>
+)}
+
+
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
+        
         <div className="flex justify-end space-x-4 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

@@ -1838,60 +1838,6 @@ export type Database = {
         }
         Relationships: []
       }
-      job_statuses: {
-        Row: {
-          color: string | null
-          created_at: string | null
-          description: string | null
-          display_order: number | null
-          id: string
-          name: string
-          organization_id: string | null
-          parent_id: string | null
-          type: Database["public"]["Enums"]["status_type"]
-          updated_at: string | null
-        }
-        Insert: {
-          color?: string | null
-          created_at?: string | null
-          description?: string | null
-          display_order?: number | null
-          id?: string
-          name: string
-          organization_id?: string | null
-          parent_id?: string | null
-          type: Database["public"]["Enums"]["status_type"]
-          updated_at?: string | null
-        }
-        Update: {
-          color?: string | null
-          created_at?: string | null
-          description?: string | null
-          display_order?: number | null
-          id?: string
-          name?: string
-          organization_id?: string | null
-          parent_id?: string | null
-          type?: Database["public"]["Enums"]["status_type"]
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "job_statuses_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "hr_organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "job_statuses_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "job_statuses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       locations: {
         Row: {
           created_at: string | null
@@ -2004,11 +1950,627 @@ export type Database = {
           },
         ]
       }
+      candidate_companies: {
+        Row: {
+          candidate_id: string
+          company_id: number
+          designation: string | null
+          job_id: string
+          years: string | null
+        }
+        Insert: {
+          candidate_id: string
+          company_id: number
+          designation?: string | null
+          job_id: string
+          years?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          company_id?: number
+          designation?: string | null
+          job_id?: string
+          years?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_company"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          id: number
+          name: string
+        }
+        Insert: {
+          id?: number
+          name: string
+        }
+        Update: {
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      hr_availability_date_specific: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          specific_date: string
+          start_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          specific_date: string
+          start_time: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          specific_date?: string
+          start_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hr_availability_time_slots: {
+        Row: {
+          availability_id: string
+          created_at: string
+          end_time: string
+          id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          availability_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          availability_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_availability_time_slots_availability_id_fkey"
+            columns: ["availability_id"]
+            isOneToOne: false
+            referencedRelation: "hr_availability_weekly"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_availability_weekly: {
+        Row: {
+          created_at: string
+          day_of_week: string
+          id: string
+          is_available: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: string
+          id?: string
+          is_available?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: string
+          id?: string
+          is_available?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hr_candidate_interviews: {
+        Row: {
+          candidate_id: string
+          created_at: string | null
+          created_by: string | null
+          feedback: Json | null
+          id: string
+          interview_date: string
+          interview_round: string | null
+          interview_time: string | null
+          interview_type: string
+          interviewers: Json | null
+          location: string | null
+          notes: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string | null
+          created_by?: string | null
+          feedback?: Json | null
+          id?: string
+          interview_date: string
+          interview_round?: string | null
+          interview_time?: string | null
+          interview_type: string
+          interviewers?: Json | null
+          location?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          feedback?: Json | null
+          id?: string
+          interview_date?: string
+          interview_round?: string | null
+          interview_time?: string | null
+          interview_type?: string
+          interviewers?: Json | null
+          location?: string | null
+          notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_candidate_interviews_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_candidate_joining_details: {
+        Row: {
+          candidate_id: string
+          created_at: string | null
+          created_by: string | null
+          documents_submitted: Json | null
+          final_salary: number | null
+          id: string
+          joining_date: string | null
+          onboarding_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string | null
+          created_by?: string | null
+          documents_submitted?: Json | null
+          final_salary?: number | null
+          id?: string
+          joining_date?: string | null
+          onboarding_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          documents_submitted?: Json | null
+          final_salary?: number | null
+          id?: string
+          joining_date?: string | null
+          onboarding_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_candidate_joining_details_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_candidate_offers: {
+        Row: {
+          candidate_id: string
+          created_at: string | null
+          created_by: string | null
+          expected_joining_date: string | null
+          id: string
+          negotiation_notes: string | null
+          offer_letter_url: string | null
+          offer_status: string | null
+          offer_valid_until: string | null
+          offered_salary: number
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string | null
+          created_by?: string | null
+          expected_joining_date?: string | null
+          id?: string
+          negotiation_notes?: string | null
+          offer_letter_url?: string | null
+          offer_status?: string | null
+          offer_valid_until?: string | null
+          offered_salary: number
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          expected_joining_date?: string | null
+          id?: string
+          negotiation_notes?: string | null
+          offer_letter_url?: string | null
+          offer_status?: string | null
+          offer_valid_until?: string | null
+          offered_salary?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_candidate_offers_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_status_change_counts: {
+        Row: {
+          candidate_id: string
+          count: number
+          created_at: string | null
+          employee_id: string
+          id: string
+          job_id: string
+          main_status_id: string
+          sub_status_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id: string
+          count?: number
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          job_id: string
+          main_status_id: string
+          sub_status_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string
+          count?: number
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          job_id?: string
+          main_status_id?: string
+          sub_status_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_status_change_counts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_status_change_counts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_user_settings: {
+        Row: {
+          created_at: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      job_statuses: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          name: string
+          organization_id: string | null
+          parent_id: string | null
+          type: Database["public"]["Enums"]["status_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name: string
+          organization_id?: string | null
+          parent_id?: string | null
+          type: Database["public"]["Enums"]["status_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          name?: string
+          organization_id?: string | null
+          parent_id?: string | null
+          type?: Database["public"]["Enums"]["status_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_statuses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_statuses_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "job_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resume_analysis: {
+        Row: {
+          additional_certifications: string[] | null
+          candidate_id: string
+          candidate_name: string | null
+          development_gaps: string[] | null
+          email: string | null
+          github: string | null
+          job_id: string
+          linkedin: string | null
+          matched_skills: Json | null
+          missing_or_weak_areas: string[] | null
+          overall_score: number | null
+          resume_text: string | null
+          section_wise_scoring: Json | null
+          summary: string | null
+          top_skills: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          additional_certifications?: string[] | null
+          candidate_id: string
+          candidate_name?: string | null
+          development_gaps?: string[] | null
+          email?: string | null
+          github?: string | null
+          job_id: string
+          linkedin?: string | null
+          matched_skills?: Json | null
+          missing_or_weak_areas?: string[] | null
+          overall_score?: number | null
+          resume_text?: string | null
+          section_wise_scoring?: Json | null
+          summary?: string | null
+          top_skills?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          additional_certifications?: string[] | null
+          candidate_id?: string
+          candidate_name?: string | null
+          development_gaps?: string[] | null
+          email?: string | null
+          github?: string | null
+          job_id?: string
+          linkedin?: string | null
+          matched_skills?: Json | null
+          missing_or_weak_areas?: string[] | null
+          overall_score?: number | null
+          resume_text?: string | null
+          section_wise_scoring?: Json | null
+          summary?: string | null
+          top_skills?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      search_params: {
+        Row: {
+          boolean_search: string
+          created_at: string | null
+          id: number
+          job_id: string
+          keywords: string[]
+        }
+        Insert: {
+          boolean_search: string
+          created_at?: string | null
+          id?: number
+          job_id: string
+          keywords: string[]
+        }
+        Update: {
+          boolean_search?: string
+          created_at?: string | null
+          id?: number
+          job_id?: string
+          keywords?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_search_params_job"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_params_backup: {
+        Row: {
+          boolean_search: string | null
+          created_at: string | null
+          id: number | null
+          job_id: string | null
+          keywords: string[] | null
+          skills: string[] | null
+        }
+        Insert: {
+          boolean_search?: string | null
+          created_at?: string | null
+          id?: number | null
+          job_id?: string | null
+          keywords?: string[] | null
+          skills?: string[] | null
+        }
+        Update: {
+          boolean_search?: string | null
+          created_at?: string | null
+          id?: number | null
+          job_id?: string | null
+          keywords?: string[] | null
+          skills?: string[] | null
+        }
+        Relationships: []
+      }
+      search_params_skills: {
+        Row: {
+          search_params_id: number
+          skill_id: number
+        }
+        Insert: {
+          search_params_id: number
+          skill_id: number
+        }
+        Update: {
+          search_params_id?: number
+          skill_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_search_params"
+            columns: ["search_params_id"]
+            isOneToOne: false
+            referencedRelation: "search_params"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_skills"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skills: {
+        Row: {
+          created_at: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      whatsapp_messages: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          id: string
+          message_response: Json | null
+          message_sent: boolean | null
+          phone_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          message_response?: Json | null
+          message_sent?: boolean | null
+          phone_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          message_response?: Json | null
+          message_sent?: boolean | null
+          phone_number?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      bytea_to_text: {
+        Args: { data: string }
+        Returns: string
+      }
       create_organization_with_superadmin: {
         Args: {
           org_name: string
@@ -2026,6 +2588,72 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      get_jobs_with_candidate_count: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          job: Json
+          candidate_count: number
+        }[]
+      }
+      http: {
+        Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_delete: {
+        Args:
+          | { uri: string }
+          | { uri: string; content: string; content_type: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_get: {
+        Args: { uri: string } | { uri: string; data: Json }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_head: {
+        Args: { uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_header: {
+        Args: { field: string; value: string }
+        Returns: Database["public"]["CompositeTypes"]["http_header"]
+      }
+      http_list_curlopt: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          curlopt: string
+          value: string
+        }[]
+      }
+      http_patch: {
+        Args: { uri: string; content: string; content_type: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_post: {
+        Args:
+          | { uri: string; content: string; content_type: string }
+          | { uri: string; data: Json }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_put: {
+        Args: { uri: string; content: string; content_type: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+      }
+      http_reset_curlopt: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      http_set_curlopt: {
+        Args: { curlopt: string; value: string }
+        Returns: boolean
+      }
+      text_to_bytea: {
+        Args: { data: string }
+        Returns: string
+      }
+      urlencode: {
+        Args: { string: string } | { string: string } | { data: Json }
+        Returns: string
+      }
     }
     Enums: {
       hr_candidate_event_type:
@@ -2038,7 +2666,23 @@ export type Database = {
       status_type: "main" | "sub"
     }
     CompositeTypes: {
-      [_ in never]: never
+      http_header: {
+        field: string | null
+        value: string | null
+      }
+      http_request: {
+        method: unknown | null
+        uri: string | null
+        headers: Database["public"]["CompositeTypes"]["http_header"][] | null
+        content_type: string | null
+        content: string | null
+      }
+      http_response: {
+        status: number | null
+        content_type: string | null
+        headers: Database["public"]["CompositeTypes"]["http_header"][] | null
+        content: string | null
+      }
     }
   }
 }

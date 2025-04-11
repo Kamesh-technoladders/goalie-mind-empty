@@ -139,7 +139,7 @@ const Jobs = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [statusUpdateLoading, setStatusUpdateLoading] = useState<string | null>(null);
-  const itemsPerPage = 5;
+  // const itemsPerPage = 5;
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [associateModalOpen, setAssociateModalOpen] = useState(false);
@@ -210,13 +210,27 @@ const Jobs = () => {
     return matchesSearch;
   });
 
-  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
+  // const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+  // const startIndex = (currentPage - 1) * itemsPerPage;
+  // const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
 
   const activeJobs = filteredJobs.filter(job => job.status === "Active" || job.status === "OPEN").length;
   const pendingJobs = filteredJobs.filter(job => job.status === "Pending" || job.status === "HOLD").length;
   const completedJobs = filteredJobs.filter(job => job.status === "Completed" || job.status === "CLOSE").length;
+
+  // Inside the Jobs component, add this new state
+const [itemsPerPage, setItemsPerPage] = useState(10);
+
+// Update the pagination logic (replace existing)
+const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+const startIndex = (currentPage - 1) * itemsPerPage;
+const paginatedJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
+
+// Add this new function to handle items per page change
+const handleItemsPerPageChange = (value: string) => {
+  setItemsPerPage(Number(value));
+  setCurrentPage(1); // Reset to first page when changing items per page
+};
 
   const daysSinceCreated = (createdDate: string) => {
     return moment(createdDate).fromNow();
@@ -451,6 +465,7 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {jobs.map((job) => (
+                
                 <tr key={job.id} className="hover:bg-gray-50 transition">
                   <td className="table-cell">
                     <div className="flex flex-col">
@@ -671,6 +686,73 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
     );
   };
 
+  const renderPagination = () => {
+    return (
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Show</span>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={handleItemsPerPageChange}
+          >
+            <SelectTrigger className="w-[70px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-gray-600">per page</span>
+        </div>
+  
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .slice(
+                Math.max(0, currentPage - 3),
+                Math.min(totalPages, currentPage + 2)
+              )
+              .map(page => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+          </div>
+  
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+  
+        <span className="text-sm text-gray-600">
+          Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredJobs.length)} of {filteredJobs.length} jobs
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -802,23 +884,27 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
 
       {!isEmployee ? (
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-          <TabsContent value="all" className="space-y-6">
-            {renderTable(filteredJobs)}
-          </TabsContent>
-
-          <TabsContent value="internal" className="space-y-6">
-            {renderTable(filteredJobs.filter(job => job.jobType === "Internal"))}
-          </TabsContent>
-
-          <TabsContent value="external" className="space-y-6">
-            {renderTable(filteredJobs.filter(job => job.jobType === "External"))}
-          </TabsContent>
-        </Tabs>
-      ) : (
-        <div className="space-y-6">
-          {renderTable(filteredJobs)}
-        </div>
-      )}
+        <TabsContent value="all" className="space-y-6">
+          {renderTable(paginatedJobs)}
+          {filteredJobs.length > 0 && renderPagination()}
+        </TabsContent>
+    
+        <TabsContent value="internal" className="space-y-6">
+          {renderTable(paginatedJobs.filter(job => job.jobType === "Internal"))}
+          {filteredJobs.length > 0 && renderPagination()}
+        </TabsContent>
+    
+        <TabsContent value="external" className="space-y-6">
+          {renderTable(paginatedJobs.filter(job => job.jobType === "External"))}
+          {filteredJobs.length > 0 && renderPagination()}
+        </TabsContent>
+      </Tabs>
+    ) : (
+      <div className="space-y-6">
+        {renderTable(paginatedJobs)}
+        {filteredJobs.length > 0 && renderPagination()}
+      </div>
+    )}
   
       <CreateJobModal 
         isOpen={isCreateModalOpen} 

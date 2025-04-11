@@ -1,37 +1,39 @@
 import React from "react";
 
 interface LoaderProps {
-  size?: number; // in pixels
+  size?: number;
   className?: string;
 }
 
 const Loader: React.FC<LoaderProps> = ({ size = 48, className = "" }) => {
-  const squareSize = size / 4;
+  const cubeSize = size / 2;
 
   return (
-    <div className={className} style={{ position: "relative", width: size, height: size }}>
-      {[...Array(4)].map((_, index) => (
-        <div
-          key={index}
-          style={{
-            position: "absolute",
-            width: squareSize,
-            height: squareSize,
-            background: "linear-gradient(45deg, #b44bcb, #ff4081)",
-            animation: `spin 1s linear infinite`,
-            transform: `rotate(${index * 90}deg) translate(${size / 2 - squareSize / 2}px)`,
-            transformOrigin: "0 0",
-          }}
-        />
-      ))}
+    <div className={`flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
+      <div
+        className="loader-cube"
+        style={{
+          width: cubeSize,
+          height: cubeSize,
+          backgroundColor: "#b44bcb",
+        }}
+      />
       <style>
         {`
-          @keyframes spin {
+          .loader-cube {
+            animation: cubeSpin 1.2s infinite ease-in-out;
+            transform-origin: center;
+          }
+
+          @keyframes cubeSpin {
             0% {
-              transform: rotate(0deg);
+              transform: perspective(100px) rotateX(0deg) rotateY(0deg);
+            }
+            50% {
+              transform: perspective(100px) rotateX(180deg) rotateY(0deg);
             }
             100% {
-              transform: rotate(360deg);
+              transform: perspective(100px) rotateX(180deg) rotateY(180deg);
             }
           }
         `}

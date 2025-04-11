@@ -1,15 +1,24 @@
 import { Box, Flex, IconButton, Input, InputGroup, InputLeftElement, Avatar, Menu, MenuButton, MenuList, MenuItem, useColorMode, Text, useMediaQuery } from "@chakra-ui/react";
 import { FiSearch, FiBell, FiSun, FiLogOut, FiUser, FiMenu } from "react-icons/fi";
 import { useState } from "react";
-import { Outlet } from "react-router-dom"; 
+import { Outlet, useNavigate } from "react-router-dom"; 
 import Sidebar from "../components/Sidebar/Sidebar";
 import { signOut } from "../utils/api";
-import { useSelector } from "react-redux"; 
+import { useSelector, useDispatch } from "react-redux"; 
+import { logout } from "../Redux/authSlice";
 
 const MainLayout = () => {
   const { colorMode, toggleColorMode } = useColorMode();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [isSidebarExpanded, setSidebarExpanded] = useState(false);
   const [isMobile] = useMediaQuery("(max-width: 768px)"); // ✅ Detect mobile screens\
+
+    // ✅ Handle Logout Function
+    const handleLogout = () => {
+      dispatch(logout()); // 🚀 Logout via Redux
+      navigate("/login"); // 🚀 Redirect to Login
+    };
   
   const user = useSelector((state) => state.auth.user); 
   // console.log("loggeduser", user)
@@ -105,8 +114,8 @@ const MainLayout = () => {
                 </Flex>
               </MenuButton>
               <MenuList>
-                <MenuItem icon={<FiUser />}>View Profile</MenuItem>
-                <MenuItem onClick={signOut} icon={<FiLogOut />}>Logout</MenuItem>
+                <MenuItem onClick={() => navigate("/profile")} icon={<FiUser /> }>View Profile</MenuItem>
+                <MenuItem onClick={handleLogout} icon={<FiLogOut />}>Logout</MenuItem>
               </MenuList>
             </Menu>
           </Flex>

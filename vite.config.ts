@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::",
-      port: 8080,
+      port: 8081,
       proxy: {
         '/api/proxy': {
           target: 'http://62.72.51.159:5005', // Your backend URL
@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
       hmr: {
         protocol: "ws",
         host: process.env.VITE_HMR_HOST || undefined,
-        port: process.env.VITE_HMR_PORT ? parseInt(process.env.VITE_HMR_PORT) : 24678,
+        port: process.env.VITE_HMR_PORT ? parseInt(process.env.VITE_HMR_PORT) : 24679,
         clientPort: process.env.VITE_HMR_CLIENT_PORT ? parseInt(process.env.VITE_HMR_CLIENT_PORT) : undefined,
         timeout: 30000,
       },

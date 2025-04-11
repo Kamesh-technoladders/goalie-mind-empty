@@ -183,77 +183,28 @@ const CandidatesTabsSection = ({
 
   return (
     <div className="md:col-span-3">
-      <Tabs defaultValue="all" className="w-full">
-        <div className="border-b mb-4 overflow-x-auto">
-          <div className="flex items-center justify-between">
-            <TabsList className="bg-transparent p-0 flex flex-wrap">
-              <TabsTrigger 
-                value="all" 
-                onClick={() => setActiveTab("all")}
-                className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-              >
-                All Candidates ({getStatusCount("all")})
-              </TabsTrigger>
-              
-              {/* Dynamically generate tabs based on main statuses */}
-              {allStatuses.map(status => (
-                <TabsTrigger 
-                  key={status.id}
-                  value={status.id} 
-                  onClick={() => setActiveTab(status.id)}
-                  className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 pb-3 text-muted"
-                  style={{
-                    borderColor: activeTab === status.id ? status.color : 'transparent',
-                    color: activeTab === status.id ? status.color : undefined
-                  }}
-                >
-                  {status.name} ({getStatusCount(status.id)})
-                </TabsTrigger>
-              ))}
-              
-            </TabsList>
-            <div className="flex items-center gap-2 ml-4">
-              {/* Filter Button */}
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilterDialog(true)}
-                className="flex items-center gap-1"
-              >
-                <Filter size={16} />
-                <span className="ml-1">Filter</span>
-              </Button>
-              
-              {/* Status Settings Button */}
-              <Button 
-                onClick={() => setShowStatusDialog(true)}
-                size="sm"
-              >
-                Status Settings
-              </Button>
-            </div>
-          </div>
-          
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap gap-2">
           {/* Display applied filters */}
           {appliedFilters.length > 0 && (
-            <div className="flex flex-wrap gap-2 my-2">
+            <>
               {appliedFilters.map(filterId => {
                 const filter = getFilterNameById(filterId);
                 if (!filter) return null;
-                
+  
                 return (
-                  <Badge 
-                    key={filterId} 
-                    variant="secondary" 
+                  <Badge
+                    key={filterId}
+                    variant="secondary"
                     className="flex items-center gap-1 py-1"
                     style={{
                       backgroundColor: filter.color ? `${filter.color}20` : undefined,
                       borderColor: filter.color || undefined,
-                      color: filter.color || undefined
+                      color: filter.color || undefined,
                     }}
                   >
                     {filter.name}
-                    <button 
+                    <button
                       onClick={() => removeFilter(filterId)}
                       className="ml-1 rounded-full hover:bg-gray-200 p-0.5"
                     >
@@ -262,66 +213,52 @@ const CandidatesTabsSection = ({
                   </Badge>
                 );
               })}
-              
-              {appliedFilters.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={clearFilters}
-                  className="h-6 text-xs px-2"
-                >
-                  Clear all
-                </Button>
-              )}
-            </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-6 text-xs px-2"
+              >
+                Clear all
+              </Button>
+            </>
           )}
         </div>
-        
-        {/* All candidates tab */}
-        <TabsContent value="all" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            onAddCandidate={onAddCandidate} 
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-          />
-        </TabsContent>
-        
-        {/* Career Page tab */}
-        <TabsContent value="career-page" className="mt-0">
-          <CandidatesList 
-            jobId={jobId} 
-            jobdescription={jobdescription} 
-            onAddCandidate={onAddCandidate} 
-            onRefresh={fetchCandidates}
-            statusFilters={appliedFilters}
-            isCareerPage={true}
-          />
-        </TabsContent>
-        
-        {/* Dynamically generate tab content for each main status */}
-        {allStatuses.map(status => (
-          <TabsContent key={status.id} value={status.id} className="mt-0">
-            <CandidatesList 
-              jobId={jobId} 
-              jobdescription={jobdescription} 
-              statusFilter={status.name}
-              onAddCandidate={onAddCandidate} 
-              onRefresh={fetchCandidates}
-              statusFilters={appliedFilters}
-            />
-          </TabsContent>
-        ))}
-      </Tabs>
-
-      {/*Job Status Dialog */}
+        <div className="flex items-center gap-2">
+          {/* Filter Button */}
+          {/* <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilterDialog(true)}
+            className="flex items-center gap-1"
+          >
+            <Filter size={16} />
+            <span className="ml-1">Filter</span>
+          </Button> */}
+  
+          {/* Status Settings Button */}
+          <Button onClick={() => setShowStatusDialog(true)} size="sm">
+            Status Settings
+          </Button>
+        </div>
+      </div>
+  
+      {/* Render CandidatesList directly */}
+      <CandidatesList
+        jobId={jobId}
+        jobdescription={jobdescription}
+        onAddCandidate={onAddCandidate}
+        onRefresh={fetchCandidates}
+        statusFilters={appliedFilters}
+      />
+  
+      {/* Job Status Dialog */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
         <DialogContent className="max-w-4xl p-0">
           <StatusSettings onStatusChange={fetchCandidates} />
         </DialogContent>
       </Dialog>
-      
+  
       {/* Filter Dialog */}
       <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
         <DialogContent className="max-w-md">
@@ -335,21 +272,21 @@ const CandidatesTabsSection = ({
               ) : (
                 statusFilters.map(filter => (
                   <div key={filter.id} className="flex items-center space-x-2">
-                    <Checkbox 
+                    <Checkbox
                       id={filter.id}
                       checked={filter.selected}
                       onCheckedChange={() => toggleFilter(filter.id)}
                     />
-                    <label 
-                      htmlFor={filter.id} 
-                      className={`text-sm ${filter.isMain ? 'font-medium' : 'ml-2'}`}
+                    <label
+                      htmlFor={filter.id}
+                      className={`text-sm ${filter.isMain ? "font-medium" : "ml-2"}`}
                       style={{ color: filter.color || undefined }}
                     >
                       {filter.name}
                     </label>
                     {filter.color && (
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: filter.color }}
                       />
                     )}
@@ -362,9 +299,7 @@ const CandidatesTabsSection = ({
             <Button variant="outline" onClick={clearFilters}>
               Clear
             </Button>
-            <Button onClick={applyFilters}>
-              Apply Filters
-            </Button>
+            <Button onClick={applyFilters}>Apply Filters</Button>
           </div>
         </DialogContent>
       </Dialog>

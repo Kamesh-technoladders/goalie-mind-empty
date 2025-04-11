@@ -58,7 +58,12 @@ export const fetchJobsAssignedToUser = async (userId: string) => {
     // Query jobs where assigned_to.id equals userId or contains userId in a comma-separated list
     const { data, error } = await supabase
       .from('hr_jobs')
-      .select('*')
+      .select(`
+        *,
+        created_by:hr_employees!hr_jobs_created_by_fkey (first_name, last_name),
+        assigned_to,
+        candidate_count:hr_job_candidates (count)
+      `)
       .or(
         `assigned_to->>id.eq.${userId},` + // Exact match for single assignment
         `assigned_to->>id.ilike.%${userId}%` // Pattern match for multiple assignments

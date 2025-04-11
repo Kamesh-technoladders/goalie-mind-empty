@@ -224,7 +224,8 @@ export interface Candidate {
   currentStage?: string;
   completedStages?: string[];
   hasValidatedResume?: boolean;
-  
+  email?: string
+  phone?: string
   profit?: ReactNode;
   organization?: string;
   updatedBy?: string;
