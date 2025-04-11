@@ -34,7 +34,7 @@ const LOCATION_OPTIONS = [
   "New York", "San Francisco", "Chicago", "Los Angeles", "Boston",
   "Seattle", "Austin", "Denver", "Miami", "Washington DC",
   "Bangalore", "Hyderabad", "Chennai", "Mumbai", "Delhi",
-  "London", "Berlin", "Paris", "Tokyo", "Sydney"
+  "London", "Berlin", "Paris", "Tokyo", "Sydney", "Coimbatore", "Madurai", "Remote", "Others"
 ];
 
 // Helper function to format number in INR style (e.g., 1,23,456)
