@@ -19,6 +19,8 @@ const buttonVariants = cva(
         ghost: "hover:bg-select hover:text-accent-foreground",
         ghost1: " bg-purple text-white hover:bg-transparent hover:purple-text-color",
         link: "text-primary underline-offset-4 hover:underline",
+        copyicon:
+        " text-secondary-foreground hover:bg-secondary hover:purple-text-color",
       },
       size: {
         default: "h-10 px-4 py-2",

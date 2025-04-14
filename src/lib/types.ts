@@ -218,6 +218,7 @@ export interface Candidate {
     currentSalary?: string | number;
     expectedSalary?: string | number;
     resume_url?: string;
+    relevantExperienceMonths?: string;
   };
 
   skill_ratings?: Array<{ name: string; rating: number }>;

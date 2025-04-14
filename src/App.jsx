@@ -46,6 +46,10 @@ function App() {
           <Route path="/job/:jobId" element={<CareerJobDetail />} />
           <Route path="/job/:jobId/apply" element={<CareerJobApplication />} />
 
+          {/* Candidate Profile Magic Link */}
+          <Route path="/share/:shareId" element={<SharedProfile />} />
+
+
         {/* Protected Routes */}
         <Route
           element={
@@ -92,7 +96,6 @@ function App() {
             <Route path="/jobs/:id/description" element={<JobDescription />} />
             <Route path="/jobs/edit/:id" element={<JobDescription />} />
             <Route path="/jobstatuses" element={<StatusSettings />} />
-            <Route path="/share/:shareId" element={<SharedProfile />} />
           </Route>
         </Route>
       </Routes>
