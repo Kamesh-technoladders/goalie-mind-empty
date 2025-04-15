@@ -129,6 +129,11 @@ const Sidebar = ({ isExpanded, setExpanded }) => {
           </Tooltip>
         ))}
       </VStack>
+      {isExpanded && (
+        <Text fontSize="xs" color="gray.400" textAlign="center" mt={4}>
+          Version: {__APP_VERSION__}
+        </Text>
+      )}
     </Flex>
   );
 };

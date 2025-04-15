@@ -195,7 +195,7 @@ const CandidatesList = ({
           education_summary,
           education_enhancement_tips,
           overall_summary,
-          report_url, created_at,
+          report_url
         `)
         .eq("job_id", jobId)
         .eq("candidate_id", candidateId)

@@ -34,6 +34,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       // Make sure to provide a fallback value for __WS_TOKEN__
+      __APP_VERSION__: JSON.stringify(env.VITE_APP_VERSION),
       __WS_TOKEN__: JSON.stringify(process.env.VITE_WS_TOKEN || "development-token"),
       "process.env": env,
     },
@@ -54,5 +55,6 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    
   };
 });

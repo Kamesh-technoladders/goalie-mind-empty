@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "set-version": "echo \"VITE_APP_VERSION=$(git rev-parse --short HEAD)\" > .env.version",
+   "build": "npm run set-version && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
