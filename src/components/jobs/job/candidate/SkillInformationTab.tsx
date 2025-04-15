@@ -114,7 +114,7 @@ const SkillInformationTab = ({
             Cancel
           </Button>
           <Button type="submit">
-            Save
+            Save & Next
           </Button>
         </div>
       </form>

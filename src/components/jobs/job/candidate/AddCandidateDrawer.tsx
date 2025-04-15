@@ -21,6 +21,7 @@ import SkillInformationTab from "./SkillInformationTab";
 import { createCandidate, updateCandidate, updateCandidateSkillRatings } from "@/services/candidateService";
 import { useSelector } from "react-redux";
 import { supabase } from "@/integrations/supabase/client";
+import ProofIdTab from "./ProofIdTab";
 
 
 interface AddCandidateDrawerProps {
@@ -51,6 +52,15 @@ export type CandidateFormData = {
   location?: string;       // Make optional
   expectedSalary?: number; // Make optional
   currentSalary?: number;  // Make optional
+  noticePeriod?: number; // Add Notice Period (in days)
+  lastWorkingDay?: string;
+  linkedInId?: string; // Added
+  hasOffers?: "Yes" | "No"; // Added
+  offerDetails?: string; // Added
+  uan?: string; // Add UAN (optional)
+  pan?: string; // Add PAN (optional)
+  pf?: string; // Add PF (optional)
+  esicNumber?: string; // Add ESIC Number (optional)
 };
 
 const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChange }: AddCandidateDrawerProps) => {
@@ -81,7 +91,16 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
     currentSalary: undefined, // Changed to undefined
     expectedSalary: undefined,
       resume: null,
-      skills: []
+      skills: [],
+      noticePeriod: candidate?.metadata?.noticePeriod || undefined, // Add Notice Period
+    lastWorkingDay: candidate?.metadata?.lastWorkingDay || "", // Add Last Working Day
+    linkedInId: candidate?.metadata?.linkedInId || "", // Initialize for edit mode
+      hasOffers: candidate?.metadata?.hasOffers || undefined, // Initialize for edit mode
+      offerDetails: candidate?.metadata?.offerDetails || "", 
+    uan: candidate?.metadata?.uan || "", // Initialize for edit mode
+      pan: candidate?.metadata?.pan || "", // Initialize for edit mode
+      pf: candidate?.metadata?.pf || "", // Initialize for edit mode
+      esicNumber: candidate?.metadata?.esicNumber || "", // Initialize for edit mode
     }
   });
 
@@ -90,10 +109,20 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
       skills: job.skills?.map(skill => ({ name: skill, rating: 0 })) || []
     }
   });
+
+  const proofIdForm = useForm<CandidateFormData>({
+    defaultValues: {
+      uan: candidate?.metadata?.uan || "",
+      pan: candidate?.metadata?.pan || "",
+      pf: candidate?.metadata?.pf || "",
+      esicNumber: candidate?.metadata?.esicNumber || "",
+    },
+  });
   
   const handleClose = () => {
     basicInfoForm.reset();
     skillsForm.reset();
+    proofIdForm.reset();
     setCandidateId(isEditMode ? candidate?.id.toString() : null);
     setActiveTab("basic-info");
     controlledOnOpenChange(false); // Use controlled handler
@@ -141,7 +170,7 @@ const handleSaveBasicInfo = async (data: CandidateFormData) => {
       phone: data.phone,
       currentSalary: data.currentSalary,
       expectedSalary: data.expectedSalary,
-      location: "",
+      location: data.currentLocation,
       appliedFrom,
       resumeUrl: data.resume, // Ensure this is set correctly
       createdBy: createdby,
@@ -155,6 +184,15 @@ const handleSaveBasicInfo = async (data: CandidateFormData) => {
         currentSalary: data.currentSalary,
         expectedSalary: data.expectedSalary,
         resume_url: data.resume, // Optional: include in metadata as well
+        noticePeriod: data.noticePeriod, // Add Notice Period
+        lastWorkingDay: data.lastWorkingDay, // Add Last Working Day
+        linkedInId: data.linkedInId || undefined, // Include LinkedIn ID
+          hasOffers: data.hasOffers || undefined, // Include Has Offers
+          offerDetails: data.offerDetails || undefined, // Include Offer Details
+        uan: data.uan || undefined, // Include UAN
+          pan: data.pan || undefined, // Include PAN
+          pf: data.pf || undefined, // Include PF
+          esicNumber: data.esicNumber || undefined, // Include ESIC Number
       }
     };
 
@@ -191,11 +229,37 @@ const handleSaveSkills = async (data: CandidateFormData) => {
     await updateCandidateSkillRatings(candidateId, data.skills);
     
     toast.success("Skills updated successfully");
-    onCandidateAdded();
-    handleClose();
+    setActiveTab("proof-id");
   } catch (error) {
     console.error("Error saving candidate skills:", error);
     toast.error("Failed to save skills information");
+  }
+};
+
+const handleSaveProofId = async (data: CandidateFormData) => {
+  try {
+    if (!candidateId || !job.id) {
+      toast.error("Candidate ID or Job ID is missing");
+      return;
+    }
+
+    // Update candidate with proof ID fields
+    const candidateData = {
+      metadata: {
+        uan: data.uan || undefined, // Include UAN
+        pan: data.pan || undefined, // Include PAN
+        pf: data.pf || undefined, // Include PF
+        esicNumber: data.esicNumber || undefined, // Include ESIC Number
+      },
+    };
+
+    await updateCandidate(candidateId, candidateData);
+    toast.success("Proof ID information saved successfully");
+    onCandidateAdded();
+    handleClose();
+  } catch (error) {
+    console.error("Error saving candidate proof ID:", error);
+    toast.error("Failed to save proof ID information");
   }
 };
 // Function to fetch candidate by ID
@@ -241,13 +305,16 @@ const fetchCandidateById = async (id: string) => {
         </SheetHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic-info">Basic Information</TabsTrigger>
             <TabsTrigger 
               value="skills-info" 
               disabled={!candidateId}
             >
               Skill Information
+            </TabsTrigger>
+            <TabsTrigger value="proof-id" disabled={!candidateId}>
+              Proof ID
             </TabsTrigger>
           </TabsList>
           
@@ -267,6 +334,13 @@ const fetchCandidateById = async (id: string) => {
               onCancel={handleClose}
             />
           </TabsContent>
+          <TabsContent value="proof-id">
+            <ProofIdTab
+              form={proofIdForm}
+              onSave={(data) => handleSaveProofId(data)}
+              onCancel={handleClose}
+            />
+          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
@@ -274,3 +348,5 @@ const fetchCandidateById = async (id: string) => {
 };
 
 export default AddCandidateDrawer;
+
+// 

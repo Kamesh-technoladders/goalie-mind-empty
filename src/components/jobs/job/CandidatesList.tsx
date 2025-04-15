@@ -22,7 +22,7 @@ import { StatusSelector } from "./StatusSelector";
 import ValidateResumeButton from "./candidate/ValidateResumeButton";
 import StageProgress from "./candidate/StageProgress";
 import EmptyState from "./candidate/EmptyState";
-import { Pencil, Eye, Download, FileText, Phone, Calendar, User, ChevronLeft, ChevronRight, EyeOff, Copy, Check, PhoneOff, MailOpen, Mail } from "lucide-react";
+import { Pencil, Eye, Download, FileText, Phone, Calendar, User, ChevronLeft, ChevronRight, EyeOff, Copy, Check, PhoneOff, MailOpen, Mail, Contact } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditCandidateDrawer from "@/components/jobs/job/candidate/EditCandidateDrawer";
 import { getJobById } from "@/services/jobService";
@@ -50,6 +50,8 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmployeeProfileDrawer from "@/components/MagicLinkView/EmployeeProfileDrawer";
+import moment from 'moment';
+
 
 interface CandidatesListProps {
   jobId: string;
@@ -121,7 +123,7 @@ const CandidatesList = ({
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // New state to track visibility of contact details
   const [visibleContacts, setVisibleContacts] = useState<{
@@ -193,7 +195,7 @@ const CandidatesList = ({
           education_summary,
           education_enhancement_tips,
           overall_summary,
-          report_url
+          report_url, created_at,
         `)
         .eq("job_id", jobId)
         .eq("candidate_id", candidateId)
@@ -244,6 +246,7 @@ const CandidatesList = ({
           skill_ratings: candidate.skillRatings,
           status: candidate.status || "New",
           currentStage: candidate.main_status?.name || "New",
+          createdAt: candidate.created_at,
          
           hasValidatedResume: candidate.hasValidatedResume || false,
           
@@ -806,125 +809,192 @@ const CandidatesList = ({
   };
 
   // Reusable component for hidden/contact cells
-  const HiddenContactCell = ({
-    value,
-    candidateId,
-    field,
-  }: {
-    value?: string;
-    candidateId: string;
-    field: "Email" | "Phone";
-  }) => {
-    const isVisible = visibleContacts[candidateId]?.[field.toLowerCase() as "email" | "phone"] || false;
-    const [justCopied, setJustCopied] = useState(false);
-
-    const handleCopy = () => {
-      if (value) {
-        copyToClipboard(value, field);
-        setJustCopied(true);
-        setTimeout(() => setJustCopied(false), 2000); // Reset after 2 seconds
+  const HiddenContactCell = ({ email, phone, candidateId }: HiddenContactCellProps) => {
+    const [justCopiedEmail, setJustCopiedEmail] = useState(false);
+    const [justCopiedPhone, setJustCopiedPhone] = useState(false);
+  
+    const copyToClipboard = (value: string, field: "Email" | "Phone") => {
+      navigator.clipboard.writeText(value);
+      if (field === "Email") {
+        setJustCopiedEmail(true);
+        setTimeout(() => setJustCopiedEmail(false), 2000);
+      } else {
+        setJustCopiedPhone(true);
+        setTimeout(() => setJustCopiedPhone(false), 2000);
       }
     };
-
-    if (!value || value === "N/A") {
+  
+    if (!email && !phone) {
       return <TableCell className="text-muted-foreground">N/A</TableCell>;
     }
-
+  
     return (
       <TableCell>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={`View ${field.toLowerCase()}`}
-            >
-              {field.toLowerCase() === "email" ? (
-                <Mail className="h-4 w-4" />
-              ) : (
-                <Phone className="h-4 w-4" />
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="p-2 flex items-center gap-2 w-auto max-w-[90vw] sm:max-w-[300px] bg-background border shadow-sm"
-            side="top"
-            align="center"
-            sideOffset={8}
-            collisionPadding={10}
-          >
-            <span className="text-sm truncate">
-              {value || "N/A"}
-            </span>
-            {value && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                className="h-6 w-6 p-0 flex-shrink-0"
-                aria-label={`Copy ${field}`}
+        <div className="flex items-center gap-2">
+          {email && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="View email"
+                  className="p-0 h-6 w-6"
+                >
+                  <Mail className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="p-2 flex items-center gap-2 w-auto max-w-[90vw] sm:max-w-[300px] bg-background border shadow-sm"
+                side="top"
+                align="center"
+                sideOffset={8}
+                collisionPadding={10}
               >
-                {justCopied ? (
-                  <Check className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-          </PopoverContent>
-        </Popover>
+                <Mail className="h-4 w-4 flex-shrink-0" />
+                <span className="text-sm truncate flex-1">{email}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(email, "Email")}
+                  className="h-6 w-6 p-0 flex-shrink-0"
+                  aria-label="Copy email"
+                >
+                  {justCopiedEmail ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </PopoverContent>
+            </Popover>
+          )}
+          {phone && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="View phone"
+                  className="p-0 h-6 w-6"
+                >
+                  <Phone className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="p-2 flex items-center gap-2 w-auto max-w-[90vw] sm:max-w-[300px] bg-background border shadow-sm"
+                side="top"
+                align="center"
+                sideOffset={8}
+                collisionPadding={10}
+              >
+                <Phone className="h-4 w-4 flex-shrink-0" />
+                <span className="text-sm truncate flex-1">{phone}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(phone, "Phone")}
+                  className="h-6 w-6 p-0 flex-shrink-0"
+                  aria-label="Copy phone"
+                >
+                  {justCopiedPhone ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </PopoverContent>
+            </Popover>
+          )}
+          {!email && !phone && (
+            <span className="text-sm text-muted-foreground">No contact info</span>
+          )}
+        </div>
       </TableCell>
     );
   };
 
   return (
     <>
-     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList1 className="grid grid-cols-7 mb-4">
-          <TabsTrigger1 value="All Candidates" className="relative">
-            All Candidates
-            <span className="absolute top-0 right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {getTabCount("All Candidates")}
-            </span>
-          </TabsTrigger1>
-          <TabsTrigger1 value="Applied" className="relative">
-            Applied
-            <span className="absolute top-0 right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {getTabCount("Applied")}
-            </span>
-          </TabsTrigger1>
-          <TabsTrigger1 value="New" className="relative">
-            New
-            <span className="absolute top-0 right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {getTabCount("New")}
-            </span>
-          </TabsTrigger1>
-          <TabsTrigger1 value="Processed" className="relative">
-            Processed
-            <span className="absolute top-0 right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {getTabCount("Processed")}
-            </span>
-          </TabsTrigger1>
-          <TabsTrigger1 value="Interview" className="relative">
-            Interview
-            <span className="absolute top-0 right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {getTabCount("Interview")}
-            </span>
-          </TabsTrigger1>
-          <TabsTrigger1 value="Offered" className="relative">
-            Offered
-            <span className="absolute top-0 right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {getTabCount("Offered")}
-            </span>
-          </TabsTrigger1>
-          <TabsTrigger1 value="Joined" className="relative">
-            Joined
-            <span className="absolute top-0 right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              {getTabCount("Joined")}
-            </span>
-          </TabsTrigger1>
-        </TabsList1>
-      </Tabs>
+<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+  <TabsList1 className="grid grid-cols-7 mb-4">
+    <TabsTrigger1 value="All Candidates" className="relative">
+      All Candidates
+      <span
+        className={`absolute top-0 right-1 text-xs rounded-full h-4 w-4 flex items-center justify-center ${
+          activeTab === "All Candidates"
+            ? "bg-white purple-text-color"
+            : "bg-purple text-white"
+        }`}
+      >
+        {getTabCount("All Candidates")}
+      </span>
+    </TabsTrigger1>
+    <TabsTrigger1 value="Applied" className="relative">
+      Applied
+      <span
+        className={`absolute top-0 right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+          activeTab === "Applied" ? "bg-white purple-text-color" : "bg-purple text-white"
+        }`}
+      >
+        {getTabCount("Applied")}
+      </span>
+    </TabsTrigger1>
+    <TabsTrigger1 value="New" className="relative">
+      New
+      <span
+        className={`absolute top-0 right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+          activeTab === "New" ? "bg-white purple-text-color" : "bg-purple text-white"
+        }`}
+      >
+        {getTabCount("New")}
+      </span>
+    </TabsTrigger1>
+    <TabsTrigger1 value="Processed" className="relative">
+      Processed
+      <span
+        className={`absolute top-0 right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+          activeTab === "Processed"
+            ? "bg-white purple-text-color"
+            : "bg-purple text-white"
+        }`}
+      >
+        {getTabCount("Processed")}
+      </span>
+    </TabsTrigger1>
+    <TabsTrigger1 value="Interview" className="relative">
+      Interview
+      <span
+        className={`absolute top-0 right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+          activeTab === "Interview"
+            ? "bg-white purple-text-color"
+            : "bg-purple text-white"
+        }`}
+      >
+        {getTabCount("Interview")}
+      </span>
+    </TabsTrigger1>
+    <TabsTrigger1 value="Offered" className="relative">
+      Offered
+      <span
+        className={`absolute top-0 right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+          activeTab === "Offered" ? "bg-white purple-text-color" : "bg-purple text-white"
+        }`}
+      >
+        {getTabCount("Offered")}
+      </span>
+    </TabsTrigger1>
+    <TabsTrigger1 value="Joined" className="relative">
+      Joined
+      <span
+        className={`absolute top-0 right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+          activeTab === "Joined" ? "bg-white purple-text-color" : "bg-purple text-white"
+        }`}
+      >
+        {getTabCount("Joined")}
+      </span>
+    </TabsTrigger1>
+  </TabsList1>
+</Tabs>
 
 
       {filteredCandidates.length === 0 ? (
@@ -962,18 +1032,19 @@ const CandidatesList = ({
     <TableHead className="w-[150px] sm:w-[200px]">Candidate Name</TableHead>
     <TableHead className="w-[100px] sm:w-[150px]">Owner</TableHead>
     <TableHead className="w-[50px] sm:w-[100px]">
-      <span className="flex items-center gap-1">
-        <Mail className="h-3 w-3 sm:h-4 sm:w-4" /> Email
-      </span>
+      {/* <span className="flex items-center gap-1"> */}
+        {/* <Contact className="h-3 w-3 sm:h-4 sm:w-4" /> */}
+         Contact Info
+      {/* </span> */}
     </TableHead>
-    <TableHead className="w-[50px] sm:w-[100px]">
+    {/* <TableHead className="w-[50px] sm:w-[100px]">
       <span className="flex items-center gap-1">
         <Phone className="h-3 w-3 sm:h-4 sm:w-4" /> Phone
       </span>
-    </TableHead>
+    </TableHead> */}
     {!isEmployee && <TableHead className="w-[80px] sm:w-[100px]">Profit</TableHead>}
     <TableHead className="w-[120px] sm:w-[150px]">Stage Progress</TableHead>
-    {!isEmployee && <TableHead className="w-[100px] sm:w-[120px]">Status</TableHead>}
+   <TableHead className="w-[100px] sm:w-[120px]">Status</TableHead>
     <TableHead className="w-[80px] sm:w-[100px]">Validate</TableHead>
     {activeTab === "Applied" && <TableHead className="w-[80px] sm:w-[100px]">Action</TableHead>}
     <TableHead className="w-[50px] sm:w-[60px]">Action</TableHead>
@@ -993,21 +1064,17 @@ const CandidatesList = ({
         >
           <span>{candidate.name}</span>
           <span className="text-xs text-muted-foreground">
-            Applied on {candidate.appliedDate}
-          </span>
+  {moment(candidate.createdAt).format("DD MMM YYYY")} (
+  {moment(candidate.createdAt).fromNow()})
+</span>
         </div>
                 </TableCell>
                 <TableCell>{candidate.owner || candidate.appliedFrom}</TableCell>
                 <HiddenContactCell
-                      value={candidate.email}
-                      candidateId={candidate.id}
-                      field="Email"
-                    />
-                    <HiddenContactCell
-                      value={candidate.phone}
-                      candidateId={candidate.id}
-                      field="Phone"
-                    />
+        email={candidate.email}
+        phone={candidate.phone}
+        candidateId={candidate.id}
+      />
                 {!isEmployee &&  <TableCell>{candidate.profit || "N/A"}</TableCell>}
                 <TableCell>
                   <div className="truncate">
@@ -1018,7 +1085,7 @@ const CandidatesList = ({
                     />
                   </div>
                 </TableCell>
-               {!isEmployee && <TableCell>
+               <TableCell>
                
                   <StatusSelector
                       value={candidate.sub_status_id || ""}
@@ -1027,7 +1094,7 @@ const CandidatesList = ({
                       disableNextStage={candidate.sub_status?.name?.includes('Reject')}
                     />
                
-                </TableCell> }
+                </TableCell> 
                 <TableCell className="px-2">
   <div className="flex items-center gap-2">
     <ValidateResumeButton
@@ -1039,7 +1106,7 @@ const CandidatesList = ({
     />
     {analysisDataAvailable[candidate.id] && (
       <Button
-        variant="ghost1"
+        variant="ghost"
         size="xs"
         onClick={() => fetchAnalysisData(candidate.id)}
         title="View Summary Report"

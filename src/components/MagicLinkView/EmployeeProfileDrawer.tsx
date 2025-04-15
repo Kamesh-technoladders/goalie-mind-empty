@@ -25,10 +25,17 @@ import {
   Building,
   Award,
   MapPinPlus,
-  FileBadge
+  FileBadge,
+  Eye,
+  Download,
+  Banknote,
+  Globe,
+  FileText,
+
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Candidate } from "@/lib/types";
+import { FaLinkedin } from "react-icons/fa";
 
 interface EmployeeProfileDrawerProps {
   open: boolean;
@@ -83,31 +90,49 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
 
   console.log("Candidateshared", candidate)
 
+  // Formated INR
+  const formatINR = (amount: number | string) => {
+    const num = typeof amount === "string" ? parseFloat(amount) : amount;
+    return isNaN(num)
+      ? "N/A"
+      : new Intl.NumberFormat("en-IN", {
+          style: "currency",
+          currency: "INR",
+          maximumFractionDigits: 0,
+        }).format(num);
+  };
+  
+
   // Employee data for normal mode
   const employeeNormal = candidate
-    ? {
-        id: candidate.id || "emp001",
-        name: candidate.name || "Unknown Candidate",
-        role: candidate.metadata?.role || "N/A",
-        department: candidate.metadata?.department || "N/A",
-        joinDate: candidate.appliedDate || "N/A",
-        status: candidate.status || "Applied",
-        tags: candidate.metadata?.tags || ["N/A"],
-        profileImage: candidate.metadata?.profileImage || "/lovable-uploads/placeholder.png",
-        email: candidate.email || "N/A",
-        phone: candidate.phone || "N/A",
-        location: candidate.metadata?.currentLocation || "N/A",
-        skills: normalizeSkills(candidate.skills || candidate.skill_ratings),
-        skillRatings: candidate.skill_ratings || [],
-        experience: candidate.experience || "N/A",
-        relvantExpyears:candidate.metadata?.relevantExperience || "N/A",
-        relvantExpmonths:candidate.metadata?.relevantExperienceMonths || "N/A",
-        preferedLocation: Array.isArray(candidate.metadata?.preferredLocations)
+  ? {
+      id: candidate.id || "emp001",
+      name: candidate.name || "Unknown Candidate",
+      role: candidate.metadata?.role || "N/A",
+      department: candidate.metadata?.department || "N/A",
+      joinDate: candidate.appliedDate || "N/A",
+      status: candidate.status || "Applied",
+      tags: candidate.metadata?.tags || ["N/A"],
+      profileImage: candidate.metadata?.profileImage || "/lovable-uploads/placeholder.png",
+      email: candidate.email || "N/A",
+      phone: candidate.phone || "N/A",
+      location: candidate.metadata?.currentLocation || "N/A",
+      skills: normalizeSkills(candidate.skills || candidate.skill_ratings),
+      skillRatings: candidate.skill_ratings || [],
+      experience: candidate.experience || "N/A",
+      relvantExpyears: candidate.metadata?.relevantExperience || "N/A",
+      relvantExpmonths: candidate.metadata?.relevantExperienceMonths || "N/A",
+      preferedLocation: Array.isArray(candidate.metadata?.preferredLocations)
         ? candidate.metadata.preferredLocations.join(", ")
         : "N/A",
-        resume: candidate.resume || candidate.metadata?.resume_url || "#",
-
-      }
+      resume: candidate.resume || candidate.metadata?.resume_url || "#",
+      currentSalary: candidate.currentSalary || "N/A",
+      expectedSalary: candidate.expectedSalary || "N/A",
+      linkedInId: candidate.metadata?.linkedInId || "N/A",
+      noticePeriod: candidate.metadata?.noticePeriod || "N/A",
+      hasOffers: candidate.metadata?.hasOffers || "N/A",
+      offerDetails: candidate.metadata?.offerDetails || "N/A",
+    }
     : {
         id: "emp001",
         name: "Unknown Candidate",
@@ -141,23 +166,27 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
     location: sharedDataOptions?.contactInfo && candidate.metadata?.currentLocation ? candidate.metadata?.currentLocation : "N/A",
     skills: sharedDataOptions?.personalInfo && candidate?.skills ? normalizeSkills(candidate.skills) : ["N/A"],
     experience: sharedDataOptions?.personalInfo && candidate?.experience ? candidate.experience : "N/A",
-    relvantExpyears: sharedDataOptions?.personalInfo && candidate.metadata?.relevantExperience ? candidate.metadata?.relevantExperience : "N/A",
-    relvantExpmonths: sharedDataOptions?.personalInfo && candidate.metadata?.relevantExperienceMonths ? candidate.metadata?.relevantExperienceMonths : "N/A",
-    preferedLocation:
-    sharedDataOptions?.personalInfo &&
-    Array.isArray(candidate.metadata?.preferredLocations)
+    relvantExpyears: sharedDataOptions?.personalInfo && candidate.metadata?.relevantExperience ? candidate.metadata.relevantExperience : "N/A",
+    relvantExpmonths: sharedDataOptions?.personalInfo && candidate.metadata?.relevantExperienceMonths ? candidate.metadata.relevantExperienceMonths : "N/A",
+    preferedLocation: sharedDataOptions?.personalInfo && Array.isArray(candidate.metadata?.preferredLocations)
       ? candidate.metadata.preferredLocations.join(", ")
       : "N/A",
-      skillRatings: sharedDataOptions?.personalInfo && candidate?.skill_ratings ? candidate.skill_ratings : [], // Added for skill matrix
-      resume: sharedDataOptions?.personalInfo && (candidate?.resume || candidate?.metadata?.resume_url) ? candidate.resume || candidate.metadata.resume_url : "#", // Added for resume buttons
+    skillRatings: sharedDataOptions?.personalInfo && candidate?.skill_ratings ? candidate.skill_ratings : [],
+    resume: sharedDataOptions?.personalInfo && (candidate?.resume || candidate?.metadata?.resume_url) ? candidate.resume || candidate.metadata.resume_url : "#",
+    currentSalary: sharedDataOptions?.personalInfo && (candidate?.currentSalary ? candidate.currentSalary : "N/A"),
+    expectedSalary: sharedDataOptions?.personalInfo && (candidate?.expectedSalary ? candidate.expectedSalary : "N/A"),
+    linkedInId: sharedDataOptions?.contactInfo && candidate.metadata?.linkedInId ? candidate.metadata.linkedInId : "N/A",
+    noticePeriod: sharedDataOptions?.personalInfo && candidate.metadata?.noticePeriod ? candidate.metadata.noticePeriod : "N/A",
+    hasOffers: sharedDataOptions?.personalInfo && candidate.metadata?.hasOffers ? candidate.metadata.hasOffers : "N/A",
+    offerDetails: sharedDataOptions?.personalInfo && candidate.metadata?.offerDetails ? candidate.metadata.offerDetails : "N/A",
   };
 
   const employee = shareMode ? employeeShared : employeeNormal;
 
   // Document verification states for normal mode
   const documentsNormal = {
-    aadhar: {
-      value: candidate?.metadata?.aadhar || "1234-5678-9012",
+    uan: {
+      value: candidate?.metadata?.uan || "N/A",
       isVerifying: false,
       isVerified: false,
       verificationDate: null,
@@ -165,15 +194,15 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
       isEditing: false,
     },
     pan: {
-      value: candidate?.metadata?.pan || "ABCDE1234F",
+      value: candidate?.metadata?.pan || "N/A",
       isVerifying: false,
       isVerified: false,
       verificationDate: null,
       error: null,
       isEditing: false,
     },
-    uan: {
-      value: candidate?.metadata?.uan || "100123456789",
+    pf: {
+      value: candidate?.metadata?.pf || "N/A",
       isVerifying: false,
       isVerified: false,
       verificationDate: null,
@@ -181,7 +210,7 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
       isEditing: false,
     },
     esic: {
-      value: candidate?.metadata?.esic || "3214567890",
+      value: candidate?.metadata?.esicNumber || "N/A",
       isVerifying: false,
       isVerified: false,
       verificationDate: null,
@@ -192,8 +221,8 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
 
   // Documents for shared mode, using candidate data by default
   const documentsShared = {
-    aadhar: {
-      value: sharedDataOptions?.documentsInfo && candidate?.metadata?.aadhar ? candidate.metadata.aadhar : "Restricted",
+    uan: {
+      value: sharedDataOptions?.documentsInfo && candidate?.metadata?.uan ? candidate.metadata.uan : "Restricted",
       isVerifying: false,
       isVerified: false,
       verificationDate: null,
@@ -208,8 +237,8 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
       error: null,
       isEditing: false,
     },
-    uan: {
-      value: sharedDataOptions?.documentsInfo && candidate?.metadata?.uan ? candidate.metadata.uan : "Restricted",
+    pf: {
+      value: sharedDataOptions?.documentsInfo && candidate?.metadata?.pf ? candidate.metadata.pf : "Restricted",
       isVerifying: false,
       isVerified: false,
       verificationDate: null,
@@ -217,7 +246,7 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
       isEditing: false,
     },
     esic: {
-      value: sharedDataOptions?.documentsInfo && candidate?.metadata?.esic ? candidate.metadata.esic : "Restricted",
+      value: sharedDataOptions?.documentsInfo && candidate?.metadata?.esicNumber ? candidate.metadata.esicNumber : "Restricted",
       isVerifying: false,
       isVerified: false,
       verificationDate: null,
@@ -520,7 +549,7 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
             </div>
             {!shareMode && (
               <div className="flex space-x-2">
-                {(!doc.isVerified || doc.error) && (
+                {/* {(!doc.isVerified || doc.error) && (
                   <Button
                     onClick={() => toggleEditing(type)}
                     variant="outline"
@@ -529,7 +558,7 @@ const EmployeeProfileDrawer: React.FC<EmployeeProfileDrawerProps> = ({
                   >
                     {doc.isEditing ? "Save" : "Edit"}
                   </Button>
-                )}
+                )} */}
                 <Button
                   onClick={() => verifyDocument(type)}
                   variant="secondary"
@@ -606,7 +635,7 @@ const renderSkills = () => {
     <>
       <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
         <SheetContent className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl overflow-y-auto bg-gray-50">
-          <SheetHeader className="mb-5 mt-3">
+          <SheetHeader className="mb-5 mt-5">
             <div className="flex items-start justify-between">
               <div>
                 <SheetTitle className="text-2xl text-gray-900">{employee.name}</SheetTitle>
@@ -615,33 +644,40 @@ const renderSkills = () => {
                   <span>Applied: {employee.joinDate}</span>
                 </div>
               </div>
-              <div className="flex space-x-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => window.open(employee.resume, "_blank")} // View resume in new tab
-        className="text-indigo-700 border-indigo-200 hover:bg-indigo-50"
-      >
-        View Resume
-      </Button>
-      <Button
-        variant="default"
-        size="sm"
-        onClick={() => {
-          const link = document.createElement("a");
-          link.href = employee.resume;
-          link.download = `${employee.name}_Resume.pdf`; // Suggest filename
-          link.click();
-          toast({
-            title: "Resume Download Started",
-            description: "The resume is being downloaded.",
-          });
-        }}
-        className="bg-indigo-600 text-white hover:bg-indigo-700"
-      >
-        Download Resume
-      </Button>
-    </div>
+              <div className="flex items-center space-x-3 mt-3">
+              <Button
+  variant="resume"
+  size="sm"
+  className="flex items-center space-x-2 px-3 py-1"
+>
+  <span className="text-sm font-medium">Resume</span>
+  <Separator orientation="vertical" className="h-4 bg-gray-300" />
+  <span
+    onClick={() => window.open(employee.resume, "_blank")} // View resume in new tab
+    className="cursor-pointer hover:text-gray-800"
+    title="View Resume"
+  >
+    <Eye className="w-4 h-4" />
+  </span>
+  <span
+    onClick={() => {
+      const link = document.createElement("a");
+      link.href = employee.resume;
+      link.download = `${employee.name}_Resume.pdf`; // Suggest filename
+      link.click();
+      toast({
+        title: "Resume Download Started",
+        description: "The resume is being downloaded.",
+      });
+    }}
+    className="cursor-pointer hover:text-gray-800"
+    title="Download Resume"
+  >
+    <Download className="w-4 h-4" />
+  </span>
+</Button>
+</div>
+
   </div>
         
 
@@ -651,78 +687,128 @@ const renderSkills = () => {
                   <CardContent className="p-4">
                     <div className="flex flex-col space-y-4">
                     {(!shareMode || sharedDataOptions?.contactInfo) && (
+        <>
+       <div className="flex items-center text-sm space-x-3 w-full">
+  <div className="flex items-center">
+    <Mail className="w-4 h-4 mr-2 text-indigo-500" />
+    <span className="ml-2 text-gray-600">{employee.email}</span>
+    <Button
+      variant="copyicon"
+      size="xs"
+      onClick={() => {
+        navigator.clipboard.writeText(employee.email);
+        toast({
+          title: "Email Copied",
+          description: "Email address copied to clipboard.",
+        });
+      }}
+      className="ml-2 text-indigo-500 hover:text-indigo-700"
+    >
+      <Copy className="w-4 h-4" />
+    </Button>
+  </div>
+
+  <div className="flex items-center">
+    <Phone className="w-4 h-4 mr-2 text-indigo-500" />
+    <span className="ml-2 text-gray-600">{employee.phone}</span>
+    <Button
+      variant="copyicon"
+      size="xs"
+      onClick={() => {
+        navigator.clipboard.writeText(employee.phone);
+        toast({
+          title: "Phone Copied",
+          description: "Phone number copied to clipboard.",
+        });
+      }}
+      className="ml-2 text-indigo-500 hover:text-indigo-700"
+    >
+      <Copy className="w-4 h-4" />
+    </Button>
+  </div>
+
+  {/* LinkedIn Icon at the end */}
+  <div className="flex items-center ml-auto">
+    {employee.linkedInId !== "N/A" ? (
+      <a
+        href={employee.linkedInId}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-indigo-500 hover:text-indigo-700"
+      >
+        <FaLinkedin className="w-6 h-6" />
+      </a>
+    ) : (
+      <FaLinkedin className="w-4 h-4 text-gray-400" />
+    )}
+  </div>
+</div>
+
+        </>
+      )}
+{(!shareMode || sharedDataOptions?.personalInfo) && (
   <>
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex items-center">
-        <Mail className="w-4 h-4 mr-2 text-indigo-500" />
-        <span className="text-gray-600">{employee.email}</span>
-      </div>
-      <Button
-        variant="copyicon"
-        size="xs"
-        onClick={() => {
-          navigator.clipboard.writeText(employee.email);
-          toast({
-            title: "Email Copied",
-            description: "Email address copied to clipboard.",
-          });
-        }}
-        className="text-indigo-500 hover:text-indigo-700"
-      >
-        <Copy className="w-4 h-4" />
-      </Button>
+    <div className="flex items-center text-sm">
+      <FileBadge className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Total Experience</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">{employee.experience}</span>
     </div>
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex items-center">
-        <Phone className="w-4 h-4 mr-2 text-indigo-500" />
-        <span className="text-gray-600">{employee.phone}</span>
-      </div>
-      <Button
-        variant="copyicon"
-        size="xs"
-        onClick={() => {
-          navigator.clipboard.writeText(employee.phone);
-          toast({
-            title: "Phone Copied",
-            description: "Phone number copied to clipboard.",
-          });
-        }}
-        className="text-indigo-500 hover:text-indigo-700"
-      >
-        <Copy className="w-4 h-4" />
-      </Button>
+    <div className="flex items-center text-sm">
+      <Award className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Relevant Experience</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">
+        {employee.relvantExpyears} years and {employee.relvantExpmonths} months
+      </span>
     </div>
+    <div className="flex items-center text-sm">
+      <MapPin className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Current Location</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">{employee.location}</span>
+    </div>
+    <div className="flex items-center text-sm">
+      <MapPinPlus className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Preferred Location</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">{employee.preferedLocation}</span>
+    </div>
+    <div className="flex items-center text-sm">
+      <Banknote className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Current Salary</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">{formatINR(employee.currentSalary)} LPA</span>
+    </div>
+    <div className="flex items-center text-sm">
+      <Banknote className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Expected Salary</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">{formatINR(employee.expectedSalary)} LPA</span>
+    </div>
+
+    <div className="flex items-center text-sm">
+      <Calendar className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Notice Period</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">{employee.noticePeriod} days</span>
+    </div>
+    <div className="flex items-center text-sm">
+      <Briefcase className="w-4 h-4 mr-2 text-indigo-500" />
+      <span className="font-medium text-gray-700">Has Offers</span>
+      <span className="mx-2 text-gray-300">•</span>
+      <span className="text-gray-600">{employee.hasOffers}</span>
+    </div>
+    {employee.hasOffers === "Yes" && (
+      <div className="flex items-center text-sm">
+        <FileText className="w-4 h-4 mr-2 text-indigo-500" />
+        <span className="font-medium text-gray-700">Offer Details</span>
+        <span className="mx-2 text-gray-300">•</span>
+        <span className="text-gray-600">{employee.offerDetails}</span>
+      </div>
+    )}
   </>
 )}
-                      {(!shareMode || sharedDataOptions?.personalInfo) && (
-                        <>
-                          <div className="flex items-center text-sm">
-                            <FileBadge className="w-4 h-4 mr-2 text-indigo-500" />
-                            <span className="font-medium text-gray-700">Total Experience</span>
-                            <span className="mx-2 text-gray-300">•</span>
-                            <span className="text-gray-600">{employee.experience}</span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <Award className="w-4 h-4 mr-2 text-indigo-500" />
-                            <span className="font-medium text-gray-700">Relevant Experience</span>
-                            <span className="mx-2 text-gray-300">•</span>
-                            <span className="text-gray-600">{employee.relvantExpyears} years and {employee.relvantExpmonths} months</span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <MapPin className="w-4 h-4 mr-2 text-indigo-500" />
-                            <span className="font-medium text-gray-700">Current Location</span>
-                            <span className="mx-2 text-gray-300">•</span>
-                            <span className="text-gray-600">{employee.location}</span>
-              
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <MapPinPlus className="w-4 h-4 mr-2 text-indigo-500" />
-                            <span className="font-medium text-gray-700">Prefered Location</span>
-                            <span className="mx-2 text-gray-300">•</span>
-                            <span className="text-gray-600">{employee.preferedLocation}</span>
-                          </div>
-                        </>
-                      )}
                       
                     </div>
                   </CardContent>
@@ -822,9 +908,9 @@ const renderSkills = () => {
               <TabsContent value="documents">
                 <div className="space-y-2">
                   <h3 className="text-sm font-medium mb-4">Verification Documents</h3>
-                  {renderDocumentRow("aadhar", "Aadhar Number")}
-                  {renderDocumentRow("pan", "PAN Number")}
                   {renderDocumentRow("uan", "UAN Number")}
+                  {renderDocumentRow("pan", "PAN Number")}
+                  {renderDocumentRow("pf", "PF Number")}
                   {renderDocumentRow("esic", "ESIC Number")}
                 </div>
               </TabsContent>

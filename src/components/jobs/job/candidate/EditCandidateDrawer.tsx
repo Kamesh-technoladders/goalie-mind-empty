@@ -23,6 +23,8 @@ import { useSelector } from "react-redux";
 import { supabase } from "@/integrations/supabase/client";
 import { getJobById } from "@/services/jobService";
 import { useQuery } from "@tanstack/react-query";
+import ProofIdTab from "./ProofIdTab";
+
 
 interface AddCandidateDrawerProps {
   job: JobData;
@@ -52,6 +54,15 @@ export type CandidateFormData = {
   location?: string;
   expectedSalary?: number; // Made optional
   currentSalary?: number; // Made optional
+  noticePeriod?: number; // Add Notice Period (in days)
+  lastWorkingDay?: string; // Add Last Working Day (date string, e.g., "2025-05-30")
+  uan?: string; // Add UAN (optional)
+  pan?: string; // Add PAN (optional)
+  pf?: string; // Add PF (optional)
+  esicNumber?: string; // Add ESIC Number (optional)
+  linkedInId?: string; // Added
+  hasOffers?: "Yes" | "No"; // Added
+  offerDetails?: string; // Added
 };
 
 const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChange }: AddCandidateDrawerProps) => {
@@ -90,9 +101,13 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
       relevantExperienceMonths: undefined,
       currentSalary: undefined,
       expectedSalary: undefined,
+      linkedInId: "",
+      hasOffers: undefined,
+      offerDetails: "",
       resume: null,
-      skills: []
-    }
+      skills: [],
+
+    },
   });
 
   const skillsForm = useForm<CandidateFormData>({
@@ -100,6 +115,15 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
       skills: jobs?.skills?.map(skill => ({ name: skill, rating: 3 })) || []
     }
   });
+
+    const proofIdForm = useForm<CandidateFormData>({
+      defaultValues: {
+        uan: candidate?.metadata?.uan || "",
+        pan: candidate?.metadata?.pan || "",
+        pf: candidate?.metadata?.pf || "",
+        esicNumber: candidate?.metadata?.esicNumber || "",
+      },
+    });
 
   useEffect(() => {
     if (candidate && isEditMode) {
@@ -118,7 +142,13 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
         currentSalary: candidate.currentSalary ?? candidate.metadata?.currentSalary,
         expectedSalary: candidate.expectedSalary ?? candidate.metadata?.expectedSalary,
         resume: candidate.resume || null,
-        skills: candidate.skillRatings || candidate.skills || []
+        skills: candidate.skillRatings || candidate.skills || [],
+        noticePeriod: candidate?.metadata?.noticePeriod || "",
+        lastWorkingDay: candidate?.metadata?.lastWorkingDay || "", 
+        linkedInId: candidate.metadata?.linkedInId || "",
+        hasOffers: candidate.metadata?.hasOffers,
+        offerDetails: candidate.metadata?.offerDetails || "",
+        
       });
 
       // Populate skills form with candidate skills or job skills as fallback
@@ -184,6 +214,15 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
           currentSalary: data.currentSalary,
           expectedSalary: data.expectedSalary,
           resume_url: data.resume,
+          noticePeriod: data.noticePeriod, // Add Notice Period
+        lastWorkingDay: data.lastWorkingDay,
+        linkedInId: data.linkedInId,
+          hasOffers: data.hasOffers,
+          offerDetails: data.offerDetails,
+        uan: data.uan || undefined, // Include UAN
+          pan: data.pan || undefined, // Include PAN
+          pf: data.pf || undefined, // Include PF
+          esicNumber: data.esicNumber || undefined, // Include ESIC Number
         },
         skillRatings: skillsForm.getValues().skills || [],
         progress: candidate?.progress || {
@@ -248,6 +287,12 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
           currentSalary: basicInfoData.currentSalary,
           expectedSalary: basicInfoData.expectedSalary,
           resume_url: basicInfoData.resume,
+          noticePeriod: basicInfoData.noticePeriod,
+        lastWorkingDay: basicInfoData.lastWorkingDay,
+        linkedInId: basicInfoData.linkedInId,
+          hasOffers: basicInfoData.hasOffers,
+          offerDetails: basicInfoData.offerDetails,
+
         },
         skillRatings: data.skills,
         progress: candidate?.progress || {
@@ -268,41 +313,73 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
         toast.success("Candidate created successfully");
       }
 
-      onCandidateAdded();
-      handleClose();
+      setActiveTab("proof-id");
     } catch (error) {
       console.error("Error saving candidate skills:", error);
       toast.error("Failed to save skills information");
     }
   };
 
+  const handleSaveProofId = async (data: CandidateFormData) => {
+    try {
+      if (!candidateId || !job.id) {
+        toast.error("Candidate ID or Job ID is missing");
+        return;
+      }
+  
+      // Update candidate with proof ID fields
+      const candidateData = {
+        metadata: {
+          uan: data.uan || undefined, // Include UAN
+          pan: data.pan || undefined, // Include PAN
+          pf: data.pf || undefined, // Include PF
+          esicNumber: data.esicNumber || undefined, // Include ESIC Number
+        },
+      };
+  
+      await updateCandidate(candidateId, candidateData);
+      toast.success("Proof ID information saved successfully");
+      onCandidateAdded();
+      handleClose();
+    } catch (error) {
+      console.error("Error saving candidate proof ID:", error);
+      toast.error("Failed to save proof ID information");
+    }
+  };
+
   return (
     <Sheet open={controlledOpen} onOpenChange={controlledOnOpenChange}>
-      <SheetTrigger asChild>
+      {/* <SheetTrigger asChild>
         <Button 
           id={isEditMode ? "edit-candidate-btn" : "add-candidate-btn"} 
           onClick={() => controlledOnOpenChange(true)}
         >
           {isEditMode ? "Edit Candidate" : "Add Candidate"}
         </Button>
-      </SheetTrigger>
+      </SheetTrigger> */}
       <SheetContent className="w-full sm:max-w-md md:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-6">
           <SheetTitle>{isEditMode ? "Edit Candidate" : "Add New Candidate"}</SheetTitle>
         </SheetHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic-info">Basic Information</TabsTrigger>
-            <TabsTrigger value="skills-info">
+            <TabsTrigger 
+              value="skills-info" 
+              disabled={!candidateId}
+            >
               Skill Information
+            </TabsTrigger>
+            <TabsTrigger value="proof-id" disabled={!candidateId}>
+              Proof ID
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="basic-info">
             <BasicInformationTab 
               form={basicInfoForm} 
-              onSaveAndNext={handleSaveBasicInfo}
+              onSaveAndNext={(data) => handleSaveBasicInfo(data)}
               onCancel={handleClose}
             />
           </TabsContent>
@@ -310,8 +387,15 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
           <TabsContent value="skills-info">
             <SkillInformationTab 
               form={skillsForm}
-              jobSkills={jobs?.skills || []}
-              onSave={handleSaveSkills}
+              jobSkills={job.skills || []}
+              onSave={(data) => handleSaveSkills(data)}
+              onCancel={handleClose}
+            />
+          </TabsContent>
+          <TabsContent value="proof-id">
+            <ProofIdTab
+              form={proofIdForm}
+              onSave={(data) => handleSaveProofId(data)}
               onCancel={handleClose}
             />
           </TabsContent>
@@ -322,3 +406,5 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
 };
 
 export default AddCandidateDrawer;
+
+// 

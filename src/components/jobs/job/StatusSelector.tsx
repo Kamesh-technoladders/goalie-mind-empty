@@ -112,20 +112,20 @@ export const StatusSelector: React.FC<StatusSelectorProps> = ({
   
     // New -> Processed (Internal)
     if (selectedMainStatus.name === 'New' && mainStatus.name === 'Processed') {
-      return mainStatus.subStatuses.filter(s => s.name === 'Process (Internal)');
+      return mainStatus.subStatuses.filter(s => s.name === 'Processed (Internal)');
     }
   
     // Process (Internal) -> Process (Client), Duplicate (Internal), or Reject
-    if (selectedSubStatus?.name === 'Process (Internal)' && mainStatus.name === 'Processed') {
+    if (selectedSubStatus?.name === 'Processed (Internal)' && mainStatus.name === 'Processed') {
       return mainStatus.subStatuses.filter(s => 
-        s.name === 'Process (Client)' || 
+        s.name === 'Processed (Client)' || 
         s.name === 'Duplicate (Internal)' || 
         s.name === 'Internal Reject' // Explicitly specify allowed reject
       );
     }
   
     // Process (Client) -> Duplicate (Client), Reject, or Interview Technical Assessment
-    if (selectedSubStatus?.name === 'Process (Client)') {
+    if (selectedSubStatus?.name === 'Processed (Client)') {
       if (mainStatus.name === 'Processed') {
         return mainStatus.subStatuses.filter(s => 
           s.name === 'Duplicate (Client)' || 
@@ -187,7 +187,7 @@ export const StatusSelector: React.FC<StatusSelectorProps> = ({
     if (selectedSubStatus?.name === 'End Client Round' && mainStatus.name === 'Offered') {
       return mainStatus.subStatuses.filter(s => 
         s.name === 'Offer Issued' || 
-        s.name === 'On Hold'
+        s.name === 'Offer On Hold'
       );
     }
   
@@ -231,13 +231,13 @@ export const StatusSelector: React.FC<StatusSelectorProps> = ({
   return (
     <Select value={value} onValueChange={handleStatusChange}>
     <SelectTrigger 
-      className={`${className} w-48`} 
+      className={`${className} text-left`} 
       style={getStatusStyle()}
     >
       {/* Display the current main status and sub-status */}
       <SelectValue>
         {selectedMainStatus && selectedSubStatus 
-          ? `${selectedMainStatus.name}: ${selectedSubStatus.name}`
+          ? `${selectedSubStatus.name}`
           : "Select status"}
       </SelectValue>
     </SelectTrigger>

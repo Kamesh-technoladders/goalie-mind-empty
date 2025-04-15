@@ -24,9 +24,12 @@ const SkillRatingItem = ({
       <div className="flex flex-col mb-2 sm:mb-0">
         <div className="flex items-center">
           <span className="font-medium mr-2">{skill}</span>
-          {isJobSkill && (
+          {/* {isJobSkill && (
             <Badge variant="outline" className="text-xs">Job Skill</Badge>
           )}
+            {!isJobSkill && (
+            <Badge variant="outline" className="text-xs">Added Skill</Badge>
+          )} */}
         </div>
       </div>
       

@@ -508,7 +508,8 @@ const AssignedToCell = ({ assignedTo }: { assignedTo: { id: string; name: string
   </div>
 </td>
 <td className="table-cell">{job.createdBy?.first_name} {job.createdBy?.last_name}</td>
-                  <td className="table-cell">{job.postedDate} ({daysSinceCreated(job.postedDate)})</td>
+                  <td className="table-cell">{moment(job.createdAt).format("DD MMM YYYY")} (
+                    {moment(job.createdAt).fromNow()})</td>
                   {/* <td className="table-cell">
                     <Badge
                       variant="outline"

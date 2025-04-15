@@ -21,9 +21,14 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         copyicon:
         " text-secondary-foreground hover:bg-secondary hover:purple-text-color",
+        resume:
+        "purple-gradient text-white cursor-default",
+        outline1:
+          "bg-gray-600 text-primary-foreground hover:bg-transparent hover:text-gray-600",
       },
       size: {
         default: "h-10 px-4 py-2",
+        xxs:"h-6 rounded-md px-2",
         xs:"h-6 rounded-md px-3",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
