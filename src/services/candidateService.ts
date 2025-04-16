@@ -428,6 +428,20 @@ export const createCandidate = async (jobId: string, candidate: CandidateData): 
       throw error;
     }
 
+    // Record the status change in hr_status_change_counts
+    const statusUpdateSuccess = await updateCandidateStatusCounts(
+      data.id, // Candidate ID from the inserted record
+      jobId,
+      mainStatus.id,
+      subStatus.id,
+      candidate.createdBy // Optional: user ID who created the candidate
+    );
+
+    if (!statusUpdateSuccess) {
+      console.warn("Warning: Failed to update status change counts for candidate:", data.id);
+      // Decide whether to throw an error or continue based on your requirements
+    }
+
     return mapDbCandidateToData(data as HrJobCandidate);
   } catch (error) {
     console.error(`Failed to create candidate for job ${jobId}:`, error);
