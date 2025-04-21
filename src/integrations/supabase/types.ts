@@ -2562,6 +2562,33 @@ export type Database = {
         }
         Relationships: []
       }
+      shares: {
+        Row: {
+          id: string;
+          share_id: string;
+          expiry_date: number;
+          data_options: Json;
+          candidate: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          share_id: string;
+          expiry_date: number;
+          data_options: Json;
+          candidate: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          share_id?: string;
+          expiry_date?: number;
+          data_options?: Json;
+          candidate?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      }
     }
     Views: {
       [_ in never]: never

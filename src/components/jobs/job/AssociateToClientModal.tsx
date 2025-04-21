@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,6 +40,15 @@ interface ClientProject {
   client_id: string;
 }
 
+interface Contact {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  designation: string | null;
+  client_id: string;
+}
+
 const AssociateToClientModal = ({ 
   isOpen, 
   onClose, 
@@ -51,10 +59,12 @@ const AssociateToClientModal = ({
   const [budgetType, setBudgetType] = useState<string>("LPA");
   const [budget, setBudget] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedContact, setSelectedContact] = useState<string>("");
   const [isInternPaid, setIsInternPaid] = useState<string>("Paid");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Fetch clients with service type "Contractual"
+  const isInitialMount = useRef(true);
+
+  // Fetch clients with service type "Contractual" or "Permanent"
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-permanent-contractual'],
     queryFn: async () => {
@@ -90,7 +100,65 @@ const AssociateToClientModal = ({
     enabled: !!selectedClient,
   });
   
-  // Set budget type based on hiring mode when component mounts or hiring mode changes
+  // Fetch contacts for selected client
+  const { data: contacts = [], refetch: refetchContacts } = useQuery({
+    queryKey: ['client-contacts', selectedClient],
+    queryFn: async () => {
+      if (!selectedClient) return [];
+      
+      const { data, error } = await supabase
+        .from('hr_client_contacts')
+        .select('id, name, email, phone, designation, client_id')
+        .eq('client_id', selectedClient);
+      
+      if (error) throw error;
+      return data as Contact[];
+    },
+    enabled: !!selectedClient,
+  });
+  
+  // Initialize form with existing client details only on modal open
+  useEffect(() => {
+    if (isOpen && isInitialMount.current) {
+      if (job.clientDetails?.clientName) {
+        const client = clients.find(c => c.client_name === job.clientDetails.clientName);
+        if (client) {
+          setSelectedClient(client.id);
+          
+          // Parse budget
+          if (job.clientDetails.clientBudget) {
+            const [amount, type] = job.clientDetails.clientBudget.split(' ');
+            setBudget(amount || '');
+            setBudgetType(type || 'LPA');
+          }
+          
+          // Set project
+          setSelectedProject(job.clientProjectId || '');
+        }
+      }
+      isInitialMount.current = false;
+    }
+    
+    // Reset flag when modal closes
+    if (!isOpen) {
+      isInitialMount.current = true;
+      setSelectedClient('');
+      setBudget('');
+      setBudgetType('LPA');
+      setSelectedProject('');
+      setSelectedContact('');
+    }
+  }, [isOpen, job.clientDetails, clients, job.clientProjectId]);
+  
+  // Set contact after contacts are loaded
+  useEffect(() => {
+    if (selectedClient && contacts.length > 0 && job.clientDetails?.pointOfContact) {
+      const contact = contacts.find(c => c.name === job.clientDetails.pointOfContact);
+      setSelectedContact(contact ? contact.id : '');
+    }
+  }, [contacts, selectedClient, job.clientDetails]);
+  
+  // Set budget type based on hiring mode
   useEffect(() => {
     if (job.hiringMode === "Full Time" || job.hiringMode === "Permanent") {
       setBudgetType("LPA");
@@ -101,13 +169,15 @@ const AssociateToClientModal = ({
     }
   }, [job.hiringMode, isInternPaid]);
   
-  // Reset selected project when client changes
+  // Reset dependent fields when client changes
   useEffect(() => {
     setSelectedProject("");
+    setSelectedContact("");
     if (selectedClient) {
       refetchProjects();
+      refetchContacts();
     }
-  }, [selectedClient, refetchProjects]);
+  }, [selectedClient, refetchProjects, refetchContacts]);
   
   const handleClientChange = (clientId: string) => {
     setSelectedClient(clientId);
@@ -135,6 +205,9 @@ const AssociateToClientModal = ({
         return;
       }
       
+      // Get selected contact details
+      const contact = contacts.find(c => c.id === selectedContact);
+      
       // Create updated job object
       const updatedJob: JobData = {
         ...job,
@@ -143,7 +216,8 @@ const AssociateToClientModal = ({
         clientDetails: {
           ...job.clientDetails,
           clientName: client.client_name,
-          clientBudget: budgetType === "Unpaid" ? "Unpaid" : `${budget} ${budgetType}`
+          clientBudget: budgetType === "Unpaid" ? "Unpaid" : `${budget} ${budgetType}`,
+          pointOfContact: contact ? contact.name : ''
         },
         clientProjectId: selectedProject || undefined
       };
@@ -187,20 +261,20 @@ const AssociateToClientModal = ({
           <div className="space-y-2">
             <Label htmlFor="client">Select Client <span className="text-red-500">*</span></Label>
             <Select
-  value={selectedClient}
-  onValueChange={handleClientChange}
->
-  <SelectTrigger id="client">
-    <SelectValue placeholder="Select a client" />
-  </SelectTrigger>
-  <SelectContent>
-    {filteredClients.map(client => (
-      <SelectItem key={client.id} value={client.id}>
-        {client.client_name}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+              value={selectedClient}
+              onValueChange={handleClientChange}
+            >
+              <SelectTrigger id="client">
+                <SelectValue placeholder="Select a client" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredClients.map(client => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.client_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           {job.hiringMode === "Intern" && (
@@ -251,27 +325,51 @@ const AssociateToClientModal = ({
           )}
           
           {selectedClient && (
-            <div className="space-y-2">
-              <Label htmlFor="project">Client Project (Optional)</Label>
-              <Select
-                value={selectedProject}
-                onValueChange={setSelectedProject}
-              >
-                <SelectTrigger id="project">
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                Select an existing project or leave blank
-              </p>
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="project">Client Project (Optional)</Label>
+                <Select
+                  value={selectedProject}
+                  onValueChange={setSelectedProject}
+                >
+                  <SelectTrigger id="project">
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map(project => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  Select an existing project or leave blank
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="contact">SPOC Contact (Optional)</Label>
+                <Select
+                  value={selectedContact}
+                  onValueChange={setSelectedContact}
+                >
+                  <SelectTrigger id="contact">
+                    <SelectValue placeholder="Select a contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.map(contact => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.name}{contact.email ? ` (${contact.email})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  Select a contact person or leave blank
+                </p>
+              </div>
+            </>
           )}
         </div>
         

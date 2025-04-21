@@ -31,6 +31,7 @@ import CareerJobApplication from "./pages/careerPage/JobApplication";
 import StatusSettings from "./pages/jobs/StatusSettings";
 import ResumeAnalysisDetailView from "./pages/jobs/ResumeAnalysisDetailView";
 import SharedProfile from "./pages/jobs/SharedProfile"
+import ReportsPage from "./pages/reports/Index";
 
 function App() {
   return (
@@ -96,6 +97,10 @@ function App() {
             <Route path="/jobs/:id/description" element={<JobDescription />} />
             <Route path="/jobs/edit/:id" element={<JobDescription />} />
             <Route path="/jobstatuses" element={<StatusSettings />} />
+
+
+                        {/* Reports */}
+        <Route path="/reports" element={<ReportsPage />} />
           </Route>
         </Route>
       </Routes>

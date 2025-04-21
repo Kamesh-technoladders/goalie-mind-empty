@@ -4,6 +4,7 @@ import { SiAwsorganizations } from "react-icons/si";
 import { MdDashboardCustomize, MdOutlineManageAccounts, MdOutlineEmojiPeople} from "react-icons/md";
 import { ImProfile } from "react-icons/im";
 import { GoGoal } from "react-icons/go";
+import { AiOutlineProfile } from "react-icons/ai";
 
 
 const menuItemsByRole = {
@@ -20,6 +21,7 @@ const menuItemsByRole = {
     { icon: GoGoal, label: "Goals", path: "/goals" },
     { icon: ImProfile, label: "My Profile", path: "/profile" },
     { icon: MdOutlineManageAccounts, label: "User Management", path: "/user-management" },
+    { icon: AiOutlineProfile, label: "Reports", path: "/reports" },
     { icon: FiSettings, label: "Settings", path: "#" },
   ],
   admin: [

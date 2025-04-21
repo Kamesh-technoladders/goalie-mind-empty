@@ -168,73 +168,53 @@ export interface JobData {
   hr_budget_type?: string;     
 }
 
+// src/lib/types.ts
 export interface Candidate {
   id: string;
   name: string;
-  status: CandidateStatus | "New" | "InReview" | "Engaged" | "Available" | "Offered" | "Hired" | "Rejected";
-  
-  contact?: {
-    email: string;
-    phone: string;
-    emailVisible: boolean;
-    phoneVisible: boolean;
-  };
-  
-  resume?: {
-    url: string;
-    filename: string;
-    size: number;
-    uploadDate: string;
-  } | null;
-  
-  resumeAnalysis?: {
-    score: number;
-    status?: 'analyzed' | 'pending' | 'failed' | 'not_uploaded' | 'processing';
-    details?: any;
-  };
-  
-  progress?: Progress;
-  
-  main_status_id?: string;
-  sub_status_id?: string;
-  main_status?: Partial<MainStatus> | null;
-  sub_status?: Partial<SubStatus> | null;
-
-  totalExperience?: { years: number; months: number };
-  relevantExperience?: { years: number; months: number };
-  
-  currentSalary?: number | string;
-  expectedSalary?: number | string;
-  noticePeriod?: string;
-
-  skills: Array<{ name: string; rating: number }> | string[];
-  
+  experience: string;
+  matchScore: number;
   appliedDate: string;
   appliedFrom?: string;
-  location?: string;
-
-  metadata?: {
-    currentLocation?: string;
-    preferredLocations?: string[];
-    totalExperience?: string | number;
-    relevantExperience?: string | number;
-    currentSalary?: string | number;
-    expectedSalary?: string | number;
-    resume_url?: string;
-    relevantExperienceMonths?: string;
-  };
-
-  skill_ratings?: Array<{ name: string; rating: number }>;
+  createdAt?: string;
+  currentSalary?: number;
   currentStage?: string;
-  completedStages?: string[];
+  email?: string;
+  expectedSalary?: number;
   hasValidatedResume?: boolean;
-  email?: string
-  phone?: string
-  profit?: ReactNode;
-  organization?: string;
-  updatedBy?: string;
+  location?: string;
+  main_status?: { id: string; name: string; type: string; color: string; parent_id: string | null };
+  main_status_id?: string;
+  metadata?: {
+    pf?: string | null;
+    pan?: string | null;
+    uan?: string | null;
+    hasOffers?: string;
+    esicNumber?: string | null;
+    role?: string;
+    department?: string;
+    currentLocation?: string;
+    relevantExperience?: string;
+    relevantExperienceMonths?: string;
+    preferredLocations?: string[];
+    resume_url?: string;
+    linkedInId?: string;
+    noticePeriod?: string;
+    offerDetails?: string;
+    tags?: string[];
+    profileImage?: string;
+    manager?: string;
+    hr?: string;
+    team?: string;
+  };
+  phone?: string;
+  resume?: string;
+  skill_ratings?: { name: string; rating: number }[];
+  skills?: { name: string }[];
+  status?: string;
+  sub_status?: { id: string; name: string; type: string; color: string; parent_id: string };
+  sub_status_id?: string;
 }
-
 
 export enum CandidateStatus {
   Screening = "Screening",

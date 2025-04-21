@@ -51,6 +51,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmployeeProfileDrawer from "@/components/MagicLinkView/EmployeeProfileDrawer";
 import moment from 'moment';
+import { getRoundNameFromResult } from "@/utils/statusTransitionHelper";
 
 
 interface CandidatesListProps {
@@ -331,62 +332,88 @@ const CandidatesList = ({
       setCurrentCandidateId(candidate.id);
       setCurrentSubStatusId(value);
 
-      import('@/utils/statusTransitionHelper').then(module => {
-        const interactionType = module.getRequiredInteractionType(oldSubStatusName, newSubStatus.name);
-        
-        if (interactionType === 'interview-schedule') {
-          const roundName = module.getInterviewRoundName(newSubStatus.name);
+      const { getRequiredInteractionType, getInterviewRoundName } = await import('@/utils/statusTransitionHelper');
+      const interactionType = getRequiredInteractionType(oldSubStatusName, newSubStatus.name); // Fixed: Use newSubStatus.name
+      
+      if (interactionType === 'interview-schedule' || interactionType === 'reschedule') {
+        const roundName = getInterviewRoundName(newSubStatus.name);
+        setCurrentRound(roundName);
+        setNeedsReschedule(interactionType === 'reschedule');
+
+        // Load existing interview details for the round
+        const { data: interviews, error } = await supabase
+          .from('hr_candidate_interviews')
+          .select('*')
+          .eq('candidate_id', candidate.id)
+          .eq('interview_round', roundName)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (error) {
+          console.error("Error fetching interview:", error);
+          toast.error("Failed to load interview details");
+          return;
+        }
+
+        if (interviews && interviews.length > 0) {
+          const interview = interviews[0];
+          setInterviewDate(interview.interview_date || '');
+          setInterviewTime(interview.interview_time || '');
+          setInterviewLocation(interview.location || 'Virtual');
+          setInterviewType(interview.interview_type || 'Technical');
+          setInterviewerName(interview.interviewers?.[0]?.name || '');
+        } else {
+          // Reset fields for new scheduling
+          setInterviewDate('');
+          setInterviewTime('');
+          setInterviewLocation('Virtual');
+          setInterviewType('Technical');
+          setInterviewerName('');
+        }
+
+        setShowInterviewModal(true);
+        return;
+      }
+      
+      if (interactionType === 'interview-feedback') {
+        const roundName = getRoundNameFromResult(newSubStatus.name);
+        if (roundName) {
           setCurrentRound(roundName);
-          setShowInterviewModal(true);
+          setInterviewResult(newSubStatus.name.includes('Selected') ? 'selected' : 'rejected');
+          setShowInterviewFeedbackModal(true);
           return;
         }
-        
-        if (interactionType === 'reschedule') {
-          setNeedsReschedule(true);
-          setCurrentRound(candidate.round || '');
-          setShowInterviewModal(true);
-          return;
-        }
-        
-        if (interactionType === 'interview-feedback') {
-          const roundName = module.getRoundNameFromResult(newSubStatus.name);
-          if (roundName) {
-            setCurrentRound(roundName);
-            setInterviewResult(newSubStatus.name.includes('Selected') ? 'selected' : 'rejected');
-            setShowInterviewFeedbackModal(true);
-            return;
-          }
-        }
-        
-        if (interactionType === 'joining') {
-          setShowJoiningModal(true);
-          return;
-        }
-        
-        if (interactionType === 'reject') {
-          setShowRejectModal(true);
-          return;
-        }
-        
-        updateCandidateStatus(candidate.id, value, user?.id)
-          .then(success => {
-            if (success) {
-              toast.success("Status updated successfully");
-              onRefresh();
-            } else {
-              toast.error("Failed to update status");
-            }
-          })
-          .catch(error => {
-            console.error("Error updating status:", error);
+      }
+      
+      if (interactionType === 'joining') {
+        setShowJoiningModal(true);
+        return;
+      }
+      
+      if (interactionType === 'reject') {
+        setShowRejectModal(true);
+        return;
+      }
+      
+      updateCandidateStatus(candidate.id, value, user?.id)
+        .then(success => {
+          if (success) {
+            toast.success("Status updated successfully");
+            onRefresh();
+          } else {
             toast.error("Failed to update status");
-          });
-      });
+          }
+        })
+        .catch(error => {
+          console.error("Error updating status:", error);
+          toast.error("Failed to update status");
+        });
     } catch (error) {
       console.error("Error in handleStatusChange:", error);
       toast.error("Failed to update status");
     }
   };
+
 
   const handleValidateResume = async (candidateId: number) => {
     try {
@@ -503,7 +530,7 @@ const CandidatesList = ({
 
   
   const handleInterviewSubmit = async () => {
-    if (!currentCandidateId || !currentSubStatusId) return;
+    if (!currentCandidateId || !currentSubStatusId || !currentRound) return;
     
     const interviewData = {
       interview_date: interviewDate,
@@ -515,29 +542,62 @@ const CandidatesList = ({
     };
     
     try {
-      const { data, error } = await supabase.from('hr_candidate_interviews').insert({
-        candidate_id: currentCandidateId,
-        interview_date: interviewDate,
-        interview_time: interviewTime,
-        location: interviewLocation,
-        interview_type: interviewType,
-        interview_round: currentRound,
-        interviewers: [{ name: interviewerName }],
-        status: 'scheduled',
-        created_by: user.id
-      });
+      // Check if an interview exists for this round
+      const { data: existingInterviews, error: fetchError } = await supabase
+        .from('hr_candidate_interviews')
+        .select('*')
+        .eq('candidate_id', currentCandidateId)
+        .eq('interview_round', currentRound)
+        .order('created_at', { ascending: false })
+        .limit(1);
       
-      if (error) throw error;
+      if (fetchError) throw fetchError;
+
+      if (needsReschedule && existingInterviews && existingInterviews.length > 0) {
+        // Update existing interview
+        const { error } = await supabase
+          .from('hr_candidate_interviews')
+          .update({
+            interview_date: interviewDate,
+            interview_time: interviewTime,
+            location: interviewLocation,
+            interview_type: interviewType,
+            interviewers: [{ name: interviewerName }],
+            status: 'scheduled',
+            updated_by: user.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingInterviews[0].id);
+          
+        if (error) throw error;
+      } else {
+        // Insert new interview
+        const { error } = await supabase
+          .from('hr_candidate_interviews')
+          .insert({
+            candidate_id: currentCandidateId,
+            interview_date: interviewDate,
+            interview_time: interviewTime,
+            location: interviewLocation,
+            interview_type: interviewType,
+            interview_round: currentRound,
+            interviewers: [{ name: interviewerName }],
+            status: 'scheduled',
+            created_by: user.id
+          });
+          
+        if (error) throw error;
+      }
       
       await updateCandidateStatus(currentCandidateId, currentSubStatusId, user.id, interviewData);
       
       setShowInterviewModal(false);
       resetInterviewForm();
       await onRefresh();
-      toast.success("Interview scheduled successfully");
+      toast.success(needsReschedule ? "Interview rescheduled successfully" : "Interview scheduled successfully");
     } catch (error) {
-      console.error("Error scheduling interview:", error);
-      toast.error("Failed to schedule interview");
+      console.error("Error scheduling/rescheduling interview:", error);
+      toast.error("Failed to schedule/reschedule interview");
     }
   };
 
@@ -560,6 +620,8 @@ const CandidatesList = ({
       
     if (interviewError) {
       console.error("Error fetching interview:", interviewError);
+      toast.error("Failed to fetch interview details");
+      return;
     }
     
     if (interviews && interviews.length > 0) {
@@ -578,6 +640,8 @@ const CandidatesList = ({
         
       if (error) {
         console.error("Error updating interview:", error);
+        toast.error("Failed to update interview feedback");
+        return;
       }
     }
     
@@ -589,6 +653,8 @@ const CandidatesList = ({
     await onRefresh();
     toast.success("Interview feedback saved");
   };
+
+
 
   const handleJoiningSubmit = async () => {
     if (!currentCandidateId || !currentSubStatusId) return;
@@ -1235,80 +1301,81 @@ const CandidatesList = ({
        candidate={selectedDrawerCandidate}
       />
 
-      <Dialog open={showInterviewModal} onOpenChange={setShowInterviewModal}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{needsReschedule ? 'Reschedule' : 'Schedule'} {currentRound} Interview</DialogTitle>
-          <DialogDescription>
-            Enter the details for the interview session.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right" htmlFor="date">Date</Label>
-            <input 
-              id="date" 
-              type="date" 
-              value={interviewDate} 
-              onChange={e => setInterviewDate(e.target.value)} 
-              className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-              required
-            />
+  {/* Interview Scheduling/Rescheduling Dialog */}
+  <Dialog open={showInterviewModal} onOpenChange={setShowInterviewModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{needsReschedule ? 'Reschedule' : 'Schedule'} {currentRound} Interview</DialogTitle>
+            <DialogDescription>
+              Enter the details for the interview session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="date">Date</Label>
+              <input 
+                id="date" 
+                type="date" 
+                value={interviewDate} 
+                onChange={e => setInterviewDate(e.target.value)} 
+                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="time">Time</Label>
+              <input 
+                id="time" 
+                type="time" 
+                value={interviewTime} 
+                onChange={e => setInterviewTime(e.target.value)} 
+                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="location">Location</Label>
+              <input 
+                id="location" 
+                type="text" 
+                value={interviewLocation} 
+                onChange={e => setInterviewLocation(e.target.value)} 
+                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                placeholder="Virtual or Office Address"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="type">Type</Label>
+              <select 
+                id="type" 
+                value={interviewType} 
+                onChange={e => setInterviewType(e.target.value)} 
+                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+              >
+                <option value="Technical">Technical</option>
+                <option value="Behavioral">Behavioral</option>
+                <option value="HR">HR</option>
+                <option value="Client">Client</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right" htmlFor="interviewer">Interviewer</Label>
+              <input 
+                id="interviewer" 
+                type="text" 
+                value={interviewerName} 
+                onChange={e => setInterviewerName(e.target.value)} 
+                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                placeholder="Interviewer Name"
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right" htmlFor="time">Time</Label>
-            <input 
-              id="time" 
-              type="time" 
-              value={interviewTime} 
-              onChange={e => setInterviewTime(e.target.value)} 
-              className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-              required
-            />
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowInterviewModal(false)}>Cancel</Button>
+            <Button onClick={handleInterviewSubmit}>{needsReschedule ? 'Reschedule' : 'Schedule'} Interview</Button>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right" htmlFor="location">Location</Label>
-            <input 
-              id="location" 
-              type="text" 
-              value={interviewLocation} 
-              onChange={e => setInterviewLocation(e.target.value)} 
-              className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-              placeholder="Virtual or Office Address"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right" htmlFor="type">Type</Label>
-            <select 
-              id="type" 
-              value={interviewType} 
-              onChange={e => setInterviewType(e.target.value)} 
-              className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-            >
-              <option value="Technical">Technical</option>
-              <option value="Behavioral">Behavioral</option>
-              <option value="HR">HR</option>
-              <option value="Client">Client</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right" htmlFor="interviewer">Interviewer</Label>
-            <input 
-              id="interviewer" 
-              type="text" 
-              value={interviewerName} 
-              onChange={e => setInterviewerName(e.target.value)} 
-              className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-              placeholder="Interviewer Name"
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={() => setShowInterviewModal(false)}>Cancel</Button>
-          <Button onClick={handleInterviewSubmit}>{needsReschedule ? 'Reschedule' : 'Schedule'} Interview</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
 
     <Dialog open={showInterviewFeedbackModal} onOpenChange={setShowInterviewFeedbackModal}>
       <DialogContent className="sm:max-w-md">
