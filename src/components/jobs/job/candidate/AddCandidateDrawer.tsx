@@ -52,7 +52,7 @@ export type CandidateFormData = {
   location?: string;       // Make optional
   expectedSalary?: number; // Make optional
   currentSalary?: number;  // Make optional
-  noticePeriod?: number; // Add Notice Period (in days)
+  noticePeriod?: string;
   lastWorkingDay?: string;
   linkedInId?: string; // Added
   hasOffers?: "Yes" | "No"; // Added
@@ -67,6 +67,7 @@ const AddCandidateDrawer = ({ job, onCandidateAdded, candidate, open, onOpenChan
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("basic-info");
   const [candidateId, setCandidateId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false); // Added loading state
   const user = useSelector((state: any) => state.auth.user);
   const isEditMode = !!candidate;
 
@@ -238,18 +239,18 @@ const handleSaveSkills = async (data: CandidateFormData) => {
 
 const handleSaveProofId = async (data: CandidateFormData) => {
   try {
+    setIsSaving(true); // Set loading state
     if (!candidateId || !job.id) {
       toast.error("Candidate ID or Job ID is missing");
       return;
     }
 
-    // Update candidate with proof ID fields
     const candidateData = {
       metadata: {
-        uan: data.uan || undefined, // Include UAN
-        pan: data.pan || undefined, // Include PAN
-        pf: data.pf || undefined, // Include PF
-        esicNumber: data.esicNumber || undefined, // Include ESIC Number
+        uan: data.uan || undefined,
+        pan: data.pan || undefined,
+        pf: data.pf || undefined,
+        esicNumber: data.esicNumber || undefined,
       },
     };
 
@@ -260,6 +261,8 @@ const handleSaveProofId = async (data: CandidateFormData) => {
   } catch (error) {
     console.error("Error saving candidate proof ID:", error);
     toast.error("Failed to save proof ID information");
+  } finally {
+    setIsSaving(false); // Reset loading state
   }
 };
 // Function to fetch candidate by ID
@@ -339,6 +342,7 @@ const fetchCandidateById = async (id: string) => {
               form={proofIdForm}
               onSave={(data) => handleSaveProofId(data)}
               onCancel={handleClose}
+              isSaving={isSaving} // Pass loading state
             />
           </TabsContent>
         </Tabs>

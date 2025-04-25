@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FileText } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
+import { toast } from "sonner";
 
 interface BasicInformationTabProps {
   form: UseFormReturn<CandidateFormData>;
@@ -86,6 +87,7 @@ const LOCATION_OPTIONS = [
 "Salem",
 "Tiruchirappalli",
 "Bhubaneshwar",
+"Gurgaon",
   "Remote",
   "Others",
 ];
@@ -151,40 +153,79 @@ const basicInfoSchema = z.object({
     })
   ),
   noticePeriod: z
-    .preprocess(preprocessNumber, z.number().min(0, "Cannot be negative").max(180, "Max 180 days"))
-    .optional(),
+  .enum(["Immediate", "15 days", "30 days", "45 days", "60 days", "90 days"])
+  .optional(),
   lastWorkingDay: z.string().optional(),
   linkedInId: z.string().url("Invalid LinkedIn URL").optional(),
   hasOffers: z.enum(["Yes", "No"]).optional(),
   offerDetails: z.string().optional(),
 });
 
+// Define notice period options
+const NOTICE_PERIOD_OPTIONS = [
+  "Immediate",
+  "15 days",
+  "30 days",
+  "45 days",
+  "60 days",
+  "90 days",
+];
+
+// Function to sanitize file names
+const sanitizeFileName = (fileName: string): string => {
+  // Extract the file extension
+  const extension = fileName.split(".").pop()?.toLowerCase() || "";
+  const name = fileName.substring(0, fileName.length - (extension.length + 1));
+
+  // Replace invalid characters with hyphens, remove multiple hyphens, and trim
+  const sanitizedName = name
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]/g, "-") // Replace non-alphanumeric (except . and -) with -
+    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
+
+  return `${sanitizedName}.${extension}`;
+};
+
 const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformationTabProps) => {
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const filePath = `resumes/${Date.now()}_${file.name}`;
-    const { data, error } = await supabase.storage
-      .from("candidate_resumes")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+    // Sanitize the file name
+    const sanitizedFileName = sanitizeFileName(file.name);
+    const filePath = `resumes/${Date.now()}_${sanitizedFileName}`;
+    
+    try {
+      const { data, error } = await supabase.storage
+        .from("candidate_resumes")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-    if (error) {
-      console.error("Upload Error:", error.message);
-      return;
-    }
+      if (error) {
+        console.error("Upload Error:", error.message);
+        toast.error("Failed to upload resume. Please try again.");
+        return;
+      }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("candidate_resumes").getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("candidate_resumes").getPublicUrl(filePath);
 
-    if (publicUrl) {
-      form.setValue("resume", publicUrl);
+      if (publicUrl) {
+        form.setValue("resume", publicUrl);
+        toast.success("Resume uploaded successfully!");
+      } else {
+        toast.error("Failed to retrieve resume URL.");
+      }
+    } catch (err) {
+      console.error("Unexpected error during upload:", err);
+      toast.error("An unexpected error occurred while uploading the resume.");
     }
   };
+
 
   const currentSalary = form.watch("currentSalary");
   const expectedSalary = form.watch("expectedSalary");
@@ -471,26 +512,33 @@ const BasicInformationTab = ({ form, onSaveAndNext, onCancel }: BasicInformation
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="noticePeriod"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notice Period (days)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="180"
-                    value={field.value ?? ""}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                    placeholder="Enter days (e.g., 30)"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+    control={form.control}
+    name="noticePeriod"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Notice Period</FormLabel>
+        <Select
+          onValueChange={field.onChange}
+          value={field.value}
+        >
+          <FormControl>
+            <SelectTrigger>
+              <SelectValue placeholder="Select notice period" />
+            </SelectTrigger>
+          </FormControl>
+          <SelectContent>
+            {NOTICE_PERIOD_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
           <FormField
             control={form.control}
             name="lastWorkingDay"

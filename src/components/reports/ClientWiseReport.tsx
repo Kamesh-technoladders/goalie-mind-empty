@@ -15,6 +15,8 @@ import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import { autoTable } from 'jspdf-autotable'; // Explicitly import autoTable
 import StackedBarChart from './StackedBarChart';
+import { supabase } from "@/integrations/supabase/client";
+
 
 // Colors for each status (vibrant purple, fuchsia, violet theme)
 const COLORS = {
@@ -33,6 +35,8 @@ const ClientWiseReport: React.FC = () => {
     key: 'selection',
   });
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+
+  console.log("reportdata", reportData)
 
   const debouncedFetch = debounce(async (from: Date, to: Date) => {
     const data = await fetchClientReport(from, to);
@@ -206,6 +210,56 @@ const ClientWiseReport: React.FC = () => {
     doc.save('client_wise_report.pdf');
   };
 
+
+    // Send Report via Email
+    const sendReport = async () => {
+      try {
+        // Get JWT
+        const { data: { session }, error: authError } = await supabase.auth.getSession();
+        if (authError || !session) {
+          throw new Error('No authenticated user found');
+        }
+        const jwt = session.access_token;
+    
+        // Log initial state
+        console.log('Starting sendReport, reportData:', reportData);
+    
+        // Validate reportData
+        if (!reportData || !Array.isArray(reportData)) {
+          throw new Error('Invalid or missing reportData');
+        }
+    
+        // Prepare and log payload
+        const payload = { reportData };
+        console.log('Sending payload:', JSON.stringify(payload));
+    
+        const response = await fetch(
+          'https://kbpeyfietrwlhwcwqhjw.supabase.co/functions/v1/send-client-report',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImticGV5ZmlldHJ3bGh3Y3dxaGp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4NDA5NjEsImV4cCI6MjA1NDQxNjk2MX0.A-K4DO6D2qQZ66qIXY4BlmoHxc-W5B0itV-HAAM84YA',
+              'Authorization': `Bearer ${jwt}`,
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+    
+        const data = await response.json();
+    
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to send email');
+        }
+    
+        console.log('Report sent successfully! Server response:', data);
+      } catch (err) {
+        console.error('Failed to send report:', err.message);
+        throw err;
+      }
+    };
+
+
   if (isLoading) return <LoadingSpinner />;
   if (error) {
     return (
@@ -342,6 +396,9 @@ const ClientWiseReport: React.FC = () => {
             </Button>
             <Button onClick={exportToPDF} variant="outline">
               Download PDF
+            </Button>
+            <Button onClick={sendReport} variant="outline">
+              Send Email
             </Button>
           </div>
         </CardHeader>

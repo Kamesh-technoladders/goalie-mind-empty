@@ -25,9 +25,10 @@ interface ProofIdTabProps {
   form: UseFormReturn<CandidateFormData>;
   onSave: (data: CandidateFormData) => void;
   onCancel: () => void;
+  isSaving: boolean; // Added prop for loading state
 }
 
-const ProofIdTab = ({ form, onSave, onCancel }: ProofIdTabProps) => {
+const ProofIdTab = ({ form, onSave, onCancel, isSaving}: ProofIdTabProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSave)} className="space-y-4 py-4">
@@ -88,10 +89,12 @@ const ProofIdTab = ({ form, onSave, onCancel }: ProofIdTabProps) => {
           />
         </div>
         <div className="flex justify-end space-x-4 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
             Cancel
           </Button>
-          <Button type="submit">Save</Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save"}
+          </Button>
         </div>
       </form>
     </Form>
