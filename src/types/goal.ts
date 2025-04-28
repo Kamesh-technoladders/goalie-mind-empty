@@ -1,4 +1,3 @@
-
 export type SectorType = 'HR' | 'Sales' | 'Finance' | 'Operations' | 'Marketing';
 export type MetricType = 'percentage' | 'currency' | 'count' | 'hours' | 'custom';
 export type GoalType = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
@@ -49,9 +48,25 @@ export interface AssignedGoal {
   goalType: GoalType;
 }
 
+export interface GoalInstance {
+  id: string;
+  assignedGoalId: string;
+  periodStart: string;
+  periodEnd: string;
+  targetValue: number;
+  currentValue: number;
+  progress: number;
+  status: 'pending' | 'in-progress' | 'completed' | 'overdue';
+  createdAt: string;
+  updatedAt: string;
+  notes?: string;
+}
+
 export interface GoalWithDetails extends Goal {
   assignedTo?: Employee[];
   assignmentDetails?: AssignedGoal;
+  instances?: GoalInstance[];
+  activeInstance?: GoalInstance;
 }
 
 export interface TrackingRecord {

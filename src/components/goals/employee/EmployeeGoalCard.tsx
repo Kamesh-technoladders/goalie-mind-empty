@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import { formatDistance, format } from "date-fns";
-import { Calendar, BarChart3, Clock } from "lucide-react";
-import { GoalWithDetails, Employee } from "@/types/goal";
+
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import ProgressTracker from "@/components/goals/goals/ProgressTracker";
-import AnimatedCard from "@/components/ui/custom/AnimatedCard";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import TrackingRecordForm from "./TrackingRecordForm";
+import { Separator } from "@/components/ui/separator";
+import { useNavigate } from "react-router-dom";
+import { Employee, GoalWithDetails } from "@/types/goal";
+import { BarChart3, Clock, AlertTriangle, CheckCircle2, Calendar, Target } from "lucide-react";
+import { format } from 'date-fns';
 
 interface EmployeeGoalCardProps {
   goal: GoalWithDetails;
@@ -15,151 +16,136 @@ interface EmployeeGoalCardProps {
 }
 
 const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) => {
-  const [isTrackingFormOpen, setIsTrackingFormOpen] = useState(false);
-  console.log("goalcardadat:", goal)
-
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "MMM d, yyyy");
-    } catch (e) {
-      return dateString;
+  const navigate = useNavigate();
+  
+  // Use active instance if available, otherwise fall back to assignment details
+  const displayDetails = goal.activeInstance || goal.assignmentDetails;
+  const status = displayDetails?.status || 'pending';
+  const progress = displayDetails?.progress || 0;
+  
+  // Format dates
+  const getPeriodText = () => {
+    if (goal.activeInstance) {
+      const startDate = format(new Date(goal.activeInstance.periodStart), 'MMM d');
+      const endDate = format(new Date(goal.activeInstance.periodEnd), 'MMM d');
+      return `Current Period: ${startDate} - ${endDate}`;
+    } else {
+      const startDate = format(new Date(goal.startDate), 'MMM d');
+      const endDate = format(new Date(goal.endDate), 'MMM d');
+      return `${startDate} - ${endDate}`;
     }
   };
 
-  const getTimeRemaining = (endDate: string) => {
-    try {
-      const end = new Date(endDate);
-      const now = new Date();
-      if (now > end) return "Overdue";
-      return formatDistance(end, now, { addSuffix: true });
-    } catch (e) {
-      return "Unknown";
-    }
-  };
-
-  const getSectorColor = (sector: string) => {
-    switch (sector.toLowerCase()) {
-      case "hr":
-        return "bg-sector-hr text-white";
-      case "sales":
-        return "bg-sector-sales text-white";
-      case "finance":
-        return "bg-sector-finance text-white";
-      case "operations":
-        return "bg-sector-operations text-white";
-      case "marketing":
-        return "bg-sector-marketing text-white";
-      default:
-        return "bg-gray-500 text-white";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
+  // Get icon based on status
+  const statusIcon = () => {
     switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "in-progress":
-        return "bg-blue-100 text-blue-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "overdue":
-        return "bg-red-100 text-red-800";
+      case 'completed':
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'in-progress':
+        return <BarChart3 className="h-5 w-5 text-blue-500" />;
+      case 'overdue':
+        return <AlertTriangle className="h-5 w-5 text-red-500" />;
       default:
-        return "bg-gray-100 text-gray-800";
+        return <Clock className="h-5 w-5 text-amber-500" />;
     }
   };
 
-  const getStatusText = (status: string) => {
-    return status
-      .replace("-", " ")
-      .replace(/^\w/, (c) => c.toUpperCase());
+  // Get badge color based on status
+  const getBadgeClasses = () => {
+    switch (status) {
+      case 'completed':
+        return "bg-green-100 text-green-800 border-green-200";
+      case 'in-progress':
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case 'overdue':
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-amber-100 text-amber-800 border-amber-200";
+    }
+  };
+  
+  // Get the recurring interval type text
+  const getIntervalTypeText = () => {
+    if (!goal.assignmentDetails) return "";
+    return `${goal.assignmentDetails.goalType} Goal`;
+  };
+
+  const handleViewDetails = () => {
+    navigate(`/goals/${goal.id}`, { state: { employee } });
   };
 
   return (
-    <AnimatedCard
-      animation="fade"
-      className="bg-white border border-gray-100 h-full"
-    >
-      <div className="flex flex-col h-full">
-        <div className="flex justify-between items-start mb-3">
-          <Badge variant="outline" className={getSectorColor(goal.sector)}>
+    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md">
+      <CardHeader className="p-4">
+        <div className="flex justify-between items-start">
+          <Badge variant="outline" className="mb-2">
             {goal.sector}
           </Badge>
-          {goal.assignmentDetails && (
-            <Badge
-              variant="outline"
-              className={getStatusColor(goal.assignmentDetails.status)}
-            >
-              {getStatusText(goal.assignmentDetails.status)}
-            </Badge>
-          )}
+          <Badge variant="outline" className={getBadgeClasses()}>
+            <span className="flex items-center">
+              {statusIcon()}
+              <span className="ml-1 capitalize">{status}</span>
+            </span>
+          </Badge>
         </div>
-
-        <h3 className="text-lg font-semibold mb-2 line-clamp-1">{goal.name}</h3>
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+        <CardTitle className="text-lg">{goal.name}</CardTitle>
+      </CardHeader>
+      
+      <CardContent className="p-4 pt-0">
+        <div className="text-sm text-gray-500 mb-3">
           {goal.description}
-        </p>
-
-        <div className="flex items-center text-sm text-gray-500 mb-2">
-          <Calendar className="h-4 w-4 mr-2" />
-          <span>
-            {formatDate(goal.startDate)} - {formatDate(goal.endDate)}
-          </span>
         </div>
-
-        <div className="flex items-center text-sm text-gray-500 mb-4">
-          <Clock className="h-4 w-4 mr-2" />
-          <span>{getTimeRemaining(goal.endDate)}</span>
-        </div>
-
-        <div className="mt-auto">
-          {goal.assignmentDetails && (
-            <div className="mb-4">
-              <ProgressTracker
-                progress={goal.assignmentDetails.progress}
-                size="md"
-              />
-              <div className="mt-2 flex justify-between text-xs text-gray-500">
-                <span>
-                  Current: {goal.assignmentDetails.currentValue}
-                  {goal.metricUnit}
-                </span>
-                <span>
-                  Target: {goal.assignmentDetails.targetValue}
-                  {goal.metricUnit}
-                </span>
-              </div>
-              <div className="mt-1 text-xs text-gray-500">
-                <span>Type: {goal.assignmentDetails.goalType}</span>
-              </div>
+        
+        <div className="space-y-4">
+          <div className="flex items-center text-sm text-gray-500">
+            <Calendar className="h-4 w-4 mr-1" />
+            {getPeriodText()}
+          </div>
+          
+          <div className="flex items-center text-sm text-gray-500">
+            <Target className="h-4 w-4 mr-1" />
+            {getIntervalTypeText()}
+          </div>
+          
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span>Progress</span>
+              <span className="font-medium">{Math.round(progress)}%</span>
             </div>
-          )}
-
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2 text-gray-400" />
-              <span className="text-sm text-gray-600">
-                {goal.metricType}
-              </span>
-            </div>
-
-            <Popover open={isTrackingFormOpen} onOpenChange={setIsTrackingFormOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Track Progress
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-96">
-                <TrackingRecordForm
-                  goal={goal}
-                  onClose={() => setIsTrackingFormOpen(false)}
-                />
-              </PopoverContent>
-            </Popover>
+            <Progress value={progress} className="h-2" />
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Target</span>
+            <span>
+              {goal.activeInstance ? (
+                <span>
+                  {goal.activeInstance.currentValue} / {goal.activeInstance.targetValue}
+                  <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
+                </span>
+              ) : (
+                <span>
+                  {displayDetails?.currentValue || 0} / {displayDetails?.targetValue || goal.targetValue}
+                  <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
+                </span>
+              )}
+            </span>
           </div>
         </div>
-      </div>
-    </AnimatedCard>
+      </CardContent>
+      
+      <Separator />
+      
+      <CardFooter className="p-4">
+        <Button 
+          variant="default" 
+          className="w-full" 
+          onClick={handleViewDetails}
+        >
+          View & Update Progress
+        </Button>
+      </CardFooter>
+    </Card>
   );
 };
 

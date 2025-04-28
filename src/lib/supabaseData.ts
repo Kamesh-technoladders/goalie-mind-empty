@@ -335,10 +335,22 @@ export const createGoal = async (
 export const assignGoalToEmployees = async (
   goalId: string,
   employeeIds: string[],
-  goalType: string,
+  goalType: GoalType,
   employeeTargets: { employee: Employee; targetValue: number }[]
 ) => {
   try {
+    // Fetch goal details to get dates
+    const { data: goalData, error: goalError } = await supabase
+      .from('hr_goals')
+      .select('start_date, end_date')
+      .eq('id', goalId)
+      .single();
+    
+    if (goalError) {
+      console.error("Error fetching goal details:", goalError);
+      throw goalError;
+    }
+    
     // Prepare the batch of assignments
     const assignments = employeeTargets.map(target => ({
       goal_id: goalId,
@@ -348,9 +360,11 @@ export const assignGoalToEmployees = async (
       current_value: 0,
       target_value: target.targetValue,
       goal_type: goalType,
+      assigned_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }));
 
-    // Insert assignments
+    // Insert assignments - this will trigger the database function to create instances
     const { data, error } = await supabase
       .from('hr_assigned_goals')
       .insert(assignments)
@@ -372,6 +386,7 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
   try {
     console.log(`Fetching goals for employee ID: ${employeeId}`);
     
+    // Original code to get assigned goals
     const { data: assignedGoalsData, error: assignedGoalsError } = await supabase
       .from('hr_assigned_goals')
       .select('*')
@@ -433,10 +448,51 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
       const assignmentDetails = assignedGoals.find(ag => ag.goalId === goal.id);
       
       if (assignmentDetails) {
+        // Fetch goal instances
+        const { data: instancesData, error: instancesError } = await supabase
+          .from('hr_goal_instances')
+          .select('*')
+          .eq('assigned_goal_id', assignmentDetails.id)
+          .order('period_start', { ascending: true });
+        
+        let instances: GoalInstance[] = [];
+        let activeInstance: GoalInstance | undefined = undefined;
+        
+        if (!instancesError && instancesData) {
+          instances = instancesData.map(instance => ({
+            id: instance.id,
+            assignedGoalId: instance.assigned_goal_id,
+            periodStart: instance.period_start,
+            periodEnd: instance.period_end,
+            targetValue: instance.target_value,
+            currentValue: instance.current_value,
+            progress: instance.progress,
+            status: instance.status,
+            createdAt: instance.created_at,
+            updatedAt: instance.updated_at,
+            notes: instance.notes
+          }));
+          
+          // Find the current active instance
+          const today = new Date().toISOString().split('T')[0];
+          activeInstance = instances.find(
+            instance => 
+              new Date(instance.periodStart) <= new Date(today) && 
+              new Date(instance.periodEnd) >= new Date(today)
+          );
+          
+          // If no active instance is found, use the latest one
+          if (!activeInstance && instances.length > 0) {
+            activeInstance = instances[instances.length - 1];
+          }
+        }
+        
         goalsWithDetails.push({
           ...goal,
           assignedTo: [employee],
-          assignmentDetails
+          assignmentDetails,
+          instances,
+          activeInstance
         });
       }
     }
@@ -446,6 +502,333 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
   } catch (error) {
     console.error('Error in getEmployeeGoals:', error);
     return [];
+  }
+};
+
+export const getGoalById = async (goalId: string): Promise<GoalWithDetails | null> => {
+  try {
+    console.log(`Fetching goal with ID: ${goalId}`);
+    
+    // Original code to get the goal details
+    const { data: goalData, error: goalError } = await supabase
+      .from('hr_goals')
+      .select('*')
+      .eq('id', goalId)
+      .single();
+    
+    if (goalError) {
+      console.error('Error fetching goal details:', goalError);
+      return null;
+    }
+    
+    // Fetch assigned employees
+    const { data: assignedData, error: assignedError } = await supabase
+      .from('hr_assigned_goals')
+      .select('*, hr_employees:employee_id(*)')
+      .eq('goal_id', goalId);
+    
+    if (assignedError) {
+      console.error('Error fetching assigned goals:', assignedError);
+      return null;
+    }
+    
+    // Map employees and assignment details
+    const assignedEmployees: Employee[] = [];
+    let assignmentDetails = null;
+    let instances: GoalInstance[] = [];
+    let activeInstance: GoalInstance | undefined = undefined;
+    
+    if (assignedData && assignedData.length > 0) {
+      // For each assignment, gather employee info
+      assignedData.forEach(assignment => {
+        if (assignment.hr_employees) {
+          const employee = assignment.hr_employees;
+          assignedEmployees.push({
+            id: employee.id,
+            name: `${employee.first_name} ${employee.last_name}`,
+            position: employee.position || 'Employee',
+            department: employee.department_id as any,
+            email: employee.email,
+            avatar: employee.profile_picture_url
+          });
+        }
+        
+        // For simplicity, we just take the first assignment details
+        // In a real app, you might handle multiple assignments differently
+        if (!assignmentDetails) {
+          assignmentDetails = {
+            id: assignment.id,
+            goalId: assignment.goal_id,
+            employeeId: assignment.employee_id,
+            status: assignment.status,
+            progress: assignment.progress,
+            currentValue: assignment.current_value,
+            targetValue: assignment.target_value,
+            notes: assignment.notes,
+            assignedAt: assignment.assigned_at,
+            goalType: assignment.goal_type as any
+          };
+          
+          // Fetch goal instances for this assignment
+          const fetchInstances = async () => {
+            const { data: instancesData, error: instancesError } = await supabase
+              .from('hr_goal_instances')
+              .select('*')
+              .eq('assigned_goal_id', assignment.id)
+              .order('period_start', { ascending: true });
+            
+            if (!instancesError && instancesData) {
+              instances = instancesData.map(instance => ({
+                id: instance.id,
+                assignedGoalId: instance.assigned_goal_id,
+                periodStart: instance.period_start,
+                periodEnd: instance.period_end,
+                targetValue: instance.target_value,
+                currentValue: instance.current_value,
+                progress: instance.progress,
+                status: instance.status,
+                createdAt: instance.created_at,
+                updatedAt: instance.updated_at,
+                notes: instance.notes
+              }));
+              
+              // Find the current active instance
+              const today = new Date().toISOString().split('T')[0];
+              activeInstance = instances.find(
+                instance => 
+                  new Date(instance.periodStart) <= new Date(today) && 
+                  new Date(instance.periodEnd) >= new Date(today)
+              );
+              
+              // If no active instance is found, use the latest one
+              if (!activeInstance && instances.length > 0) {
+                activeInstance = instances[instances.length - 1];
+              }
+            }
+          };
+          
+          // Need to use async/await or Promise here
+          fetchInstances();
+        }
+      });
+    }
+    
+    // Map goal with details
+    const goal: GoalWithDetails = {
+      id: goalData.id,
+      name: goalData.name,
+      description: goalData.description,
+      sector: goalData.sector,
+      targetValue: goalData.target_value,
+      metricType: goalData.metric_type,
+      metricUnit: goalData.metric_unit,
+      startDate: goalData.start_date,
+      endDate: goalData.end_date,
+      createdAt: goalData.created_at,
+      assignedTo: assignedEmployees,
+      assignmentDetails,
+      instances,
+      activeInstance
+    };
+    
+    return goal;
+  } catch (error) {
+    console.error('Error in getGoalById:', error);
+    return null;
+  }
+};
+
+export const getTrackingRecordsForGoal = async (goalId: string, employeeId?: string): Promise<TrackingRecord[]> => {
+  try {
+    console.log(`Fetching tracking records for goal ID: ${goalId}`);
+    
+    // First get the assigned goal ID
+    let query = supabase
+      .from('hr_assigned_goals')
+      .select('id')
+      .eq('goal_id', goalId);
+    
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId);
+    }
+    
+    const { data: assignedGoals, error: assignedError } = await query;
+    
+    if (assignedError) {
+      console.error('Error fetching assigned goals:', assignedError);
+      return [];
+    }
+    
+    if (!assignedGoals || assignedGoals.length === 0) {
+      console.log('No assigned goals found');
+      return [];
+    }
+    
+    // Get all assigned goal IDs
+    const assignedGoalIds = assignedGoals.map(ag => ag.id);
+    
+    // Fetch tracking records for these assigned goals
+    const { data: trackingRecords, error: trackingError } = await supabase
+      .from('tracking_records')
+      .select('*')
+      .in('assigned_goal_id', assignedGoalIds)
+      .order('record_date', { ascending: false });
+    
+    if (trackingError) {
+      console.error('Error fetching tracking records:', trackingError);
+      return [];
+    }
+    
+    return trackingRecords.map(mapTrackingRecordDbToTrackingRecord);
+    
+  } catch (error) {
+    console.error('Error in getTrackingRecordsForGoal:', error);
+    return [];
+  }
+};
+
+export const getGoalInstances = async (assignedGoalId: string): Promise<GoalInstance[]> => {
+  try {
+    console.log(`Fetching goal instances for assigned goal ID: ${assignedGoalId}`);
+    
+    const { data, error } = await supabase
+      .from('hr_goal_instances')
+      .select('*')
+      .eq('assigned_goal_id', assignedGoalId)
+      .order('period_start', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching goal instances:', error);
+      return [];
+    }
+    
+    return data.map((instance) => ({
+      id: instance.id,
+      assignedGoalId: instance.assigned_goal_id,
+      periodStart: instance.period_start,
+      periodEnd: instance.period_end,
+      targetValue: instance.target_value,
+      currentValue: instance.current_value,
+      progress: instance.progress,
+      status: instance.status,
+      createdAt: instance.created_at,
+      updatedAt: instance.updated_at,
+      notes: instance.notes
+    }));
+  } catch (error) {
+    console.error('Error in getGoalInstances:', error);
+    return [];
+  }
+};
+
+export const getActiveGoalInstance = async (assignedGoalId: string): Promise<GoalInstance | null> => {
+  try {
+    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    const { data, error } = await supabase
+      .from('hr_goal_instances')
+      .select('*')
+      .eq('assigned_goal_id', assignedGoalId)
+      .lte('period_start', currentDate)
+      .gte('period_end', currentDate)
+      .single();
+    
+    if (error || !data) {
+      console.log('No active instance found, fetching the latest instance');
+      
+      // If no active instance found, get the latest one
+      const { data: latestData, error: latestError } = await supabase
+        .from('hr_goal_instances')
+        .select('*')
+        .eq('assigned_goal_id', assignedGoalId)
+        .order('period_end', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (latestError || !latestData) {
+        console.error('Error fetching latest goal instance:', latestError);
+        return null;
+      }
+      
+      return {
+        id: latestData.id,
+        assignedGoalId: latestData.assigned_goal_id,
+        periodStart: latestData.period_start,
+        periodEnd: latestData.period_end,
+        targetValue: latestData.target_value,
+        currentValue: latestData.current_value,
+        progress: latestData.progress,
+        status: latestData.status,
+        createdAt: latestData.created_at,
+        updatedAt: latestData.updated_at,
+        notes: latestData.notes
+      };
+    }
+    
+    return {
+      id: data.id,
+      assignedGoalId: data.assigned_goal_id,
+      periodStart: data.period_start,
+      periodEnd: data.period_end,
+      targetValue: data.target_value,
+      currentValue: data.current_value,
+      progress: data.progress,
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      notes: data.notes
+    };
+  } catch (error) {
+    console.error('Error in getActiveGoalInstance:', error);
+    return null;
+  }
+};
+
+export const addTrackingRecord = async (
+  assignedGoalId: string,
+  value: number,
+  recordDate: string = new Date().toISOString(),
+  notes?: string
+): Promise<TrackingRecord | null> => {
+  try {
+    // First, check if there's an active goal instance for this date
+    const datePart = recordDate.split('T')[0]; // Extract just the YYYY-MM-DD part
+    
+    const { data: instanceData, error: instanceError } = await supabase
+      .from('hr_goal_instances')
+      .select('id')
+      .eq('assigned_goal_id', assignedGoalId)
+      .lte('period_start', datePart)
+      .gte('period_end', datePart)
+      .maybeSingle();
+    
+    if (instanceError) {
+      console.error('Error checking goal instance:', instanceError);
+      // Continue with tracking record creation regardless
+    }
+    
+    // Insert the tracking record which will trigger our database function
+    const { data, error } = await supabase
+      .from('tracking_records')
+      .insert({
+        assigned_goal_id: assignedGoalId,
+        record_date: recordDate,
+        value,
+        notes
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error adding tracking record:', error);
+      return null;
+    }
+    
+    // Database triggers will handle updating the goal instance and parent goal
+    return mapTrackingRecordDbToTrackingRecord(data);
+  } catch (error) {
+    console.error('Error in addTrackingRecord:', error);
+    return null;
   }
 };
 
@@ -514,261 +897,4 @@ const calculateGoalProgress = (currentValue: number, targetValue: number): numbe
   if (targetValue === 0) return 0;
   const progress = (currentValue / targetValue) * 100;
   return Math.min(Math.round(progress), 100);
-};
-
-export const addTrackingRecord = async (
-  assignedGoalId: string,
-  value: number,
-  recordDate: string = new Date().toISOString(),
-  notes?: string
-): Promise<TrackingRecord | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('tracking_records')
-      .insert({
-        assigned_goal_id: assignedGoalId,
-        record_date: recordDate,
-        value,
-        notes
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error adding tracking record:', error);
-      return null;
-    }
-    
-    return mapTrackingRecordDbToTrackingRecord(data);
-  } catch (error) {
-    console.error('Error in addTrackingRecord:', error);
-    return null;
-  }
-};
-
-export const getTrackingRecords = async (assignedGoalId: string): Promise<TrackingRecord[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('tracking_records')
-      .select('*')
-      .eq('assigned_goal_id', assignedGoalId)
-      .order('record_date', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching tracking records:', error);
-      return [];
-    }
-    
-    return data.map(mapTrackingRecordDbToTrackingRecord);
-  } catch (error) {
-    console.error('Error in getTrackingRecords:', error);
-    return [];
-  }
-};
-
-export const updateGoalProgressFromRecords = async (assignedGoalId: string): Promise<boolean> => {
-  try {
-    console.log("Updating goal progress for assignedGoalId:", assignedGoalId);
-
-    // 1️⃣ Fetch assigned goal details
-    const { data: goalData, error: goalError } = await supabase
-      .from('hr_assigned_goals')
-      .select('*') // No need to fetch hr_goals.end_date
-      .eq('id', assignedGoalId)
-      .single();
-
-    if (goalError || !goalData) {
-      console.error('Error fetching assigned goal details:', goalError);
-      return false;
-    }
-
-    // 2️⃣ Fetch all tracking records for this goal
-    const { data: recordsData, error: recordsError } = await supabase
-      .from('tracking_records')
-      .select('value') // Fetch only 'value' column
-      .eq('assigned_goal_id', assignedGoalId);
-
-    if (recordsError) {
-      console.error('Error fetching tracking records:', recordsError);
-      return false;
-    }
-
-    // 3️⃣ Sum up all tracking record values
-    const currentValue = recordsData.reduce((sum, record) => sum + (record.value || 0), 0);
-    console.log("Computed current_value (sum of tracking records):", currentValue);
-
-    // 4️⃣ Calculate progress
-    const targetValue = goalData.target_value;
-    const progress = targetValue > 0 ? (currentValue / targetValue) * 100 : 0;
-
-    // 5️⃣ Determine goal status (without hr_goals.end_date)
-    let status: 'pending' | 'in-progress' | 'completed' = 'pending';
-
-    if (progress >= 100) {
-      status = 'completed';
-    } else if (progress > 0) {
-      status = 'in-progress';
-    }
-
-    // 6️⃣ Update hr_assigned_goals table with new current_value
-    const { error: updateError } = await supabase
-      .from('hr_assigned_goals')
-      .update({
-        current_value: currentValue, // ✅ Correct column name
-        progress,
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', assignedGoalId);
-
-    if (updateError) {
-      console.error('Error updating goal progress:', updateError);
-      return false;
-    }
-
-    console.log("✅ Goal progress updated successfully in hr_assigned_goals");
-    return true;
-
-  } catch (error) {
-    console.error('Error in updateGoalProgressFromRecords:', error);
-    return false;
-  }
-};
-
-export const getGoalById = async (goalId: string): Promise<GoalWithDetails | null> => {
-  try {
-    console.log(`Fetching goal with ID: ${goalId}`);
-    
-    // Fetch the goal details
-    const { data: goalData, error: goalError } = await supabase
-      .from('hr_goals')
-      .select('*')
-      .eq('id', goalId)
-      .single();
-    
-    if (goalError) {
-      console.error('Error fetching goal details:', goalError);
-      return null;
-    }
-    
-    // Fetch assigned employees
-    const { data: assignedData, error: assignedError } = await supabase
-      .from('hr_assigned_goals')
-      .select('*, hr_employees:employee_id(*)')
-      .eq('goal_id', goalId);
-    
-    if (assignedError) {
-      console.error('Error fetching assigned goals:', assignedError);
-      return null;
-    }
-    
-    // Map employees and assignment details
-    const assignedEmployees: Employee[] = [];
-    let assignmentDetails = null;
-    
-    if (assignedData && assignedData.length > 0) {
-      assignedData.forEach(assignment => {
-        if (assignment.hr_employees) {
-          const employee = assignment.hr_employees;
-          assignedEmployees.push({
-            id: employee.id,
-            name: `${employee.first_name} ${employee.last_name}`,
-            position: employee.position || 'Employee',
-            department: employee.department_id as any,
-            email: employee.email,
-            avatar: employee.profile_picture_url
-          });
-        }
-        
-        // For simplicity, we just take the first assignment details
-        // In a real app, you might handle multiple assignments differently
-        if (!assignmentDetails) {
-          assignmentDetails = {
-            id: assignment.id,
-            goalId: assignment.goal_id,
-            employeeId: assignment.employee_id,
-            status: assignment.status,
-            progress: assignment.progress,
-            currentValue: assignment.current_value,
-            targetValue: assignment.target_value,
-            notes: assignment.notes,
-            assignedAt: assignment.assigned_at,
-            goalType: assignment.goal_type as any,
-            updated_at: assignment.updated_at
-          };
-        }
-      });
-    }
-    
-    // Map goal with details
-    const goal: GoalWithDetails = {
-      id: goalData.id,
-      name: goalData.name,
-      description: goalData.description,
-      sector: goalData.sector,
-      targetValue: goalData.target_value,
-      metricType: goalData.metric_type,
-      metricUnit: goalData.metric_unit,
-      startDate: goalData.start_date,
-      endDate: goalData.end_date,
-      createdAt: goalData.created_at,
-      updatedAt: goalData.updated_at,
-      assignedTo: assignedEmployees,
-      assignmentDetails
-    };
-    
-    return goal;
-  } catch (error) {
-    console.error('Error in getGoalById:', error);
-    return null;
-  }
-};
-
-export const getTrackingRecordsForGoal = async (goalId: string, employeeId?: string): Promise<TrackingRecord[]> => {
-  try {
-    console.log(`Fetching tracking records for goal ID: ${goalId}`);
-    
-    // First get the assigned goal ID
-    let query = supabase
-      .from('hr_assigned_goals')
-      .select('id')
-      .eq('goal_id', goalId);
-    
-    if (employeeId) {
-      query = query.eq('employee_id', employeeId);
-    }
-    
-    const { data: assignedGoals, error: assignedError } = await query;
-    
-    if (assignedError) {
-      console.error('Error fetching assigned goals:', assignedError);
-      return [];
-    }
-    
-    if (!assignedGoals || assignedGoals.length === 0) {
-      console.log('No assigned goals found');
-      return [];
-    }
-    
-    // Get all assigned goal IDs
-    const assignedGoalIds = assignedGoals.map(ag => ag.id);
-    
-    // Fetch tracking records for these assigned goals
-    const { data: trackingRecords, error: trackingError } = await supabase
-      .from('tracking_records')
-      .select('*')
-      .in('assigned_goal_id', assignedGoalIds)
-      .order('record_date', { ascending: false });
-    
-    if (trackingError) {
-      console.error('Error fetching tracking records:', trackingError);
-      return [];
-    }
-    
-    return trackingRecords.map(mapTrackingRecordDbToTrackingRecord);
-    
-  } catch (error) {
-    console.error('Error in getTrackingRecordsForGoal:', error);
-    return [];
-  }
 };
