@@ -336,50 +336,44 @@ export const assignGoalToEmployees = async (
   goalId: string,
   employeeIds: string[],
   goalType: GoalType,
-  employeeTargets: { employee: Employee; targetValue: number }[]
+  employeeTargets: EmployeeGoalTarget[]
 ) => {
-  try {
-    // Fetch goal details to get dates
-    const { data: goalData, error: goalError } = await supabase
-      .from('hr_goals')
-      .select('start_date, end_date')
-      .eq('id', goalId)
-      .single();
-    
-    if (goalError) {
-      console.error("Error fetching goal details:", goalError);
-      throw goalError;
-    }
-    
-    // Prepare the batch of assignments
-    const assignments = employeeTargets.map(target => ({
-      goal_id: goalId,
-      employee_id: target.employee.id,
-      status: 'pending',
-      progress: 0,
-      current_value: 0,
-      target_value: target.targetValue,
-      goal_type: goalType,
-      assigned_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }));
+  const { data: goal } = await supabase
+    .from('hr_goals')
+    .select('*')
+    .eq('id', goalId)
+    .single();
 
-    // Insert assignments - this will trigger the database function to create instances
-    const { data, error } = await supabase
-      .from('hr_assigned_goals')
-      .insert(assignments)
-      .select();
-
-    if (error) {
-      console.error("Error assigning goals:", error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Error in assignGoalToEmployees:", error);
-    throw error;
+  if (!goal) {
+    throw new Error('Goal not found');
   }
+
+  // Create assigned goals for each employee
+  const assignedGoalsPromises = employeeTargets.map(async ({ employee, targetValue }) => {
+    const { data: assignedGoal, error: assignError } = await supabase
+      .from('hr_assigned_goals')
+      .insert({
+        goal_id: goalId,
+        employee_id: employee.id,
+        target_value: targetValue,
+        goal_type: goalType,
+        current_value: 0,
+        progress: 0,
+        status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (assignError) {
+      throw new Error(`Error assigning goal to ${employee.name}: ${assignError.message}`);
+    }
+
+    return assignedGoal;
+  });
+
+  await Promise.all(assignedGoalsPromises);
+
+  return { success: true };
 };
 
 export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDetails[]> => {

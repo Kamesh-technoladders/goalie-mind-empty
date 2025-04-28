@@ -59,17 +59,14 @@ const AssignGoalsForm: React.FC<AssignGoalsFormProps> = ({ onClose }) => {
     }
   }, [selectedGoal, selectedEmployees]);
 
-  // Handle checkbox change for employee selection
   const handleEmployeeSelection = (employee: Employee, isSelected: boolean) => {
     if (isSelected) {
       setSelectedEmployees((prev) => [...prev, employee]);
-      // Set default target value
       if (selectedGoal) {
         setEmployeeTargets((prev) => new Map(prev.set(employee.id, selectedGoal.targetValue)));
       }
     } else {
       setSelectedEmployees((prev) => prev.filter((e) => e.id !== employee.id));
-      // Remove target value
       setEmployeeTargets((prev) => {
         const newMap = new Map(prev);
         newMap.delete(employee.id);
@@ -78,7 +75,6 @@ const AssignGoalsForm: React.FC<AssignGoalsFormProps> = ({ onClose }) => {
     }
   };
 
-  // Handle target value change for an employee
   const handleTargetChange = (employeeId: string, value: string) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
@@ -100,12 +96,7 @@ const AssignGoalsForm: React.FC<AssignGoalsFormProps> = ({ onClose }) => {
         })
       );
 
-      return await assignGoalToEmployees(
-        selectedGoalId,
-        selectedEmployees.map((e) => e.id),
-        goalType,
-        employeeGoalTargets
-      );
+      return await assignGoalToEmployees(selectedGoalId, selectedEmployees.map((e) => e.id), goalType, employeeGoalTargets);
     },
     onSuccess: () => {
       toast.success("Goals assigned successfully!");
@@ -117,18 +108,13 @@ const AssignGoalsForm: React.FC<AssignGoalsFormProps> = ({ onClose }) => {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    assignGoalsMutation.mutate();
-  };
-
   return (
     <DialogContent className="max-w-2xl">
       <DialogHeader>
         <DialogTitle>Assign Goals to Employees</DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={(e) => { e.preventDefault(); assignGoalsMutation.mutate(); }} className="space-y-6">
         {/* Goal Selection */}
         <div className="space-y-2">
           <Label htmlFor="goal">Select a Goal</Label>
