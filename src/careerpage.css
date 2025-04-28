@@ -141,6 +141,9 @@
   .purple-text-color:hover {
     color: oklch(62.7% 0.265 303.9);
   }
+  .border-purple {
+    border-color: oklch(62.7% 0.265 303.9);
+  }
 
   .purple-gradient {
     background-image: linear-gradient(to right, var(--tw-gradient-stops));

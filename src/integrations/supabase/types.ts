@@ -671,6 +671,7 @@ export type Database = {
           start_date: string
           status: string | null
           upload_date: string | null
+          skills: []
         }
         Insert: {
           company: string
@@ -697,6 +698,8 @@ export type Database = {
           start_date: string
           status?: string | null
           upload_date?: string | null
+          skills: []
+
         }
         Update: {
           company?: string
@@ -723,6 +726,7 @@ export type Database = {
           start_date?: string
           status?: string | null
           upload_date?: string | null
+          skills: []
         }
         Relationships: [
           {
@@ -2386,6 +2390,7 @@ export type Database = {
           summary: string | null
           top_skills: string[] | null
           updated_at: string | null
+          created_by: string | null 
         }
         Insert: {
           additional_certifications?: string[] | null
@@ -2404,6 +2409,7 @@ export type Database = {
           summary?: string | null
           top_skills?: string[] | null
           updated_at?: string | null
+          created_by: string | null 
         }
         Update: {
           additional_certifications?: string[] | null
@@ -2422,8 +2428,16 @@ export type Database = {
           summary?: string | null
           top_skills?: string[] | null
           updated_at?: string | null
+          created_by: string | null 
         }
-        Relationships: []
+        Relationships: [ 
+          {
+          foreignKeyName: "resume_analysis_created_by_fkey",
+          columns: ["created_by"],
+          referencedRelation: "hr_employees",
+          referencedColumns: ["id"]
+        }
+      ]
       }
       search_params: {
         Row: {

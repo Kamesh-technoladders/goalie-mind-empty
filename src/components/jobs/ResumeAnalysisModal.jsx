@@ -3,6 +3,9 @@ import Modal from 'react-modal';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../../integrations/supabase/client'; // Adjust import path as needed
 import { v4 as uuidv4 } from 'uuid';
+import { useSelector } from "react-redux";
+import { use } from 'react';
+
 
 function ResumeAnalysisModal({ jobId, onClose, setError, onAnalysisComplete = () => {}, initialData }) {
   const [resumeText, setResumeText] = useState(initialData?.resume_text || '');
@@ -18,6 +21,10 @@ function ResumeAnalysisModal({ jobId, onClose, setError, onAnalysisComplete = ()
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [isAnalysisComplete, setIsAnalysisComplete] = useState(false);
+
+  // user metadata
+  const user = useSelector((state) => state.auth.user);
+
 
   // Gemini setup
   const geminiApiKey = 'AIzaSyCPKQst10C4qlQ8hPinNI3LANSVPEuwGN4';
@@ -201,6 +208,7 @@ function ResumeAnalysisModal({ jobId, onClose, setError, onAnalysisComplete = ()
           email: result.email || '',
           github: result.github || '',
           linkedin: result.linkedin || '',
+          created_by: user?.id || null,
           updated_at: new Date().toISOString(),
         };
    
