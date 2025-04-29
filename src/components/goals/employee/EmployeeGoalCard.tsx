@@ -23,16 +23,16 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
   const status = displayDetails?.status || 'pending';
   const progress = displayDetails?.progress || 0;
   
-  // Format dates
+  // Get period text based on goal type
   const getPeriodText = () => {
+    const goalType = goal.assignmentDetails?.goalType || "Standard";
+    
     if (goal.activeInstance) {
       const startDate = format(new Date(goal.activeInstance.periodStart), 'MMM d');
       const endDate = format(new Date(goal.activeInstance.periodEnd), 'MMM d');
-      return `Current Period: ${startDate} - ${endDate}`;
+      return `Current ${goalType} Period: ${startDate} - ${endDate}`;
     } else {
-      const startDate = format(new Date(goal.startDate), 'MMM d');
-      const endDate = format(new Date(goal.endDate), 'MMM d');
-      return `${startDate} - ${endDate}`;
+      return `${goalType} Goal`;
     }
   };
 

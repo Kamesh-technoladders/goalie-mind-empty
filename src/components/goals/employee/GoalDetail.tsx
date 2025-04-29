@@ -210,6 +210,17 @@ const GoalDetail = () => {
   // Current instance to display (either selected or active)
   const displayInstance = selectedInstance || goal.activeInstance;
 
+  // Get goal period text based on goal type
+  const getGoalPeriodText = () => {
+    const goalType = goal.assignmentDetails?.goalType || "Standard";
+    
+    if (displayInstance) {
+      return `${goalType} Period: ${formatDate(displayInstance.periodStart)} - ${formatDate(displayInstance.periodEnd)}`;
+    }
+    
+    return `${goalType} Goal`;
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center mb-6">
@@ -256,11 +267,7 @@ const GoalDetail = () => {
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <span className="text-sm">
-                    {displayInstance ? (
-                      <>Period: {formatDate(displayInstance.periodStart)} - {formatDate(displayInstance.periodEnd)}</>
-                    ) : (
-                      <>Goal: {formatDate(goal.startDate)} - {formatDate(goal.endDate)}</>
-                    )}
+                    {getGoalPeriodText()}
                   </span>
                 </div>
 
@@ -324,7 +331,7 @@ const GoalDetail = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2" />
-                Update Progress
+                Update Progress for Current {goal.assignmentDetails?.goalType || ""} Period
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -433,6 +440,12 @@ const GoalDetail = () => {
           {/* Goal Instances List */}
           {instances && instances.length > 0 && (
             <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  {goal.assignmentDetails?.goalType || "Goal"} Periods
+                </CardTitle>
+              </CardHeader>
               <CardContent className="p-6">
                 <GoalInstanceList 
                   instances={instances}

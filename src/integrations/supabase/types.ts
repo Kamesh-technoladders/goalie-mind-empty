@@ -2630,6 +2630,7 @@ export type Database = {
       hr_status_change_counts: {
         Row: {
           candidate_id: string
+          candidate_owner: string | null
           count: number
           created_at: string | null
           employee_id: string
@@ -2641,6 +2642,7 @@ export type Database = {
         }
         Insert: {
           candidate_id: string
+          candidate_owner?: string | null
           count?: number
           created_at?: string | null
           employee_id: string
@@ -2652,6 +2654,7 @@ export type Database = {
         }
         Update: {
           candidate_id?: string
+          candidate_owner?: string | null
           count?: number
           created_at?: string | null
           employee_id?: string
@@ -2667,6 +2670,13 @@ export type Database = {
             columns: ["candidate_id"]
             isOneToOne: false
             referencedRelation: "hr_job_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_status_change_counts_candidate_owner_fkey"
+            columns: ["candidate_owner"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
           {

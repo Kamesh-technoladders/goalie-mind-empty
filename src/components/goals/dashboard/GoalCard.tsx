@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Users, BarChart3, Clock, Target, ChevronRight } from "lucide-react";
@@ -41,8 +40,6 @@ interface GoalCardProps {
 
 const GoalCard: React.FC<GoalCardProps> = ({ goal, delay = 0 }) => {
   const navigate = useNavigate();
-  
-console.log("Goaaalssss:", goal)
 
   // Calculate the total target value across all assigned employees
   const calculateTotalTarget = () => {
@@ -55,9 +52,8 @@ console.log("Goaaalssss:", goal)
       return goal.assignmentDetails?.targetValue || goal.targetValue || 0;
     }
     
-    // Try to get detailed assignments data if available through an API
-    // This would require the backend to expose all assignments for this goal
-    // For now, we'll just return the assignment target value or goal target value
+    // For multiple assignments, we'd need to sum all targets
+    // For now, we'll just return the single assignment or goal target value
     return goal.assignmentDetails?.targetValue || goal.targetValue || 0;
   };
   
@@ -78,14 +74,6 @@ console.log("Goaaalssss:", goal)
   };
   
   const progress = calculateProgress();
-  
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), "MMM d, yyyy");
-    } catch (e) {
-      return dateString;
-    }
-  };
 
   const getSectorColor = (sector: string) => {
     switch (sector.toLowerCase()) {
@@ -126,9 +114,9 @@ console.log("Goaaalssss:", goal)
       case "weekly":
         return <Calendar className="h-4 w-4 mr-1" />;
       case "monthly":
-        return <Target className="h-4 w-4 mr-1" />;
-      case "yearly":
         return <BarChart3 className="h-4 w-4 mr-1" />;
+      case "yearly":
+        return <Target className="h-4 w-4 mr-1" />;
       default:
         return <Target className="h-4 w-4 mr-1" />;
     }
@@ -195,25 +183,6 @@ console.log("Goaaalssss:", goal)
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">
           {goal.description}
         </p>
-
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-          <div className="flex items-center">
-            <Calendar className="h-4 w-4 mr-2" />
-            <span className="line-clamp-1">
-              {formatDate(goal.startDate)} - {formatDate(goal.endDate)}
-            </span>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger className="text-xs font-medium text-blue-600">
-                {getTimeRemaining()}
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Goal deadline: {formatDate(goal.endDate)}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
 
         <div className="mt-auto">
           {goal.assignmentDetails && (

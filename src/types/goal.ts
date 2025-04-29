@@ -1,3 +1,4 @@
+
 export type SectorType = 'HR' | 'Sales' | 'Finance' | 'Operations' | 'Marketing';
 export type MetricType = 'percentage' | 'currency' | 'count' | 'hours' | 'custom';
 export type GoalType = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
@@ -33,6 +34,11 @@ export interface KPI {
   targetValue: number;
   metricType: MetricType;
   metricUnit: string;
+}
+
+export interface EmployeeGoalTarget {
+  employee: Employee;
+  targetValue: number;
 }
 
 export interface AssignedGoal {

@@ -10,7 +10,8 @@ import {
   Goal, 
   Users, 
   CheckCircle2, 
-  Clock 
+  Clock,
+  Target
 } from "lucide-react";
 import { getGoalsWithDetails, getSectorsWithCounts } from "@/lib/supabaseData";
 import { GoalWithDetails } from "@/types/goal";
@@ -65,12 +66,16 @@ const Index = () => {
       ? goals 
       : goals.filter(goal => goal.sector.toLowerCase() === selectedSector.toLowerCase());
   
+  // Goals statistics
   const totalGoals = goals.length;
   const inProgressGoals = goals.filter(
     goal => goal.assignmentDetails?.status === "in-progress"
   ).length;
   const completedGoals = goals.filter(
     goal => goal.assignmentDetails?.status === "completed"
+  ).length;
+  const pendingGoals = goals.filter(
+    goal => goal.assignmentDetails?.status === "pending"
   ).length;
   
   // Count unique employees assigned to goals
@@ -81,6 +86,14 @@ const Index = () => {
     }
   });
   const assignedEmployeesCount = uniqueEmployeeIds.size;
+  
+  // Count goals by type
+  const goalsByType = goals.reduce((acc, goal) => {
+    if (goal.assignmentDetails?.goalType) {
+      acc[goal.assignmentDetails.goalType] = (acc[goal.assignmentDetails.goalType] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -209,10 +222,12 @@ const Index = () => {
               <div>
                 <p className="text-gray-500 text-sm">Assigned To</p>
                 <h3 className="text-2xl font-bold">{assignedEmployeesCount}</h3>
-                <div className="flex items-center mt-1">
-                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-100">
-                    Employees
-                  </Badge>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {Object.entries(goalsByType).map(([type, count]) => (
+                    <Badge key={type} variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-100">
+                      {count} {type}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </AnimatedCard>

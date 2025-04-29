@@ -74,7 +74,7 @@ const GoalInstanceList: React.FC<GoalInstanceListProps> = ({
   return (
     <div className="space-y-4">
       <div className="text-sm text-gray-500 flex items-center mb-2">
-        <Calendar className="h-4 w-4 mr-1" /> Goal Time Periods
+        <Calendar className="h-4 w-4 mr-1" /> Goal Periods
       </div>
       
       <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
