@@ -15,17 +15,31 @@ import {
 interface GoalListProps {
   goals: GoalWithDetails[];
   title?: string;
+  className?: string;
 }
 
-const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals" }) => {
+const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", className = "" }) => {
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("newest");
 
   const filteredGoals = goals
     .filter((goal) => {
       if (filter === "all") return true;
-      if (!goal.assignmentDetails) return false;
-      return goal.assignmentDetails.status === filter;
+      if (!goal.assignments || goal.assignments.length === 0) return false;
+
+      // Check status across all assignments
+      switch(filter) {
+        case "in-progress":
+          return goal.assignments.some(a => a.status === "in-progress");
+        case "pending":
+          return goal.assignments.some(a => a.status === "pending");
+        case "completed":
+          return goal.assignments.every(a => a.status === "completed");
+        case "overdue":
+          return goal.assignments.some(a => a.status === "overdue");
+        default:
+          return true;
+      }
     })
     .sort((a, b) => {
       if (sort === "newest") {
@@ -33,19 +47,19 @@ const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals" }) => {
       } else if (sort === "oldest") {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       } else if (sort === "progress-high") {
-        const progressA = a.assignmentDetails?.progress || 0;
-        const progressB = b.assignmentDetails?.progress || 0;
+        const progressA = a.overallProgress || 0;
+        const progressB = b.overallProgress || 0;
         return progressB - progressA;
       } else if (sort === "progress-low") {
-        const progressA = a.assignmentDetails?.progress || 0;
-        const progressB = b.assignmentDetails?.progress || 0;
+        const progressA = a.overallProgress || 0;
+        const progressB = b.overallProgress || 0;
         return progressA - progressB;
       }
       return 0;
     });
 
   return (
-    <div className="w-full">
+    <div className={`w-full ${className}`}>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">{title}</h2>
         <div className="flex space-x-2">

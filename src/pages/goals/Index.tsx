@@ -14,7 +14,7 @@ import {
   Target
 } from "lucide-react";
 import { getGoalsWithDetails, getSectorsWithCounts } from "@/lib/supabaseData";
-import { GoalWithDetails } from "@/types/goal";
+import { GoalType, GoalWithDetails } from "@/types/goal";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import CreateGoalForm from "@/components/goals/goals/CreateGoalForm";
@@ -25,6 +25,7 @@ const Index = () => {
   const [goals, setGoals] = useState<GoalWithDetails[]>([]);
   const [sectors, setSectors] = useState<{name: string, count: number}[]>([]);
   const [selectedSector, setSelectedSector] = useState("all");
+  const [selectedTimeframe, setSelectedTimeframe] = useState<"all" | GoalType>("all");
   const [loading, setLoading] = useState(true);
   const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
   const [createGoalDialogOpen, setCreateGoalDialogOpen] = useState(false);
@@ -61,21 +62,49 @@ const Index = () => {
     fetchData();
   }, [createGoalDialogOpen, assignGoalDialogOpen]);
   
-  const filteredGoals = 
-    selectedSector === "all" 
-      ? goals 
-      : goals.filter(goal => goal.sector.toLowerCase() === selectedSector.toLowerCase());
+  const filteredGoals = goals
+    .filter(goal => {
+      if (selectedSector === "all") return true;
+      return goal.sector.toLowerCase() === selectedSector.toLowerCase();
+    })
+    .filter(goal => {
+      if (selectedTimeframe === "all") return true;
+      if (!goal.assignments || goal.assignments.length === 0) return false;
+      // Check if any assignment matches the selected timeframe
+      return goal.assignments.some(assignment => 
+        assignment.goalType === selectedTimeframe
+      );
+    });
+  
+  // Group goals by timeframe
+  const dailyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Daily')
+  );
+  
+  const weeklyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Weekly')
+  );
+  
+  const monthlyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Monthly')
+  );
+  
+  const yearlyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Yearly')
+  );
   
   // Goals statistics
   const totalGoals = goals.length;
   const inProgressGoals = goals.filter(
-    goal => goal.assignmentDetails?.status === "in-progress"
+    goal => goal.assignments?.some(a => a.status === "in-progress")
   ).length;
+  
   const completedGoals = goals.filter(
-    goal => goal.assignmentDetails?.status === "completed"
+    goal => goal.assignments?.every(a => a.status === "completed")
   ).length;
+  
   const pendingGoals = goals.filter(
-    goal => goal.assignmentDetails?.status === "pending"
+    goal => goal.assignments?.every(a => a.status === "pending")
   ).length;
   
   // Count unique employees assigned to goals
@@ -89,11 +118,17 @@ const Index = () => {
   
   // Count goals by type
   const goalsByType = goals.reduce((acc, goal) => {
-    if (goal.assignmentDetails?.goalType) {
-      acc[goal.assignmentDetails.goalType] = (acc[goal.assignmentDetails.goalType] || 0) + 1;
+    if (goal.assignments) {
+      goal.assignments.forEach(assignment => {
+        acc[assignment.goalType] = (acc[assignment.goalType] || 0) + 1;
+      });
     }
     return acc;
   }, {} as Record<string, number>);
+
+  const handleTimeframeChange = (timeframe: "all" | GoalType) => {
+    setSelectedTimeframe(timeframe);
+  };
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -130,6 +165,7 @@ const Index = () => {
             </div>
           </div>
           
+          {/* Department Tabs */}
           <Tabs defaultValue="all" className="w-full mb-6">
             <TabsList className={`grid grid-cols-2 md:grid-cols-${Math.min(departments.length + 1, 7)} w-full md:w-auto`}>
               <TabsTrigger 
@@ -150,6 +186,51 @@ const Index = () => {
                   {department.name}
                 </TabsTrigger>
               ))}
+            </TabsList>
+          </Tabs>
+          
+          {/* Timeframe Tabs */}
+          <Tabs defaultValue="all" className="w-full mb-6">
+            <TabsList className="grid grid-cols-5 w-full md:w-auto">
+              <TabsTrigger 
+                value="all" 
+                onClick={() => handleTimeframeChange("all")}
+                className="px-4 py-2"
+              >
+                All Timeframes
+              </TabsTrigger>
+              
+              <TabsTrigger 
+                value="Daily" 
+                onClick={() => handleTimeframeChange("Daily")}
+                className="px-4 py-2"
+              >
+                Daily
+              </TabsTrigger>
+              
+              <TabsTrigger 
+                value="Weekly" 
+                onClick={() => handleTimeframeChange("Weekly")}
+                className="px-4 py-2"
+              >
+                Weekly
+              </TabsTrigger>
+              
+              <TabsTrigger 
+                value="Monthly" 
+                onClick={() => handleTimeframeChange("Monthly")}
+                className="px-4 py-2"
+              >
+                Monthly
+              </TabsTrigger>
+              
+              <TabsTrigger 
+                value="Yearly" 
+                onClick={() => handleTimeframeChange("Yearly")}
+                className="px-4 py-2"
+              >
+                Yearly
+              </TabsTrigger>
             </TabsList>
           </Tabs>
           
@@ -236,10 +317,39 @@ const Index = () => {
           {loading ? (
             <div className="text-center py-10">Loading goals data...</div>
           ) : (
-            <GoalList 
-              goals={filteredGoals} 
-              title={selectedSector === "all" ? "All Goals" : `${selectedSector.toUpperCase()} Goals`} 
-            />
+            <>
+              {selectedTimeframe === "all" ? (
+                <>
+                  {dailyGoals.length > 0 && (
+                    <GoalList goals={dailyGoals} title="Daily Goals" />
+                  )}
+                  
+                  {weeklyGoals.length > 0 && (
+                    <GoalList goals={weeklyGoals} title="Weekly Goals" className="mt-10" />
+                  )}
+                  
+                  {monthlyGoals.length > 0 && (
+                    <GoalList goals={monthlyGoals} title="Monthly Goals" className="mt-10" />
+                  )}
+                  
+                  {yearlyGoals.length > 0 && (
+                    <GoalList goals={yearlyGoals} title="Yearly Goals" className="mt-10" />
+                  )}
+                  
+                  {dailyGoals.length === 0 && weeklyGoals.length === 0 && 
+                   monthlyGoals.length === 0 && yearlyGoals.length === 0 && (
+                    <div className="text-center py-10 bg-gray-50 rounded-lg">
+                      <p className="text-gray-500">No goals found</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <GoalList 
+                  goals={filteredGoals}
+                  title={`${selectedTimeframe} Goals`}
+                />
+              )}
+            </>
           )}
         </section>
       </main>

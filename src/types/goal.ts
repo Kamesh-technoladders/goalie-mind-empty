@@ -70,9 +70,12 @@ export interface GoalInstance {
 
 export interface GoalWithDetails extends Goal {
   assignedTo?: Employee[];
-  assignmentDetails?: AssignedGoal;
+  assignments?: AssignedGoal[];  // Updated to store all assignments (not just the first one)
   instances?: GoalInstance[];
   activeInstance?: GoalInstance;
+  totalTargetValue?: number;     // Sum of all target values
+  totalCurrentValue?: number;    // Sum of all current values
+  overallProgress?: number;      // Overall progress across all assignments
 }
 
 export interface TrackingRecord {
