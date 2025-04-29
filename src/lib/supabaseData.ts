@@ -940,4 +940,93 @@ export const updateGoalProgress = async (
   assignedGoalId: string,
   currentValue: number,
   notes?: string
-): Promise<AssignedGoal
+): Promise<AssignedGoal | null> => {
+  try {
+    // Update the assigned goal with new current value
+    const { data, error } = await supabase
+      .from('hr_assigned_goals')
+      .update({
+        current_value: currentValue,
+        progress: currentValue * 100 / (data?.target_value || 1), // Calculate progress percentage
+        updated_at: new Date().toISOString(),
+        notes: notes
+      })
+      .eq('id', assignedGoalId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating goal progress:', error);
+      return null;
+    }
+    
+    return {
+      id: data.id,
+      goalId: data.goal_id,
+      employeeId: data.employee_id,
+      status: data.status,
+      progress: data.progress,
+      currentValue: data.current_value,
+      targetValue: data.target_value,
+      notes: data.notes,
+      assignedAt: data.assigned_at,
+      goalType: data.goal_type
+    };
+  } catch (error) {
+    console.error('Error in updateGoalProgress:', error);
+    return null;
+  }
+};
+
+export const updateAssignedGoalTarget = async (
+  assignedGoalId: string,
+  targetValue: number
+): Promise<AssignedGoal | null> => {
+  try {
+    const { data: currentData, error: fetchError } = await supabase
+      .from('hr_assigned_goals')
+      .select('current_value')
+      .eq('id', assignedGoalId)
+      .single();
+      
+    if (fetchError) {
+      console.error('Error fetching current goal data:', fetchError);
+      return null;
+    }
+    
+    const currentValue = currentData.current_value;
+    const progress = targetValue > 0 ? Math.min(Math.round((currentValue / targetValue) * 100), 100) : 0;
+    
+    const { data, error } = await supabase
+      .from('hr_assigned_goals')
+      .update({
+        target_value: targetValue,
+        progress: progress,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', assignedGoalId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating goal target:', error);
+      return null;
+    }
+    
+    return {
+      id: data.id,
+      goalId: data.goal_id,
+      employeeId: data.employee_id,
+      status: data.status,
+      progress: data.progress,
+      currentValue: data.current_value,
+      targetValue: data.target_value,
+      notes: data.notes,
+      assignedAt: data.assigned_at,
+      goalType: data.goal_type
+    };
+  } catch (error) {
+    console.error('Error in updateAssignedGoalTarget:', error);
+    return null;
+  }
+};

@@ -22,6 +22,7 @@ const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", classNa
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("newest");
 
+  // Filter goals by goal type (we only want to show goals for a specific timeframe)
   const filteredGoals = goals
     .filter((goal) => {
       if (filter === "all") return true;

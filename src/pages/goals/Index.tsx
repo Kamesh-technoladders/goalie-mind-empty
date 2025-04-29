@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import GoalList from "@/components/goals/goals/GoalList";
 import AnimatedCard from "@/components/ui/custom/AnimatedCard";
@@ -62,38 +61,58 @@ const Index = () => {
     fetchData();
   }, [createGoalDialogOpen, assignGoalDialogOpen]);
   
+  // Filter goals by sector and timeframe
   const filteredGoals = goals
     .filter(goal => {
       if (selectedSector === "all") return true;
       return goal.sector.toLowerCase() === selectedSector.toLowerCase();
-    })
-    .filter(goal => {
-      if (selectedTimeframe === "all") return true;
-      if (!goal.assignments || goal.assignments.length === 0) return false;
-      // Check if any assignment matches the selected timeframe
-      return goal.assignments.some(assignment => 
-        assignment.goalType === selectedTimeframe
-      );
     });
   
-  // Group goals by timeframe
-  const dailyGoals = filteredGoals.filter(goal => 
-    goal.assignments?.some(a => a.goalType === 'Daily')
-  );
+  // Group goals by timeframe WITHOUT combining different timeframes into one card
+  const groupGoalsByTimeframe = (goals: GoalWithDetails[], timeframe: GoalType): GoalWithDetails[] => {
+    // For each goal, filter its assignments to only include assignments of the specified timeframe
+    return goals.map(goal => {
+      const timeframeAssignments = goal.assignments?.filter(a => a.goalType === timeframe) || [];
+      
+      // If this goal has no assignments for this timeframe, return null
+      if (timeframeAssignments.length === 0) return null;
+      
+      // Calculate the total target/current values and progress for THIS timeframe only
+      const timeframeTargetValue = timeframeAssignments.reduce((sum, a) => sum + a.targetValue, 0);
+      const timeframeCurrentValue = timeframeAssignments.reduce((sum, a) => sum + a.currentValue, 0);
+      const timeframeProgress = timeframeTargetValue > 0 
+        ? Math.min(Math.round((timeframeCurrentValue / timeframeTargetValue) * 100), 100)
+        : 0;
+      
+      // Get employees assigned to this timeframe
+      const assignedToThisTimeframe = timeframeAssignments
+        .map(a => goal.assignedTo?.find(e => e.id === a.employeeId))
+        .filter(Boolean);
+      
+      // Return a new goal object with only the timeframe-specific data
+      return {
+        ...goal,
+        assignments: timeframeAssignments,
+        assignedTo: assignedToThisTimeframe,
+        totalTargetValue: timeframeTargetValue,
+        totalCurrentValue: timeframeCurrentValue,
+        overallProgress: timeframeProgress
+      };
+    }).filter(Boolean) as GoalWithDetails[]; // Filter out null values
+  };
   
-  const weeklyGoals = filteredGoals.filter(goal => 
-    goal.assignments?.some(a => a.goalType === 'Weekly')
-  );
+  // Create separate goal lists for each timeframe
+  const dailyGoals = groupGoalsByTimeframe(filteredGoals, 'Daily');
+  const weeklyGoals = groupGoalsByTimeframe(filteredGoals, 'Weekly');
+  const monthlyGoals = groupGoalsByTimeframe(filteredGoals, 'Monthly');
+  const yearlyGoals = groupGoalsByTimeframe(filteredGoals, 'Yearly');
   
-  const monthlyGoals = filteredGoals.filter(goal => 
-    goal.assignments?.some(a => a.goalType === 'Monthly')
-  );
+  // Apply timeframe filter when a specific timeframe is selected
+  const timeframeFilteredGoals = selectedTimeframe === 'all' 
+    ? filteredGoals 
+    : groupGoalsByTimeframe(filteredGoals, selectedTimeframe as GoalType);
   
-  const yearlyGoals = filteredGoals.filter(goal => 
-    goal.assignments?.some(a => a.goalType === 'Yearly')
-  );
-  
-  // Goals statistics
+  // Goals statistics - calculated across all timeframes
   const totalGoals = goals.length;
   const inProgressGoals = goals.filter(
     goal => goal.assignments?.some(a => a.status === "in-progress")
@@ -235,6 +254,7 @@ const Index = () => {
           </Tabs>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            {/* ... keep existing code (statistics cards) */}
             <AnimatedCard 
               animation="fade" 
               delay={100}
@@ -320,6 +340,7 @@ const Index = () => {
             <>
               {selectedTimeframe === "all" ? (
                 <>
+                  {/* Display goals separated by timeframe */}
                   {dailyGoals.length > 0 && (
                     <GoalList goals={dailyGoals} title="Daily Goals" />
                   )}
@@ -345,7 +366,7 @@ const Index = () => {
                 </>
               ) : (
                 <GoalList 
-                  goals={filteredGoals}
+                  goals={timeframeFilteredGoals}
                   title={`${selectedTimeframe} Goals`}
                 />
               )}
