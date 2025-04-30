@@ -955,4 +955,104 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
       .eq('id', employeeId)
       .single();
     
-    if (employeeError ||
+    if (employeeError) {
+      console.error('Error fetching employee details:', employeeError);
+      return [];
+    }
+
+    const employee: Employee = {
+      id: employeeData.id,
+      name: `${employeeData.first_name} ${employeeData.last_name}`,
+      position: employeeData.position || 'Employee',
+      department: employeeData.department_id as any,
+      email: employeeData.email,
+      avatar: employeeData.profile_picture_url
+    };
+
+    const goals: GoalWithDetails[] = [];
+
+    // Process each goal
+    for (const goalData of goalsData) {
+      const assignedGoal = assignedGoals.find(ag => ag.goalId === goalData.id);
+      
+      if (!assignedGoal) continue;
+
+      // Get instances for this assigned goal
+      const { data: instancesData, error: instancesError } = await supabase
+        .from('hr_goal_instances')
+        .select('*')
+        .eq('assigned_goal_id', assignedGoal.id)
+        .order('period_start', { ascending: false });
+
+      let instances: GoalInstance[] = [];
+      let activeInstance: GoalInstance | undefined = undefined;
+
+      if (!instancesError && instancesData && instancesData.length > 0) {
+        instances = instancesData.map(instance => ({
+          id: instance.id,
+          assignedGoalId: instance.assigned_goal_id,
+          periodStart: instance.period_start,
+          periodEnd: instance.period_end,
+          targetValue: instance.target_value,
+          currentValue: instance.current_value,
+          progress: instance.progress,
+          status: instance.status,
+          createdAt: instance.created_at,
+          updatedAt: instance.updated_at,
+          notes: instance.notes
+        }));
+
+        // Find the current active instance
+        const today = new Date().toISOString().split('T')[0];
+        const currentInstance = instances.find(
+          instance => 
+            new Date(instance.periodStart) <= new Date(today) && 
+            new Date(instance.periodEnd) >= new Date(today)
+        );
+
+        // If we found an active instance, use it
+        activeInstance = currentInstance || instances[0]; // Fallback to the first instance if no active one
+      }
+
+      // Handle special goals (Submission or Onboarding)
+      const isSpecialGoal = goalData.name === "Submission" || goalData.name === "Onboarding";
+      if (isSpecialGoal && activeInstance) {
+        const currentValue = await getSubmissionOrOnboardingCounts(
+          employeeId,
+          goalData.name,
+          activeInstance.periodStart,
+          activeInstance.periodEnd
+        );
+        
+        // Update the assignment's current value and progress
+        assignedGoal.currentValue = currentValue;
+        if (assignedGoal.targetValue > 0) {
+          assignedGoal.progress = Math.min(Math.round((currentValue / assignedGoal.targetValue) * 100), 100);
+        }
+        
+        // Update the active instance with the new value
+        activeInstance.currentValue = currentValue;
+        activeInstance.progress = assignedGoal.progress;
+      }
+
+      const goal: GoalWithDetails = {
+        ...mapHrGoalToGoal(goalData),
+        assignedTo: [employee],
+        assignments: [assignedGoal],
+        instances,
+        activeInstance,
+        assignmentDetails: assignedGoal,
+        totalTargetValue: assignedGoal.targetValue,
+        totalCurrentValue: assignedGoal.currentValue,
+        overallProgress: assignedGoal.progress
+      };
+
+      goals.push(goal);
+    }
+
+    return goals;
+  } catch (error) {
+    console.error('Error in getEmployeeGoals:', error);
+    return [];
+  }
+};
