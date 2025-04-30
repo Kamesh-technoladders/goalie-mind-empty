@@ -3158,6 +3158,10 @@ export type Database = {
         Args: { org_name: string; user_id: string }
         Returns: string
       }
+      generate_goal_instances_periodic: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_client_status_report: {
         Args: { start_date: string; end_date: string; org_id: string }
         Returns: {

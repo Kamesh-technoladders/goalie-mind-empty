@@ -16,7 +16,8 @@ import {
   addTrackingRecord, 
   getTrackingRecords,
   getGoalInstances,
-  getActiveGoalInstance
+  getActiveGoalInstance,
+  getSubmissionOrOnboardingCounts
 } from "@/lib/supabaseData";
 import { 
   ArrowLeft, 
@@ -27,7 +28,8 @@ import {
   BarChart3, 
   Target, 
   TrendingUp,
-  Users
+  Users,
+  Info
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -60,6 +62,9 @@ const GoalDetail = () => {
   
   // State for selected instance
   const [selectedInstance, setSelectedInstance] = useState<GoalInstance | null>(null);
+  
+  // State for current value (for special goal types)
+  const [currentValue, setCurrentValue] = useState<number>(0);
 
   // Fetch goal data
   const {
@@ -92,6 +97,9 @@ const GoalDetail = () => {
     enabled: !!goal?.assignmentDetails?.id,
   });
   
+  // Check if this is a special goal type (Submission or Onboarding)
+  const isSpecialGoal = goal?.name === "Submission" || goal?.name === "Onboarding";
+  
   // When instances are loaded, set the selected instance to the active one
   useEffect(() => {
     if (instances && instances.length > 0 && !selectedInstance) {
@@ -106,6 +114,30 @@ const GoalDetail = () => {
       setSelectedInstance(activeInstance || instances[instances.length - 1]);
     }
   }, [instances, selectedInstance]);
+  
+  // Fetch current value for special goal types
+  useEffect(() => {
+    if (!isSpecialGoal || !goal || !selectedInstance) return;
+    
+    const fetchCurrentValue = async () => {
+      try {
+        const count = await getSubmissionOrOnboardingCounts(
+          employee.id,
+          goal.name,
+          selectedInstance.periodStart,
+          selectedInstance.periodEnd
+        );
+        
+        console.log(`Fetched ${goal.name} count:`, count);
+        setCurrentValue(count);
+      } catch (error) {
+        console.error("Error fetching current value:", error);
+        setCurrentValue(0);
+      }
+    };
+    
+    fetchCurrentValue();
+  }, [isSpecialGoal, goal?.name, selectedInstance, employee.id]);
 
   const addProgressMutation = useMutation({
     mutationFn: async () => {
@@ -279,6 +311,23 @@ const GoalDetail = () => {
                 </div>
               </div>
 
+              {isSpecialGoal && (
+                <div className="bg-blue-50 p-4 mb-6 rounded-md border border-blue-100">
+                  <div className="flex items-start">
+                    <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-blue-700">
+                        <strong>Auto-calculated Goal</strong>
+                      </p>
+                      <p className="text-sm text-blue-600">
+                        This {goal.name} goal tracks your performance automatically based on system records. 
+                        As you process {goal.name.toLowerCase()}s, your progress will update automatically.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Progress</span>
@@ -296,7 +345,7 @@ const GoalDetail = () => {
                     <div className="flex-1">
                       <p className="text-sm text-gray-500">Current Value</p>
                       <p className="text-2xl font-semibold">
-                        {displayInstance?.currentValue || goal.assignmentDetails?.currentValue || 0}{" "}
+                        {isSpecialGoal ? currentValue : displayInstance?.currentValue || goal.assignmentDetails?.currentValue || 0}{" "}
                         <span className="text-sm text-gray-500">{goal.metricUnit}</span>
                       </p>
                     </div>
@@ -315,7 +364,7 @@ const GoalDetail = () => {
                         {Math.max(
                           0,
                           (displayInstance?.targetValue || goal.assignmentDetails?.targetValue || goal.targetValue) -
-                            (displayInstance?.currentValue || goal.assignmentDetails?.currentValue || 0)
+                            (isSpecialGoal ? currentValue : (displayInstance?.currentValue || goal.assignmentDetails?.currentValue || 0))
                         )}{" "}
                         <span className="text-sm text-gray-500">{goal.metricUnit}</span>
                       </p>
@@ -326,80 +375,123 @@ const GoalDetail = () => {
             </CardContent>
           </Card>
 
-          {/* Update Progress Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Update Progress for Current {goal.assignmentDetails?.goalType || ""} Period
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="text-sm font-medium block mb-1" htmlFor="value">
-                      Value ({goal.metricUnit})
-                    </label>
-                    <Input
-                      id="value"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={value}
-                      onChange={(e) => setValue(e.target.value)}
-                      className="w-full"
-                    />
+          {/* Update Progress Form - Only show for non-special goals */}
+          {!isSpecialGoal && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="h-5 w-5 mr-2" />
+                  Update Progress for Current {goal.assignmentDetails?.goalType || ""} Period
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="text-sm font-medium block mb-1" htmlFor="value">
+                        Value ({goal.metricUnit})
+                      </label>
+                      <Input
+                        id="value"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium block mb-1" htmlFor="date">
+                        Date
+                      </label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        max={new Date().toISOString().split("T")[0]}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium block mb-1">
+                        &nbsp;
+                      </label>
+                      <Button
+                        type="submit"
+                        disabled={addProgressMutation.isPending}
+                        className="w-full"
+                      >
+                        {addProgressMutation.isPending ? "Updating..." : "Add Progress"}
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium block mb-1" htmlFor="date">
-                      Date
-                    </label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      max={new Date().toISOString().split("T")[0]}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium block mb-1">
-                      &nbsp;
-                    </label>
-                    <Button
-                      type="submit"
-                      disabled={addProgressMutation.isPending}
-                      className="w-full"
-                    >
-                      {addProgressMutation.isPending ? "Updating..." : "Add Progress"}
-                    </Button>
-                  </div>
-                </div>
 
-                <div>
-                  <label className="text-sm font-medium block mb-1" htmlFor="notes">
-                    Notes (optional)
-                  </label>
-                  <Textarea
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add any notes about this progress update"
-                    className="w-full"
-                  />
+                  <div>
+                    <label className="text-sm font-medium block mb-1" htmlFor="notes">
+                      Notes (optional)
+                    </label>
+                    <Textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Add any notes about this progress update"
+                      className="w-full"
+                    />
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Info Card for Special Goals */}
+          {isSpecialGoal && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Info className="h-5 w-5 mr-2" />
+                  Automatic Progress Tracking
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <p className="font-medium mb-2">How this works</p>
+                  <p className="text-gray-600 text-sm mb-4">
+                    This {goal.name} goal is automatically tracked based on your activity:
+                  </p>
+                  
+                  <ul className="list-disc pl-5 text-sm text-gray-600 space-y-2">
+                    <li>
+                      Your progress is calculated based on the number of {goal.name.toLowerCase()}s 
+                      you've processed during the current period.
+                    </li>
+                    <li>
+                      The system automatically counts your {goal.name.toLowerCase()}s and updates your 
+                      progress toward the target.
+                    </li>
+                    <li>
+                      As you process more {goal.name.toLowerCase()}s, your progress will update automatically 
+                      without requiring manual input.
+                    </li>
+                    <li>
+                      Automatic updates may take a few minutes to reflect in your dashboard.
+                    </li>
+                  </ul>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Recent Progress Records */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center">
                 <BarChart3 className="h-5 w-5 mr-2" />
-                Recent Progress Records
+                {isSpecialGoal 
+                  ? `Recent ${goal.name} Records` 
+                  : "Recent Progress Records"
+                }
               </CardTitle>
             </CardHeader>
             <CardContent>

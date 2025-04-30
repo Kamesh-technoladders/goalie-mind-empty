@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Employee, GoalWithDetails } from "@/types/goal";
 import { BarChart3, Clock, AlertTriangle, CheckCircle2, Calendar, Target } from "lucide-react";
 import { format } from 'date-fns';
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmployeeGoalCardProps {
   goal: GoalWithDetails;
@@ -17,11 +18,84 @@ interface EmployeeGoalCardProps {
 
 const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) => {
   const navigate = useNavigate();
+  const [currentValue, setCurrentValue] = useState<number>(0);
   
   // Use active instance if available, otherwise fall back to assignment details
   const displayDetails = goal.activeInstance || goal.assignmentDetails;
   const status = displayDetails?.status || 'pending';
   const progress = displayDetails?.progress || 0;
+
+  // Check if this is a special goal type (Submission or Onboarding)
+  const isSpecialGoal = goal.name === "Submission" || goal.name === "Onboarding";
+  
+  useEffect(() => {
+    // For regular goals, just use the current value from the goal
+    if (!isSpecialGoal) {
+      setCurrentValue(displayDetails?.currentValue || 0);
+      return;
+    }
+    
+    // For special goals, fetch the current value from hr_status_change_counts
+    const fetchCurrentValue = async () => {
+      let subStatusId: string | null = null;
+      if (goal.name === "Submission") {
+        subStatusId = "71706ff4-1bab-4065-9692-2a1237629dda";
+      } else if (goal.name === "Onboarding") {
+        subStatusId = "c9716374-3477-4606-877a-dfa5704e7680";
+      }
+  
+      console.log("fetchCurrentValue: Goal Name:", goal.name, "Sub Status ID:", subStatusId);
+  
+      if (!subStatusId || !goal.activeInstance) {
+        console.log(
+          "fetchCurrentValue: No subStatusId or activeInstance, using fallback currentValue:",
+          displayDetails?.currentValue || 0
+        );
+        setCurrentValue(displayDetails?.currentValue || 0);
+        return;
+      }
+  
+      try {
+        // Add one day to periodEnd to include the full day
+        const periodEndPlusOne = new Date(goal.activeInstance.periodEnd);
+        periodEndPlusOne.setDate(periodEndPlusOne.getDate() + 1);
+  
+        console.log("fetchCurrentValue: Query Parameters:", {
+          sub_status_id: subStatusId,
+          candidate_owner: employee.id,
+          period_start: goal.activeInstance.periodStart,
+          period_end: periodEndPlusOne.toISOString().split("T")[0],
+        });
+  
+        const { data, error } = await supabase
+          .from("hr_status_change_counts")
+          .select("count")
+          .eq("sub_status_id", subStatusId)
+          .eq("candidate_owner", employee.id)
+          .gte("created_at", goal.activeInstance.periodStart)
+          .lt("created_at", periodEndPlusOne.toISOString().split("T")[0]);
+  
+        if (error) {
+          console.error("fetchCurrentValue: Supabase Error:", error);
+          setCurrentValue(displayDetails?.currentValue || 0);
+          return;
+        }
+  
+        console.log("fetchCurrentValue: Supabase Data:", data);
+  
+        // Sum the counts
+        const totalCount = data.reduce((sum: number, record: { count: number }) => sum + record.count, 0);
+        console.log("fetchCurrentValue: Calculated totalCount:", totalCount);
+  
+        setCurrentValue(totalCount);
+      } catch (err) {
+        console.error("fetchCurrentValue: Unexpected Error:", err);
+        setCurrentValue(displayDetails?.currentValue || 0);
+      }
+    };
+  
+    fetchCurrentValue();
+  }, [goal.id, employee.id, goal.activeInstance?.periodStart, goal.activeInstance?.periodEnd]);
   
   // Get period text based on goal type
   const getPeriodText = () => {
@@ -120,17 +194,23 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
             <span>
               {goal.activeInstance ? (
                 <span>
-                  {goal.activeInstance.currentValue} / {goal.activeInstance.targetValue}
+                  {isSpecialGoal ? currentValue : goal.activeInstance.currentValue} / {goal.activeInstance.targetValue}
                   <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
                 </span>
               ) : (
                 <span>
-                  {displayDetails?.currentValue || 0} / {displayDetails?.targetValue || goal.targetValue}
+                  {isSpecialGoal ? currentValue : displayDetails?.currentValue || 0} / {displayDetails?.targetValue || goal.targetValue}
                   <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
                 </span>
               )}
             </span>
           </div>
+          
+          {isSpecialGoal && (
+            <div className="text-xs text-blue-600 italic">
+              *Values auto-calculated from {goal.name} records
+            </div>
+          )}
         </div>
       </CardContent>
       
@@ -142,7 +222,7 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
           className="w-full" 
           onClick={handleViewDetails}
         >
-          View & Update Progress
+          View {isSpecialGoal ? "Details" : "& Update Progress"}
         </Button>
       </CardFooter>
     </Card>

@@ -19,14 +19,15 @@ import {
   AlertCircle,
   Edit,
   PlusCircle,
-  Trash2
+  Trash2,
+  Info
 } from "lucide-react";
 import { 
   format, 
   parseISO 
 } from "date-fns";
 import { GoalWithDetails, Employee, AssignedGoal } from "@/types/goal";
-import { getGoalById, updateGoalProgress, addTrackingRecord } from "@/lib/supabaseData";
+import { getGoalById, updateGoalProgress, addTrackingRecord, getSubmissionOrOnboardingCounts } from "@/lib/supabaseData";
 import GoalInstanceList from "@/components/goals/employee/GoalInstanceList";
 import GoalProgressForm from "@/components/goals/employee/GoalProgressForm";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,12 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const GoalDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +63,9 @@ const GoalDetail = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const initialEmployee = location.state?.employee;
+  
+  // Check if this is a special goal type (Submission or Onboarding)
+  const isSpecialGoal = goal?.name === "Submission" || goal?.name === "Onboarding";
 
   useEffect(() => {
     if (id) {
@@ -237,15 +247,17 @@ const GoalDetail = () => {
               <CardTitle className="flex justify-between items-center">
                 <span>Goal Overview</span>
                 <div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mr-2"
-                    onClick={handleAddEmployeeAssignment}
-                  >
-                    <PlusCircle className="h-4 w-4 mr-1" />
-                    Add Employee
-                  </Button>
+                  {!isSpecialGoal && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mr-2"
+                      onClick={handleAddEmployeeAssignment}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-1" />
+                      Add Employee
+                    </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -259,6 +271,23 @@ const GoalDetail = () => {
             </CardHeader>
             
             <CardContent>
+              {isSpecialGoal && (
+                <div className="bg-blue-50 p-4 mb-6 rounded-md border border-blue-100">
+                  <div className="flex items-start">
+                    <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-blue-700">
+                        <strong>Auto-calculated Goal</strong>
+                      </p>
+                      <p className="text-sm text-blue-600">
+                        This {goal.name} goal is automatically calculated based on the number of records in the system. 
+                        Manual progress updates are disabled.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <h3 className="font-semibold mb-2 flex items-center">
@@ -372,53 +401,69 @@ const GoalDetail = () => {
                           <div className="text-sm text-gray-500">Target Value</div>
                           <div className="font-semibold flex items-center">
                             {assignment.targetValue} {goal.metricUnit}
-                            <Dialog open={isDialogOpen && selectedAssignmentId === assignment.id} onOpenChange={(open) => {
-                              setIsDialogOpen(open);
-                              if (!open) setSelectedAssignmentId(null);
-                            }}>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  className="ml-2 h-6 w-6 p-0"
-                                  onClick={() => {
-                                    setSelectedAssignmentId(assignment.id);
-                                    setEditTarget(assignment.targetValue);
-                                  }}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Update Target Value</DialogTitle>
-                                  <DialogDescription>
-                                    Change the target value for {employee?.name || "this employee"}.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="py-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="target">Target Value ({goal.metricUnit})</Label>
-                                    <Input
-                                      id="target"
-                                      type="number"
-                                      min="1"
-                                      value={editTarget}
-                                      onChange={(e) => setEditTarget(e.target.value)}
-                                    />
+                            {!isSpecialGoal && (
+                              <Dialog open={isDialogOpen && selectedAssignmentId === assignment.id} onOpenChange={(open) => {
+                                setIsDialogOpen(open);
+                                if (!open) setSelectedAssignmentId(null);
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="ml-2 h-6 w-6 p-0"
+                                    onClick={() => {
+                                      setSelectedAssignmentId(assignment.id);
+                                      setEditTarget(assignment.targetValue);
+                                    }}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Update Target Value</DialogTitle>
+                                    <DialogDescription>
+                                      Change the target value for {employee?.name || "this employee"}.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="py-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="target">Target Value ({goal.metricUnit})</Label>
+                                      <Input
+                                        id="target"
+                                        type="number"
+                                        min="1"
+                                        value={editTarget}
+                                        onChange={(e) => setEditTarget(e.target.value)}
+                                      />
+                                    </div>
                                   </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                                  <Button onClick={handleUpdateTarget}>Save Changes</Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
+                                  <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                                    <Button onClick={handleUpdateTarget}>Save Changes</Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            )}
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">Current Value</div>
-                          <div className="font-semibold">{assignment.currentValue} {goal.metricUnit}</div>
+                          <div className="font-semibold">
+                            {assignment.currentValue} {goal.metricUnit}
+                            {isSpecialGoal && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 inline-block ml-1 text-blue-500" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Auto-calculated from {goal.name} records
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">Progress</div>
@@ -435,7 +480,7 @@ const GoalDetail = () => {
             </CardContent>
           </Card>
 
-          {initialEmployee && (
+          {initialEmployee && !isSpecialGoal && (
             <Card>
               <CardHeader>
                 <CardTitle>Update Progress</CardTitle>
@@ -445,6 +490,28 @@ const GoalDetail = () => {
                   goal={goal}
                   onProgressUpdate={fetchGoalDetails}
                 />
+              </CardContent>
+            </Card>
+          )}
+          
+          {initialEmployee && isSpecialGoal && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Automatic Progress Tracking</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="flex items-start">
+                    <Info className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
+                    <div>
+                      <p className="font-medium mb-2">This {goal.name} goal is automatically tracked</p>
+                      <p className="text-gray-600 text-sm">
+                        Progress for this goal is automatically calculated based on the number of {goal.name.toLowerCase()} 
+                        records in the system. As you process {goal.name.toLowerCase()}s, your progress will update automatically.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
