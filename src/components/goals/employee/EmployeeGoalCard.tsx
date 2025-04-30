@@ -19,11 +19,12 @@ interface EmployeeGoalCardProps {
 const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) => {
   const navigate = useNavigate();
   const [currentValue, setCurrentValue] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
   
   // Use active instance if available, otherwise fall back to assignment details
   const displayDetails = goal.activeInstance || goal.assignmentDetails;
-  const status = displayDetails?.status || 'pending';
-  const progress = displayDetails?.progress || 0;
+  const [status, setStatus] = useState(displayDetails?.status || 'pending');
+  const [progress, setProgress] = useState(displayDetails?.progress || 0);
 
   // Check if this is a special goal type (Submission or Onboarding)
   const isSpecialGoal = goal.name === "Submission" || goal.name === "Onboarding";
@@ -32,11 +33,15 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
     // For regular goals, just use the current value from the goal
     if (!isSpecialGoal) {
       setCurrentValue(displayDetails?.currentValue || 0);
+      setStatus(displayDetails?.status || 'pending');
+      setProgress(displayDetails?.progress || 0);
+      setLoading(false);
       return;
     }
     
     // For special goals, fetch the current value from hr_status_change_counts
     const fetchCurrentValue = async () => {
+      setLoading(true);
       let subStatusId: string | null = null;
       if (goal.name === "Submission") {
         subStatusId = "71706ff4-1bab-4065-9692-2a1237629dda";
@@ -52,6 +57,9 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
           displayDetails?.currentValue || 0
         );
         setCurrentValue(displayDetails?.currentValue || 0);
+        setStatus(displayDetails?.status || 'pending');
+        setProgress(displayDetails?.progress || 0);
+        setLoading(false);
         return;
       }
   
@@ -78,6 +86,9 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
         if (error) {
           console.error("fetchCurrentValue: Supabase Error:", error);
           setCurrentValue(displayDetails?.currentValue || 0);
+          setStatus(displayDetails?.status || 'pending');
+          setProgress(displayDetails?.progress || 0);
+          setLoading(false);
           return;
         }
   
@@ -86,11 +97,38 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
         // Sum the counts
         const totalCount = data.reduce((sum: number, record: { count: number }) => sum + record.count, 0);
         console.log("fetchCurrentValue: Calculated totalCount:", totalCount);
-  
+        
+        // Update current value
         setCurrentValue(totalCount);
+        
+        // Calculate progress
+        const targetValue = displayDetails?.targetValue || 0;
+        const newProgress = targetValue > 0 ? Math.min(Math.round((totalCount / targetValue) * 100), 100) : 0;
+        setProgress(newProgress);
+        
+        // Calculate status based on various factors
+        const now = new Date();
+        const startDate = new Date(goal.activeInstance.periodStart);
+        const endDate = new Date(goal.activeInstance.periodEnd);
+        
+        // Determine status
+        if (totalCount >= targetValue) {
+          setStatus('completed');
+        } else if (now > endDate && totalCount < targetValue) {
+          setStatus('overdue');
+        } else if (totalCount > 0) {
+          setStatus('in-progress');
+        } else {
+          setStatus('pending');
+        }
+        
+        setLoading(false);
       } catch (err) {
         console.error("fetchCurrentValue: Unexpected Error:", err);
         setCurrentValue(displayDetails?.currentValue || 0);
+        setStatus(displayDetails?.status || 'pending');
+        setProgress(displayDetails?.progress || 0);
+        setLoading(false);
       }
     };
   
@@ -186,20 +224,23 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
               <span>Progress</span>
               <span className="font-medium">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            {loading ? (
+              <div className="h-2 w-full bg-gray-100 rounded overflow-hidden">
+                <div className="h-full bg-gray-300 animate-pulse"></div>
+              </div>
+            ) : (
+              <Progress value={progress} className="h-2" />
+            )}
           </div>
           
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Target</span>
             <span>
-              {goal.activeInstance ? (
-                <span>
-                  {isSpecialGoal ? currentValue : goal.activeInstance.currentValue} / {goal.activeInstance.targetValue}
-                  <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
-                </span>
+              {loading ? (
+                <span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse"></span>
               ) : (
                 <span>
-                  {isSpecialGoal ? currentValue : displayDetails?.currentValue || 0} / {displayDetails?.targetValue || goal.targetValue}
+                  {currentValue} / {displayDetails?.targetValue || goal.targetValue}
                   <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
                 </span>
               )}
