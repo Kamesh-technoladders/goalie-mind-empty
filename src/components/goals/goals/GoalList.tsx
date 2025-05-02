@@ -1,7 +1,6 @@
-
 import React, { useState } from "react";
 import { Filter } from "lucide-react";
-import GoalCard from "@/components/goals/dashboard/GoalCard";
+import GoalCard from "@/components/goals/common/GoalCard";
 import { Button } from "@/components/ui/button";
 import { GoalWithDetails } from "@/types/goal";
 import {
@@ -16,14 +15,24 @@ interface GoalListProps {
   goals: GoalWithDetails[];
   title?: string;
   className?: string;
+  showAllGoals?: boolean;
 }
 
-const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", className = "" }) => {
+const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", className = "", showAllGoals = true }) => {
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("newest");
 
-  // Filter goals by goal type (we only want to show goals for a specific timeframe)
-  const filteredGoals = goals
+  // Filter goals based on showAllGoals preference (including expired ones if true)
+  const dateFilteredGoals = showAllGoals 
+    ? goals
+    : goals.filter(goal => {
+        const now = new Date();
+        const endDate = new Date(goal.endDate);
+        return endDate >= now;
+      });
+
+  // Further filter goals by status
+  const filteredGoals = dateFilteredGoals
     .filter((goal) => {
       if (filter === "all") return true;
       if (!goal.assignments || goal.assignments.length === 0) return false;
@@ -122,9 +131,36 @@ const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", classNa
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredGoals.map((goal, index) => (
-            <GoalCard key={goal.id} goal={goal} delay={index * 100} />
-          ))}
+          {filteredGoals.map((goal, index) => {
+            // For each goal, get the most relevant instance to display
+            const now = new Date();
+            let relevantInstance = goal.instances ? 
+              // First try to find a current active instance
+              goal.instances.find(inst => {
+                const start = new Date(inst.periodStart);
+                const end = new Date(inst.periodEnd);
+                return start <= now && end >= now;
+              }) ||
+              // Otherwise get the most recent instance
+              goal.instances.sort((a, b) => 
+                new Date(b.periodEnd).getTime() - new Date(a.periodEnd).getTime()
+              )[0]
+              : undefined;
+
+            if (!relevantInstance) return null;
+
+            return (
+              <GoalCard 
+                key={`${goal.id}-${relevantInstance.id}`}
+                goal={goal}
+                goalInstance={relevantInstance}
+                allowManagement={true}
+                onUpdate={() => {
+                  // Placeholder for refresh logic
+                }}
+              />
+            );
+          })}
         </div>
       )}
     </div>

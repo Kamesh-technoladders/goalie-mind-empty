@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Employee, Goal, AssignedGoal, GoalWithDetails, KPI, TrackingRecord, GoalType, GoalInstance, EmployeeGoalTarget } from "@/types/goal";
 import { format } from 'date-fns';
@@ -976,6 +975,296 @@ export const updateAssignedGoalTarget = async (
   }
 };
 
+export const updateGoalTarget = async (
+  goalInstanceId: string,
+  newTargetValue: number
+): Promise<GoalInstance | null> => {
+  try {
+    console.log(`Updating goal instance target: ${goalInstanceId} to ${newTargetValue}`);
+    
+    const { data: instanceData, error: instanceError } = await supabase
+      .from('hr_goal_instances')
+      .select('*')
+      .eq('id', goalInstanceId)
+      .single();
+    
+    if (instanceError) {
+      console.error('Error fetching goal instance:', instanceError);
+      return null;
+    }
+    
+    // Calculate new progress based on current value and new target
+    const currentValue = instanceData.current_value;
+    const newProgress = newTargetValue > 0 
+      ? Math.min(Math.round((currentValue / newTargetValue) * 100), 100)
+      : 0;
+    
+    // Determine status based on current value, new target, and dates
+    const now = new Date();
+    const periodStart = new Date(instanceData.period_start);
+    const periodEnd = new Date(instanceData.period_end);
+    
+    let newStatus: string = 'pending';
+    if (currentValue >= newTargetValue) {
+      newStatus = 'completed';
+    } else if (now > periodEnd) {
+      newStatus = 'overdue';
+    } else if (now >= periodStart && currentValue > 0) {
+      newStatus = 'in-progress';
+    }
+    
+    // Update the goal instance with new target and recalculated values
+    const { data, error } = await supabase
+      .from('hr_goal_instances')
+      .update({
+        target_value: newTargetValue,
+        progress: newProgress,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', goalInstanceId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating goal target:', error);
+      return null;
+    }
+    
+    // Update the parent assigned goal's target as well
+    const { error: parentError } = await supabase
+      .from('hr_assigned_goals')
+      .update({
+        target_value: newTargetValue,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', data.assigned_goal_id);
+    
+    if (parentError) {
+      console.error('Error updating parent assigned goal:', parentError);
+      // Continue anyway since the main update succeeded
+    }
+    
+    return {
+      id: data.id,
+      assignedGoalId: data.assigned_goal_id,
+      periodStart: data.period_start,
+      periodEnd: data.period_end,
+      targetValue: data.target_value,
+      currentValue: data.current_value,
+      progress: data.progress,
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      notes: data.notes
+    };
+  } catch (error) {
+    console.error('Error in updateGoalTarget:', error);
+    return null;
+  }
+};
+
+export const extendGoalTarget = async (
+  goalInstanceId: string,
+  additionalTarget: number
+): Promise<GoalInstance | null> => {
+  try {
+    console.log(`Extending goal instance target: ${goalInstanceId} by ${additionalTarget}`);
+    
+    // Get current goal instance data
+    const { data: instanceData, error: instanceError } = await supabase
+      .from('hr_goal_instances')
+      .select('*')
+      .eq('id', goalInstanceId)
+      .single();
+    
+    if (instanceError) {
+      console.error('Error fetching goal instance:', instanceError);
+      return null;
+    }
+    
+    // Calculate new target value by adding the additional amount
+    const newTargetValue = instanceData.target_value + additionalTarget;
+    
+    // Recalculate progress and status with the new target
+    const currentValue = instanceData.current_value;
+    const newProgress = newTargetValue > 0 
+      ? Math.min(Math.round((currentValue / newTargetValue) * 100), 100)
+      : 0;
+    
+    // Determine status based on current value, new target, and dates
+    const now = new Date();
+    const periodStart = new Date(instanceData.period_start);
+    const periodEnd = new Date(instanceData.period_end);
+    
+    let newStatus: string = 'pending';
+    if (currentValue >= newTargetValue) {
+      newStatus = 'completed';
+    } else if (now > periodEnd) {
+      newStatus = 'overdue';
+    } else if (now >= periodStart && currentValue > 0) {
+      newStatus = 'in-progress';
+    }
+    
+    // Update the goal instance with extended target
+    const { data, error } = await supabase
+      .from('hr_goal_instances')
+      .update({
+        target_value: newTargetValue,
+        progress: newProgress,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', goalInstanceId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error extending goal target:', error);
+      return null;
+    }
+    
+    // Update the parent assigned goal's target as well
+    const { error: parentError } = await supabase
+      .from('hr_assigned_goals')
+      .update({
+        target_value: newTargetValue,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', data.assigned_goal_id);
+    
+    if (parentError) {
+      console.error('Error updating parent assigned goal:', parentError);
+      // Continue anyway since the main update succeeded
+    }
+    
+    return {
+      id: data.id,
+      assignedGoalId: data.assigned_goal_id,
+      periodStart: data.period_start,
+      periodEnd: data.period_end,
+      targetValue: data.target_value,
+      currentValue: data.current_value,
+      progress: data.progress,
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      notes: data.notes
+    };
+  } catch (error) {
+    console.error('Error in extendGoalTarget:', error);
+    return null;
+  }
+};
+
+export const deleteGoal = async (
+  goalId: string
+): Promise<boolean> => {
+  try {
+    console.log(`Deleting goal: ${goalId}`);
+    
+    // First delete all associated goal instances
+    const { error: instancesError } = await supabase
+      .from('hr_goal_instances')
+      .delete()
+      .in('assigned_goal_id', function(q) {
+        q.select('id')
+          .from('hr_assigned_goals')
+          .eq('goal_id', goalId);
+      });
+    
+    if (instancesError) {
+      console.error('Error deleting goal instances:', instancesError);
+      return false;
+    }
+    
+    // Then delete all assigned goals
+    const { error: assignmentsError } = await supabase
+      .from('hr_assigned_goals')
+      .delete()
+      .eq('goal_id', goalId);
+    
+    if (assignmentsError) {
+      console.error('Error deleting assigned goals:', assignmentsError);
+      return false;
+    }
+    
+    // Finally delete the goal itself
+    const { error } = await supabase
+      .from('hr_goals')
+      .delete()
+      .eq('id', goalId);
+    
+    if (error) {
+      console.error('Error deleting goal:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in deleteGoal:', error);
+    return false;
+  }
+};
+
+export const stopGoal = async (
+  goalInstanceId: string
+): Promise<GoalInstance | null> => {
+  try {
+    console.log(`Stopping goal instance: ${goalInstanceId}`);
+    
+    const { data: instanceData, error: instanceError } = await supabase
+      .from('hr_goal_instances')
+      .select('*')
+      .eq('id', goalInstanceId)
+      .single();
+    
+    if (instanceError) {
+      console.error('Error fetching goal instance:', instanceError);
+      return null;
+    }
+    
+    // Calculate end date as today (stopping it now)
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Update the goal instance to be marked as stopped
+    const { data, error } = await supabase
+      .from('hr_goal_instances')
+      .update({
+        period_end: today,
+        status: instanceData.current_value >= instanceData.target_value ? 'completed' : 'stopped',
+        updated_at: new Date().toISOString(),
+        notes: (instanceData.notes ? instanceData.notes + '\n' : '') + `Goal stopped on ${today}.`
+      })
+      .eq('id', goalInstanceId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error stopping goal instance:', error);
+      return null;
+    }
+    
+    return {
+      id: data.id,
+      assignedGoalId: data.assigned_goal_id,
+      periodStart: data.period_start,
+      periodEnd: data.period_end,
+      targetValue: data.target_value,
+      currentValue: data.current_value,
+      progress: data.progress,
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      notes: data.notes
+    };
+  } catch (error) {
+    console.error('Error in stopGoal:', error);
+    return null;
+  }
+};
+
+// Update getEmployeeGoals function to include all goals (including expired ones)
 export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDetails[]> => {
   try {
     console.log(`Fetching goals for employee ID: ${employeeId}`);

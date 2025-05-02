@@ -24,6 +24,7 @@ import AssignGoalsForm from "@/components/goals/goals/AssignGoalsForm";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PieChart } from "@/components/goals/charts/GoalPieChart";
 
 const GoalStatusFilter = {
   ALL: "all",
@@ -43,6 +44,7 @@ const GoalsIndex = () => {
   const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
   const [createGoalDialogOpen, setCreateGoalDialogOpen] = useState(false);
   const [assignGoalDialogOpen, setAssignGoalDialogOpen] = useState(false);
+  const [showAllGoals, setShowAllGoals] = useState(true); // New state to control showing all goals including expired
   
   useEffect(() => {
     const fetchData = async () => {
@@ -75,7 +77,7 @@ const GoalsIndex = () => {
     fetchData();
   }, [createGoalDialogOpen, assignGoalDialogOpen]);
   
-  // Filter goals by sector, timeframe, and status
+  // Filter goals by sector, timeframe, and status, but do not filter by date if showAllGoals is true
   const filteredGoals = goals
     .filter(goal => {
       // Filter by sector
@@ -399,6 +401,37 @@ const GoalsIndex = () => {
               </AnimatedCard>
             </div>
           )}
+
+          {/* Goal Distribution Chart */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <Card className="p-6 bg-white">
+              <h3 className="font-semibold mb-4">Goal Status Distribution</h3>
+              <div className="h-64">
+                <PieChart 
+                  data={[
+                    { name: 'Completed', value: completedGoals, color: '#10b981' },
+                    { name: 'In Progress', value: inProgressGoals, color: '#3b82f6' },
+                    { name: 'Overdue', value: overdueGoals, color: '#ef4444' },
+                    { name: 'Pending', value: pendingGoals, color: '#f59e0b' }
+                  ]} 
+                />
+              </div>
+            </Card>
+            
+            <Card className="p-6 bg-white">
+              <h3 className="font-semibold mb-4">Goals by Timeframe</h3>
+              <div className="h-64">
+                <PieChart 
+                  data={[
+                    { name: 'Daily', value: dailyGoals.length, color: '#8b5cf6' },
+                    { name: 'Weekly', value: weeklyGoals.length, color: '#ec4899' },
+                    { name: 'Monthly', value: monthlyGoals.length, color: '#06b6d4' },
+                    { name: 'Yearly', value: yearlyGoals.length, color: '#f97316' }
+                  ]} 
+                />
+              </div>
+            </Card>
+          </div>
           
           {/* Department Tabs */}
           <Tabs defaultValue="all" className="w-full mb-6">
@@ -427,6 +460,17 @@ const GoalsIndex = () => {
           {/* Main filtering tabs */}
           <div className="flex flex-col gap-4 mb-6 bg-white p-4 rounded-lg shadow-sm">
             <h3 className="font-semibold">Filter Goals</h3>
+            
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="text-sm text-gray-500">Options</h4>
+              <Button
+                variant={showAllGoals ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowAllGoals(!showAllGoals)}
+              >
+                {showAllGoals ? "Showing All Goals" : "Showing Active Goals Only"}
+              </Button>
+            </div>
             
             {/* Timeframe filter */}
             <div>
@@ -484,19 +528,19 @@ const GoalsIndex = () => {
                 <>
                   {/* Display goals separated by timeframe */}
                   {dailyGoals.length > 0 && (
-                    <GoalList goals={dailyGoals} title="Daily Goals" />
+                    <GoalList goals={dailyGoals} title="Daily Goals" showAllGoals={showAllGoals} />
                   )}
                   
                   {weeklyGoals.length > 0 && (
-                    <GoalList goals={weeklyGoals} title="Weekly Goals" className="mt-10" />
+                    <GoalList goals={weeklyGoals} title="Weekly Goals" className="mt-10" showAllGoals={showAllGoals} />
                   )}
                   
                   {monthlyGoals.length > 0 && (
-                    <GoalList goals={monthlyGoals} title="Monthly Goals" className="mt-10" />
+                    <GoalList goals={monthlyGoals} title="Monthly Goals" className="mt-10" showAllGoals={showAllGoals} />
                   )}
                   
                   {yearlyGoals.length > 0 && (
-                    <GoalList goals={yearlyGoals} title="Yearly Goals" className="mt-10" />
+                    <GoalList goals={yearlyGoals} title="Yearly Goals" className="mt-10" showAllGoals={showAllGoals} />
                   )}
                   
                   {dailyGoals.length === 0 && weeklyGoals.length === 0 && 
@@ -509,6 +553,7 @@ const GoalsIndex = () => {
               ) : (
                 <GoalList 
                   goals={timeframeFilteredGoals}
+                  showAllGoals={showAllGoals}
                   title={
                     selectedTimeframe !== "all" 
                       ? `${selectedTimeframe} Goals${selectedStatus !== GoalStatusFilter.ALL ? ` (${selectedStatus})` : ""}` 

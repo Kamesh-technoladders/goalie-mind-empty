@@ -45,7 +45,7 @@ export interface AssignedGoal {
   id: string;
   goalId: string;
   employeeId: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'overdue';
+  status: 'pending' | 'in-progress' | 'completed' | 'overdue' | 'stopped';
   progress: number; // 0-100 percentage
   currentValue: number;
   targetValue: number; // Added field to match database update
@@ -62,7 +62,7 @@ export interface GoalInstance {
   targetValue: number;
   currentValue: number;
   progress: number;
-  status: 'pending' | 'in-progress' | 'completed' | 'overdue';
+  status: 'pending' | 'in-progress' | 'completed' | 'overdue' | 'stopped';
   createdAt: string;
   updatedAt: string;
   notes?: string;
@@ -76,6 +76,7 @@ export interface GoalWithDetails extends Goal {
   totalTargetValue?: number;     // Sum of all target values
   totalCurrentValue?: number;    // Sum of all current values
   overallProgress?: number;      // Overall progress across all assignments
+  assignmentDetails?: AssignedGoal; // Details of the specific assignment related to an employee
 }
 
 export interface TrackingRecord {
@@ -85,4 +86,19 @@ export interface TrackingRecord {
   value: number;
   notes?: string;
   createdAt: string;
+}
+
+export interface ChartDataPoint {
+  name: string;
+  value: number;
+  color?: string;
+}
+
+export interface GoalStatistics {
+  totalGoals: number;
+  completedGoals: number;
+  inProgressGoals: number;
+  overdueGoals: number;
+  pendingGoals: number;
+  completionRate: number;
 }
