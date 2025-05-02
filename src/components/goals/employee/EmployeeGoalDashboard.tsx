@@ -2,13 +2,13 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getEmployeeGoals } from "@/lib/supabaseData";
-import { Employee, GoalType, GoalWithDetails } from "@/types/goal";
+import { Employee, GoalType, GoalWithDetails, GoalInstance } from "@/types/goal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, Clock, CheckCircle2, AlertTriangle, CalendarDays } from "lucide-react";
+import { BarChart3, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 import EmployeeGoalCard from "./EmployeeGoalCard";
 
 interface EmployeeGoalDashboardProps {
@@ -16,9 +16,9 @@ interface EmployeeGoalDashboardProps {
   goalTypeFilter?: GoalType;
 }
 
-const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({ 
+const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
   employee,
-  goalTypeFilter 
+  goalTypeFilter
 }) => {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
@@ -61,35 +61,35 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
   }
 
   // Filter goals by type if filter is set
-  const filteredByType = goalTypeFilter 
-    ? goals.filter(goal => goal.assignmentDetails?.goalType === goalTypeFilter) 
+  const filteredByType = goalTypeFilter
+    ? goals.filter(goal => goal.assignmentDetails?.goalType === goalTypeFilter)
     : goals;
 
-  // Then filter by status
-  const filteredGoals = selectedStatus === "all" 
-    ? filteredByType 
-    : filteredByType.filter(goal => {
-        const status = goal.activeInstance?.status || goal.assignmentDetails?.status;
-        return status === selectedStatus;
-      });
+  // Then filter by status, considering instances
+  const filteredGoals = filteredByType.flatMap(goal => {
+    const instances = goal.instances || [];
+    if (selectedStatus === "all") {
+      return instances.map(instance => ({ goal, instance }));
+    }
+    return instances
+      .filter(instance => instance.status === selectedStatus)
+      .map(instance => ({ goal, instance }));
+  });
 
-  // Calculate summary statistics
-  const totalGoals = filteredByType.length;
-  const completedGoals = filteredByType.filter(
-    g => g.activeInstance?.status === "completed" || g.assignmentDetails?.status === "completed"
-  ).length;
-  const inProgressGoals = filteredByType.filter(
-    g => g.activeInstance?.status === "in-progress" || g.assignmentDetails?.status === "in-progress"
-  ).length;
-  const overdueGoals = filteredByType.filter(
-    g => g.activeInstance?.status === "overdue" || g.assignmentDetails?.status === "overdue"
-  ).length;
+  // Calculate summary statistics based on all instances
+  const totalGoals = filteredByType.reduce((sum, goal) => sum + (goal.instances?.length || 0), 0);
+  const completedGoals = filteredByType.reduce((sum, goal) => 
+    sum + (goal.instances?.filter(i => i.status === "completed").length || 0), 0);
+  const inProgressGoals = filteredByType.reduce((sum, goal) => 
+    sum + (goal.instances?.filter(i => i.status === "in-progress").length || 0), 0);
+  const overdueGoals = filteredByType.reduce((sum, goal) => 
+    sum + (goal.instances?.filter(i => i.status === "overdue").length || 0), 0);
 
   // Group by goal type
   const goalsByType = filteredByType.reduce((acc, goal) => {
     if (goal.assignmentDetails?.goalType) {
       const type = goal.assignmentDetails.goalType;
-      acc[type] = (acc[type] || 0) + 1;
+      acc[type] = (acc[type] || 0) + (goal.instances?.length || 0);
     }
     return acc;
   }, {} as Record<string, number>);
@@ -190,8 +190,13 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
 
             <TabsContent value="all" className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredGoals.map((goal) => (
-                  <EmployeeGoalCard key={goal.id} goal={goal} employee={employee} />
+                {filteredGoals.map(({ goal, instance }) => (
+                  <EmployeeGoalCard
+                    key={`${goal.id}-${instance.id}`}
+                    goal={goal}
+                    goalInstance={instance}
+                    employee={employee}
+                  />
                 ))}
               </div>
               {filteredGoals.length === 0 && (
@@ -204,8 +209,13 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
             {["in-progress", "completed", "overdue", "pending"].map((status) => (
               <TabsContent key={status} value={status} className="mt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredGoals.map((goal) => (
-                    <EmployeeGoalCard key={goal.id} goal={goal} employee={employee} />
+                  {filteredGoals.map(({ goal, instance }) => (
+                    <EmployeeGoalCard
+                      key={`${goal.id}-${instance.id}`}
+                      goal={goal}
+                      goalInstance={instance}
+                      employee={employee}
+                    />
                   ))}
                 </div>
                 {filteredGoals.length === 0 && (

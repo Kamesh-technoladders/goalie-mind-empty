@@ -14,9 +14,6 @@ import {
   Target,
   AlertTriangle,
   CalendarDays,
-  CalendarWeek,
-  CalendarMonth,
-  CalendarYear
 } from "lucide-react";
 import { getGoalsWithDetails, getSectorsWithCounts } from "@/lib/supabaseData";
 import { GoalType, GoalWithDetails } from "@/types/goal";
@@ -244,9 +241,9 @@ const GoalsIndex = () => {
   const getTimeframeIcon = (timeframe: string) => {
     switch(timeframe) {
       case 'Daily': return <CalendarDays className="h-5 w-5" />;
-      case 'Weekly': return <CalendarWeek className="h-5 w-5" />;
-      case 'Monthly': return <CalendarMonth className="h-5 w-5" />;
-      case 'Yearly': return <CalendarYear className="h-5 w-5" />;
+      case 'Weekly': return <Calendar className="h-5 w-5" />;
+      case 'Monthly': return <Calendar className="h-5 w-5" />;
+      case 'Yearly': return <Calendar className="h-5 w-5" />;
       default: return <Calendar className="h-5 w-5" />;
     }
   };

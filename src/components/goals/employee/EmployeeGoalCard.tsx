@@ -6,40 +6,103 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useNavigate } from "react-router-dom";
-import { Employee, GoalWithDetails } from "@/types/goal";
+import { Employee, GoalInstance, GoalWithDetails } from "@/types/goal";
 import { BarChart3, Clock, AlertTriangle, CheckCircle2, Calendar, Target } from "lucide-react";
 import { format } from 'date-fns';
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmployeeGoalCardProps {
   goal: GoalWithDetails;
+  goalInstance: GoalInstance;
   employee: Employee;
 }
 
-const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) => {
+const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, goalInstance, employee }) => {
   const navigate = useNavigate();
-  const [currentValue, setCurrentValue] = useState<number>(0);
+  const [currentValue, setCurrentValue] = useState<number>(goalInstance.currentValue ?? 0);
   const [loading, setLoading] = useState<boolean>(true);
-  
-  // Use active instance if available, otherwise fall back to assignment details
-  const displayDetails = goal.activeInstance || goal.assignmentDetails;
-  const [status, setStatus] = useState(displayDetails?.status || 'pending');
-  const [progress, setProgress] = useState(displayDetails?.progress || 0);
+  const [status, setStatus] = useState(goalInstance.status ?? 'pending');
+  const [progress, setProgress] = useState(goalInstance.progress ?? 0);
 
-  // Check if this is a special goal type (Submission or Onboarding)
   const isSpecialGoal = goal.name === "Submission" || goal.name === "Onboarding";
-  
+
+  console.log("EmployeeGoalCard: Initial Props", {
+    goal: {
+      id: goal.id,
+      name: goal.name,
+      sector: goal.sector,
+      description: goal.description,
+      metricUnit: goal.metricUnit,
+      targetValue: goal.targetValue
+    },
+    goalInstance: {
+      id: goalInstance.id,
+      periodStart: goalInstance.periodStart,
+      periodEnd: goalInstance.periodEnd,
+      targetValue: goalInstance.targetValue,
+      currentValue: goalInstance.currentValue,
+      status: goalInstance.status,
+      progress: goalInstance.progress
+    },
+    employee: {
+      id: employee.id,
+      name: employee.name
+    }
+  });
+
   useEffect(() => {
-    // For regular goals, just use the current value from the goal
+    const calculateStatus = (current: number, target: number, endDateStr: string): string => {
+      const now = new Date();
+      const endDate = new Date(endDateStr);
+      endDate.setHours(23, 59, 59, 999);
+
+      if (current >= target) return 'completed';
+      if (now > endDate && current < target) return 'overdue';
+      if (current > 0) return 'in-progress';
+      return 'pending';
+    };
+
+    const updateInstanceStatus = async (newStatus: string, newProgress: number, newCurrentValue: number) => {
+      try {
+        const { error } = await supabase
+          .from("hr_goal_instances")
+          .update({
+            status: newStatus,
+            progress: newProgress,
+            current_value: newCurrentValue,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", goalInstance.id);
+
+        if (error) {
+          console.error("Error updating goal instance status:", error);
+        }
+      } catch (err) {
+        console.error("Unexpected error updating goal instance:", err);
+      }
+    };
+
     if (!isSpecialGoal) {
-      setCurrentValue(displayDetails?.currentValue || 0);
-      setStatus(displayDetails?.status || 'pending');
-      setProgress(displayDetails?.progress || 0);
+      const targetValue = goalInstance.targetValue ?? 0;
+      const newProgress = targetValue > 0 ? Math.min(Math.round((currentValue / targetValue) * 100), 100) : 0;
+      const newStatus = calculateStatus(currentValue, targetValue, goalInstance.periodEnd);
+
+      setCurrentValue(goalInstance.currentValue ?? 0);
+      setStatus(newStatus);
+      setProgress(newProgress);
       setLoading(false);
+
+      // Update database with calculated status and progress
+      updateInstanceStatus(newStatus, newProgress, currentValue);
+
+      console.log("EmployeeGoalCard: Regular Goal Data", {
+        currentValue: goalInstance.currentValue ?? 0,
+        status: newStatus,
+        progress: newProgress
+      });
       return;
     }
-    
-    // For special goals, fetch the current value from hr_status_change_counts
+
     const fetchCurrentValue = async () => {
       setLoading(true);
       let subStatusId: string | null = null;
@@ -48,107 +111,120 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
       } else if (goal.name === "Onboarding") {
         subStatusId = "c9716374-3477-4606-877a-dfa5704e7680";
       }
-  
-      console.log("fetchCurrentValue: Goal Name:", goal.name, "Sub Status ID:", subStatusId);
-  
-      if (!subStatusId || !goal.activeInstance) {
-        console.log(
-          "fetchCurrentValue: No subStatusId or activeInstance, using fallback currentValue:",
-          displayDetails?.currentValue || 0
-        );
-        setCurrentValue(displayDetails?.currentValue || 0);
-        setStatus(displayDetails?.status || 'pending');
-        setProgress(displayDetails?.progress || 0);
+
+      console.log("fetchCurrentValue: Starting Fetch", {
+        goalName: goal.name,
+        subStatusId,
+        goalInstance
+      });
+
+      if (!subStatusId) {
+        const fallbackStatus = calculateStatus(goalInstance.currentValue ?? 0, goalInstance.targetValue ?? 0, goalInstance.periodEnd);
+        console.log("fetchCurrentValue: Fallback Data", {
+          currentValue: goalInstance.currentValue ?? 0,
+          status: fallbackStatus,
+          progress: goalInstance.progress ?? 0
+        });
+        setCurrentValue(goalInstance.currentValue ?? 0);
+        setStatus(fallbackStatus);
+        setProgress(goalInstance.progress ?? 0);
         setLoading(false);
+        updateInstanceStatus(fallbackStatus, goalInstance.progress ?? 0, goalInstance.currentValue ?? 0);
         return;
       }
-  
+
       try {
-        // Add one day to periodEnd to include the full day
-        const periodEndPlusOne = new Date(goal.activeInstance.periodEnd);
+        const periodEndPlusOne = new Date(goalInstance.periodEnd);
         periodEndPlusOne.setDate(periodEndPlusOne.getDate() + 1);
-  
-        console.log("fetchCurrentValue: Query Parameters:", {
+
+        console.log("fetchCurrentValue: Supabase Query Parameters", {
           sub_status_id: subStatusId,
           candidate_owner: employee.id,
-          period_start: goal.activeInstance.periodStart,
-          period_end: periodEndPlusOne.toISOString().split("T")[0],
+          period_start: goalInstance.periodStart,
+          period_end: periodEndPlusOne.toISOString().split("T")[0]
         });
-  
+
         const { data, error } = await supabase
           .from("hr_status_change_counts")
           .select("count")
           .eq("sub_status_id", subStatusId)
           .eq("candidate_owner", employee.id)
-          .gte("created_at", goal.activeInstance.periodStart)
+          .gte("created_at", goalInstance.periodStart)
           .lt("created_at", periodEndPlusOne.toISOString().split("T")[0]);
-  
+
         if (error) {
-          console.error("fetchCurrentValue: Supabase Error:", error);
-          setCurrentValue(displayDetails?.currentValue || 0);
-          setStatus(displayDetails?.status || 'pending');
-          setProgress(displayDetails?.progress || 0);
+          console.error("fetchCurrentValue: Supabase Error", {
+            error,
+            fallbackData: {
+              currentValue: goalInstance.currentValue ?? 0,
+              status: goalInstance.status ?? 'pending',
+              progress: goalInstance.progress ?? 0
+            }
+          });
+          const fallbackStatus = calculateStatus(goalInstance.currentValue ?? 0, goalInstance.targetValue ?? 0, goalInstance.periodEnd);
+          setCurrentValue(goalInstance.currentValue ?? 0);
+          setStatus(fallbackStatus);
+          setProgress(goalInstance.progress ?? 0);
           setLoading(false);
+          updateInstanceStatus(fallbackStatus, goalInstance.progress ?? 0, goalInstance.currentValue ?? 0);
           return;
         }
-  
-        console.log("fetchCurrentValue: Supabase Data:", data);
-  
-        // Sum the counts
+
+        console.log("fetchCurrentValue: Supabase Response", {
+          data,
+          recordCount: data.length
+        });
+
         const totalCount = data.reduce((sum: number, record: { count: number }) => sum + record.count, 0);
-        console.log("fetchCurrentValue: Calculated totalCount:", totalCount);
-        
-        // Update current value
-        setCurrentValue(totalCount);
-        
-        // Calculate progress
-        const targetValue = displayDetails?.targetValue || 0;
+        const targetValue = goalInstance.targetValue ?? 0;
         const newProgress = targetValue > 0 ? Math.min(Math.round((totalCount / targetValue) * 100), 100) : 0;
+        const newStatus = calculateStatus(totalCount, targetValue, goalInstance.periodEnd);
+
+        console.log("fetchCurrentValue: Calculated Results", {
+          totalCount,
+          progress: newProgress,
+          status: newStatus,
+          targetValue,
+          period: {
+            start: goalInstance.periodStart,
+            end: goalInstance.periodEnd,
+            now: new Date().toISOString()
+          }
+        });
+
+        setCurrentValue(totalCount);
         setProgress(newProgress);
-        
-        // Calculate status based on various factors
-        const now = new Date();
-        const startDate = new Date(goal.activeInstance.periodStart);
-        const endDate = new Date(goal.activeInstance.periodEnd);
-        
-        // Determine status
-        if (totalCount >= targetValue) {
-          setStatus('completed');
-        } else if (now > endDate && totalCount < targetValue) {
-          setStatus('overdue');
-        } else if (totalCount > 0) {
-          setStatus('in-progress');
-        } else {
-          setStatus('pending');
-        }
-        
+        setStatus(newStatus);
         setLoading(false);
+        updateInstanceStatus(newStatus, newProgress, totalCount);
       } catch (err) {
-        console.error("fetchCurrentValue: Unexpected Error:", err);
-        setCurrentValue(displayDetails?.currentValue || 0);
-        setStatus(displayDetails?.status || 'pending');
-        setProgress(displayDetails?.progress || 0);
+        console.error("fetchCurrentValue: Unexpected Error", {
+          error: err,
+          fallbackData: {
+            currentValue: goalInstance.currentValue ?? 0,
+            status: goalInstance.status ?? 'pending',
+            progress: goalInstance.progress ?? 0
+          }
+        });
+        const fallbackStatus = calculateStatus(goalInstance.currentValue ?? 0, goalInstance.targetValue ?? 0, goalInstance.periodEnd);
+        setCurrentValue(goalInstance.currentValue ?? 0);
+        setStatus(fallbackStatus);
+        setProgress(goalInstance.progress ?? 0);
         setLoading(false);
+        updateInstanceStatus(fallbackStatus, goalInstance.progress ?? 0, goalInstance.currentValue ?? 0);
       }
     };
-  
+
     fetchCurrentValue();
-  }, [goal.id, employee.id, goal.activeInstance?.periodStart, goal.activeInstance?.periodEnd]);
-  
-  // Get period text based on goal type
+  }, [goal.id, goalInstance.id, employee.id, goalInstance.periodStart, goalInstance.periodEnd, goalInstance.currentValue]);
+
   const getPeriodText = () => {
     const goalType = goal.assignmentDetails?.goalType || "Standard";
-    
-    if (goal.activeInstance) {
-      const startDate = format(new Date(goal.activeInstance.periodStart), 'MMM d');
-      const endDate = format(new Date(goal.activeInstance.periodEnd), 'MMM d');
-      return `Current ${goalType} Period: ${startDate} - ${endDate}`;
-    } else {
-      return `${goalType} Goal`;
-    }
+    const startDate = format(new Date(goalInstance.periodStart), 'MMM d, yyyy');
+    const endDate = format(new Date(goalInstance.periodEnd), 'MMM d, yyyy');
+    return `${goalType} Period: ${startDate} - ${endDate}`;
   };
 
-  // Get icon based on status
   const statusIcon = () => {
     switch (status) {
       case 'completed':
@@ -162,7 +238,6 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
     }
   };
 
-  // Get badge color based on status
   const getBadgeClasses = () => {
     switch (status) {
       case 'completed':
@@ -175,15 +250,13 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
         return "bg-amber-100 text-amber-800 border-amber-200";
     }
   };
-  
-  // Get the recurring interval type text
+
   const getIntervalTypeText = () => {
-    if (!goal.assignmentDetails) return "";
-    return `${goal.assignmentDetails.goalType} Goal`;
+    return goal.assignmentDetails?.goalType ? `${goal.assignmentDetails.goalType} Goal` : "Goal";
   };
 
   const handleViewDetails = () => {
-    navigate(`/goals/${goal.id}`, { state: { employee } });
+    navigate(`/goals/${goal.id}/${goalInstance.id}`, { state: { employee, goalInstance } });
   };
 
   return (
@@ -240,7 +313,7 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, employee }) =
                 <span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse"></span>
               ) : (
                 <span>
-                  {currentValue} / {displayDetails?.targetValue || goal.targetValue}
+                  {currentValue} / {goalInstance.targetValue ?? goal.targetValue}
                   <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
                 </span>
               )}

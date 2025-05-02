@@ -132,28 +132,20 @@ const calculateGoalStatus = (
   const now = new Date();
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
-  // If the goal hasn't started yet
+  end.setHours(23, 59, 59, 999); // Ensure end of day for comparison
+
   if (now < start) {
     return 'pending';
   }
-  
-  // If the goal is completed (met or exceeded target)
   if (currentValue >= targetValue) {
     return 'completed';
   }
-  
-  // If the goal is past end date but not completed
   if (now > end && currentValue < targetValue) {
     return 'overdue';
   }
-  
-  // If the goal has started but not yet completed or overdue
   if (currentValue > 0) {
     return 'in-progress';
   }
-  
-  // Default case - the goal has started but no progress yet
   return 'pending';
 };
 
@@ -182,8 +174,8 @@ export const getEmployees = async (): Promise<Employee[]> => {
       name: `${employee.first_name} ${employee.last_name}`,
       email: employee.email,
       avatar: employee.profile_picture_url,
-      position: employee.hr_designations?.name ?? 'Unknown', // Extract designation
-      department: employee.hr_departments?.name ?? 'Unknown', // Extract department
+      position: employee.hr_designations?.name ?? 'Unknown',
+      department: employee.hr_departments?.name ?? 'Unknown',
     }));
   } catch (error) {
     console.error('Error in getEmployees:', error);
@@ -199,7 +191,7 @@ export const getGoals = async (): Promise<Goal[]> => {
 
     if (goalsError || !goalsData) {
       console.error('Error fetching goals:', goalsError);
-      return []; // Always return an empty array
+      return [];
     }
 
     const goals: Goal[] = [];
@@ -251,19 +243,16 @@ export const getSubmissionOrOnboardingCounts = async (
   periodEnd: string
 ): Promise<number> => {
   try {
-    // Determine the correct sub_status_id based on goal type
     const subStatusId = goalType === "Submission"
       ? "71706ff4-1bab-4065-9692-2a1237629dda"
       : "c9716374-3477-4606-877a-dfa5704e7680";
     
-    // Extend the period end to include the entire day
     const periodEndPlusOne = new Date(periodEnd);
     periodEndPlusOne.setDate(periodEndPlusOne.getDate() + 1);
     const periodEndStr = periodEndPlusOne.toISOString().split('T')[0];
     
     console.log(`Fetching ${goalType} counts for employee ${employeeId} from ${periodStart} to ${periodEndStr}`);
     
-    // Fetch count records from hr_status_change_counts
     const { data, error } = await supabase
       .from("hr_status_change_counts")
       .select("count")
@@ -279,7 +268,6 @@ export const getSubmissionOrOnboardingCounts = async (
     
     console.log(`Found ${data.length} ${goalType} count records:`, data);
     
-    // Sum all the counts
     const totalCount = data.reduce((sum, record) => sum + record.count, 0);
     return totalCount;
   } catch (error) {
@@ -295,35 +283,25 @@ export const getGoalsWithDetails = async (): Promise<GoalWithDetails[]> => {
     const employees = await getEmployees();
     
     return goals.map(goal => {
-      // Get all assignments for this goal
       const assignments = assignedGoals.filter(ag => ag.goalId === goal.id);
       
-      // Check if this is a special goal type (Submission or Onboarding)
       const isSpecialGoal = goal.name === "Submission" || goal.name === "Onboarding";
       
-      // Update assignments for special goal types
       if (isSpecialGoal) {
         for (const assignment of assignments) {
-          // Find the active instance for this assignment
           const activeInstance = assignment.activeInstance;
           
           if (activeInstance) {
-            // Fetch the current value
             getSubmissionOrOnboardingCounts(
               assignment.employeeId,
               goal.name,
               activeInstance.periodStart,
               activeInstance.periodEnd
             ).then(currentValue => {
-              // Update values
               assignment.currentValue = currentValue;
-              
-              // Calculate progress
               if (assignment.targetValue > 0) {
                 assignment.progress = Math.min(Math.round((currentValue / assignment.targetValue) * 100), 100);
               }
-              
-              // Dynamically update status
               assignment.status = calculateGoalStatus(
                 currentValue,
                 assignment.targetValue,
@@ -335,16 +313,13 @@ export const getGoalsWithDetails = async (): Promise<GoalWithDetails[]> => {
         }
       }
       
-      // Get all employees assigned to this goal
       const assignedEmployees = assignments
         .map(a => employees.find(e => e.id === a.employeeId))
         .filter(Boolean) as Employee[];
       
-      // Calculate total target and current values
       const totalTargetValue = assignments.reduce((sum, a) => sum + a.targetValue, 0);
       const totalCurrentValue = assignments.reduce((sum, a) => sum + a.currentValue, 0);
       
-      // Calculate overall progress
       const overallProgress = totalTargetValue > 0 
         ? Math.min(Math.round((totalCurrentValue / totalTargetValue) * 100), 100)
         : 0;
@@ -413,7 +388,7 @@ export const createGoal = async (
   try {
     const currentDate = new Date().toISOString();
     const futureDate = new Date();
-    futureDate.setMonth(futureDate.getMonth() + 3); // Set default end date to 3 months from now
+    futureDate.setMonth(futureDate.getMonth() + 3);
     
     const { data: goalData, error: goalError } = await supabase
       .from('hr_goals')
@@ -482,7 +457,6 @@ export const assignGoalToEmployees = async (
     throw new Error('Goal not found');
   }
 
-  // Create assigned goals for each employee
   const assignedGoalsPromises = employeeTargets.map(async ({ employee, targetValue }) => {
     const { data: assignedGoal, error: assignError } = await supabase
       .from('hr_assigned_goals')
@@ -514,7 +488,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
   try {
     console.log(`Fetching goal with ID: ${goalId}`);
     
-    // Get goal details
     const { data: goalData, error: goalError } = await supabase
       .from('hr_goals')
       .select('*')
@@ -526,7 +499,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
       return null;
     }
     
-    // Fetch assigned employees and assignments
     const { data: assignedData, error: assignedError } = await supabase
       .from('hr_assigned_goals')
       .select('*, hr_employees:employee_id(*)')
@@ -537,16 +509,13 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
       return null;
     }
     
-    // Map employees and assignments
     const assignedEmployees: Employee[] = [];
     const assignments: AssignedGoal[] = [];
     let instances: GoalInstance[] = [];
     let activeInstance: GoalInstance | undefined = undefined;
     
     if (assignedData && assignedData.length > 0) {
-      // Process all assignments
       for (const assignment of assignedData) {
-        // Add the assignment
         const assignmentDetails: AssignedGoal = {
           id: assignment.id,
           goalId: assignment.goal_id,
@@ -561,7 +530,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
         };
         assignments.push(assignmentDetails);
         
-        // Add the employee if available
         if (assignment.hr_employees) {
           const employee = assignment.hr_employees;
           const mappedEmployee: Employee = {
@@ -573,13 +541,11 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
             avatar: employee.profile_picture_url
           };
           
-          // Check if employee is already in the array
           if (!assignedEmployees.some(e => e.id === mappedEmployee.id)) {
             assignedEmployees.push(mappedEmployee);
           }
         }
         
-        // Fetch goal instances for this assignment
         const { data: instancesData, error: instancesError } = await supabase
           .from('hr_goal_instances')
           .select('*')
@@ -603,7 +569,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
           
           instances = [...instances, ...assignmentInstances];
           
-          // Find the current active instance
           const today = new Date().toISOString().split('T')[0];
           const currentInstance = assignmentInstances.find(
             instance => 
@@ -611,7 +576,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
               new Date(instance.periodEnd) >= new Date(today)
           );
           
-          // If we found an active instance, use it
           if (currentInstance && !activeInstance) {
             activeInstance = currentInstance;
           }
@@ -619,7 +583,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
       }
     }
     
-    // If no active instance is found, use the latest one
     if (!activeInstance && instances.length > 0) {
       instances.sort((a, b) => 
         new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime()
@@ -627,16 +590,13 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
       activeInstance = instances[0];
     }
     
-    // Calculate total values from all assignments
     const totalTargetValue = assignments.reduce((sum, a) => sum + a.targetValue, 0);
     let totalCurrentValue = assignments.reduce((sum, a) => sum + a.currentValue, 0);
 
-    // For Submission and Onboarding goals, update the current value based on hr_status_change_counts
     const isSpecialGoal = goalData.name === "Submission" || goalData.name === "Onboarding";
     if (isSpecialGoal && activeInstance) {
       console.log(`Special goal type detected: ${goalData.name}`);
       
-      // For each assignment, fetch and update the current value
       const countPromises = assignments.map(async (assignment) => {
         const currentValue = await getSubmissionOrOnboardingCounts(
           assignment.employeeId,
@@ -645,13 +605,11 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
           activeInstance!.periodEnd
         );
         
-        // Update the assignment's current value and progress
         assignment.currentValue = currentValue;
         if (assignment.targetValue > 0) {
           assignment.progress = Math.min(Math.round((currentValue / assignment.targetValue) * 100), 100);
         }
         
-        // Update the assignment status based on dynamically calculated status
         assignment.status = calculateGoalStatus(
           currentValue,
           assignment.targetValue,
@@ -659,7 +617,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
           activeInstance!.periodEnd
         );
         
-        // Also update the database to reflect these changes
         await supabase
           .from('hr_assigned_goals')
           .update({
@@ -673,7 +630,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
         return currentValue;
       });
       
-      // Wait for all count fetches to complete
       const currentValues = await Promise.all(countPromises);
       totalCurrentValue = currentValues.reduce((sum, val) => sum + val, 0);
     }
@@ -682,7 +638,6 @@ export const getGoalById = async (goalId: string): Promise<GoalWithDetails | nul
       ? Math.min(Math.round((totalCurrentValue / totalTargetValue) * 100), 100)
       : 0;
     
-    // Map goal with details
     const goal: GoalWithDetails = {
       id: goalData.id,
       name: goalData.name,
@@ -714,7 +669,6 @@ export const getTrackingRecordsForGoal = async (goalId: string, employeeId?: str
   try {
     console.log(`Fetching tracking records for goal ID: ${goalId}`);
     
-    // First get the assigned goal ID
     let query = supabase
       .from('hr_assigned_goals')
       .select('id')
@@ -736,10 +690,8 @@ export const getTrackingRecordsForGoal = async (goalId: string, employeeId?: str
       return [];
     }
     
-    // Get all assigned goal IDs
     const assignedGoalIds = assignedGoals.map(ag => ag.id);
     
-    // Fetch tracking records for these assigned goals
     const { data: trackingRecords, error: trackingError } = await supabase
       .from('tracking_records')
       .select('*')
@@ -795,7 +747,7 @@ export const getGoalInstances = async (assignedGoalId: string): Promise<GoalInst
 
 export const getActiveGoalInstance = async (assignedGoalId: string): Promise<GoalInstance | null> => {
   try {
-    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentDate = new Date().toISOString().split('T')[0];
     
     const { data, error } = await supabase
       .from('hr_goal_instances')
@@ -808,7 +760,6 @@ export const getActiveGoalInstance = async (assignedGoalId: string): Promise<Goa
     if (error || !data) {
       console.log('No active instance found, fetching the latest instance');
       
-      // If no active instance found, get the latest one
       const { data: latestData, error: latestError } = await supabase
         .from('hr_goal_instances')
         .select('*')
@@ -863,8 +814,7 @@ export const addTrackingRecord = async (
   notes?: string
 ): Promise<TrackingRecord | null> => {
   try {
-    // First, check if there's an active goal instance for this date
-    const datePart = recordDate.split('T')[0]; // Extract just the YYYY-MM-DD part
+    const datePart = recordDate.split('T')[0];
     
     const { data: instanceData, error: instanceError } = await supabase
       .from('hr_goal_instances')
@@ -876,10 +826,8 @@ export const addTrackingRecord = async (
     
     if (instanceError) {
       console.error('Error checking goal instance:', instanceError);
-      // Continue with tracking record creation regardless
     }
     
-    // Insert the tracking record which will trigger our database function
     const { data, error } = await supabase
       .from('tracking_records')
       .insert({
@@ -896,7 +844,6 @@ export const addTrackingRecord = async (
       return null;
     }
     
-    // Database triggers will handle updating the goal instance and parent goal
     return mapTrackingRecordDbToTrackingRecord(data);
   } catch (error) {
     console.error('Error in addTrackingRecord:', error);
@@ -910,7 +857,6 @@ export const updateGoalProgress = async (
   notes?: string
 ): Promise<AssignedGoal | null> => {
   try {
-    // Get the goal details first to calculate the correct status
     const { data: goalData, error: goalError } = await supabase
       .from('hr_assigned_goals')
       .select('*, hr_goals:goal_id(*)')
@@ -926,15 +872,13 @@ export const updateGoalProgress = async (
       ? Math.min(Math.round((currentValue * 100) / goalData.target_value), 100)
       : 0;
     
-    // Determine the correct status based on current values and dates
     const status = calculateGoalStatus(
       currentValue,
-      goalData.target_value,
+      goalData.target_valueBLUE,
       goalData.hr_goals.start_date,
       goalData.hr_goals.end_date
     );
     
-    // Update the assigned goal with new values
     const { data, error } = await supabase
       .from('hr_assigned_goals')
       .update({
@@ -942,7 +886,7 @@ export const updateGoalProgress = async (
         progress,
         status,
         updated_at: new Date().toISOString(),
-        notes: notes
+        notes
       })
       .eq('id', assignedGoalId)
       .select()
@@ -976,7 +920,6 @@ export const updateAssignedGoalTarget = async (
   targetValue: number
 ): Promise<AssignedGoal | null> => {
   try {
-    // Get the goal details first for proper status calculation
     const { data: goalData, error: goalError } = await supabase
       .from('hr_assigned_goals')
       .select('*, hr_goals:goal_id(*)')
@@ -991,7 +934,6 @@ export const updateAssignedGoalTarget = async (
     const currentValue = goalData.current_value;
     const progress = targetValue > 0 ? Math.min(Math.round((currentValue / targetValue) * 100), 100) : 0;
     
-    // Determine status based on the new target
     const status = calculateGoalStatus(
       currentValue,
       targetValue,
@@ -1038,7 +980,6 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
   try {
     console.log(`Fetching goals for employee ID: ${employeeId}`);
     
-    // Original code to get assigned goals
     const { data: assignedGoalsData, error: assignedGoalsError } = await supabase
       .from('hr_assigned_goals')
       .select('*')
@@ -1091,13 +1032,11 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
 
     const goals: GoalWithDetails[] = [];
 
-    // Process each goal
     for (const goalData of goalsData) {
       const assignedGoal = assignedGoals.find(ag => ag.goalId === goalData.id);
       
       if (!assignedGoal) continue;
 
-      // Get instances for this assigned goal
       const { data: instancesData, error: instancesError } = await supabase
         .from('hr_goal_instances')
         .select('*')
@@ -1108,21 +1047,69 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
       let activeInstance: GoalInstance | undefined = undefined;
 
       if (!instancesError && instancesData && instancesData.length > 0) {
-        instances = instancesData.map(instance => ({
-          id: instance.id,
-          assignedGoalId: instance.assigned_goal_id,
-          periodStart: instance.period_start,
-          periodEnd: instance.period_end,
-          targetValue: instance.target_value,
-          currentValue: instance.current_value,
-          progress: instance.progress,
-          status: instance.status,
-          createdAt: instance.created_at,
-          updatedAt: instance.updated_at,
-          notes: instance.notes
-        }));
+        instances = instancesData.map(instance => {
+          const currentValue = instance.current_value ?? 0;
+          const targetValue = instance.target_value ?? 0;
+          const progress = targetValue > 0 ? Math.min(Math.round((currentValue / targetValue) * 100), 100) : 0;
+          const status = calculateGoalStatus(
+            currentValue,
+            targetValue,
+            instance.period_start,
+            instance.period_end
+          );
 
-        // Find the current active instance
+          // Update database with recalculated values
+          supabase
+            .from('hr_goal_instances')
+            .update({
+              current_value: currentValue,
+              progress,
+              status,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', instance.id)
+            .then(({ error }) => {
+              if (error) {
+                console.error("Error updating goal instance in supabaseData:", error);
+              } else {
+                console.log("Updated goal instance in supabaseData:", {
+                  instanceId: instance.id,
+                  status,
+                  progress,
+                  currentValue,
+                  periodStart: instance.period_start,
+                  periodEnd: instance.period_end
+                });
+              }
+            });
+
+          return {
+            id: instance.id,
+            assignedGoalId: instance.assigned_goal_id,
+            periodStart: instance.period_start,
+            periodEnd: instance.period_end,
+            targetValue,
+            currentValue,
+            progress,
+            status,
+            createdAt: instance.created_at,
+            updatedAt: instance.updated_at,
+            notes: instance.notes
+          };
+        });
+
+        console.log("Mapped Goal Instances:", {
+          goalId: goalData.id,
+          instances: instances.map(i => ({
+            id: i.id,
+            periodStart: i.periodStart,
+            periodEnd: i.periodEnd,
+            currentValue: i.currentValue,
+            targetValue: i.targetValue,
+            status: i.status
+          }))
+        });
+
         const today = new Date().toISOString().split('T')[0];
         const currentInstance = instances.find(
           instance => 
@@ -1130,11 +1117,9 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
             new Date(instance.periodEnd) >= new Date(today)
         );
 
-        // If we found an active instance, use it
-        activeInstance = currentInstance || instances[0]; // Fallback to the first instance if no active one
+        activeInstance = currentInstance || instances[0];
       }
 
-      // Handle special goals (Submission or Onboarding)
       const isSpecialGoal = goalData.name === "Submission" || goalData.name === "Onboarding";
       if (isSpecialGoal && activeInstance) {
         const currentValue = await getSubmissionOrOnboardingCounts(
@@ -1144,13 +1129,10 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
           activeInstance.periodEnd
         );
         
-        // Update the assignment's current value and progress
         assignedGoal.currentValue = currentValue;
-        if (assignedGoal.targetValue > 0) {
-          assignedGoal.progress = Math.min(Math.round((currentValue / assignedGoal.targetValue) * 100), 100);
-        }
-        
-        // Update the assignment status based on the new values
+        assignedGoal.progress = assignedGoal.targetValue > 0 
+          ? Math.min(Math.round((currentValue / assignedGoal.targetValue) * 100), 100) 
+          : 0;
         assignedGoal.status = calculateGoalStatus(
           currentValue,
           assignedGoal.targetValue,
@@ -1158,7 +1140,6 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
           activeInstance.periodEnd
         );
         
-        // Also update in database
         await supabase
           .from('hr_assigned_goals')
           .update({
@@ -1167,12 +1148,52 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
             status: assignedGoal.status,
             updated_at: new Date().toISOString()
           })
-          .eq('id', assignedGoal.id);
+          .eq('id', assignedGoal.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error("Error updating assigned goal for special goal:", error);
+            } else {
+              console.log("Updated assigned goal for special goal:", {
+                assignedGoalId: assignedGoal.id,
+                status: assignedGoal.status,
+                progress: assignedGoal.progress,
+                currentValue
+              });
+            }
+          });
         
-        // Update the active instance with the new value
         activeInstance.currentValue = currentValue;
         activeInstance.progress = assignedGoal.progress;
         activeInstance.status = assignedGoal.status;
+
+        const instanceToUpdate = instances.find(i => i.id === activeInstance!.id);
+        if (instanceToUpdate) {
+          instanceToUpdate.currentValue = currentValue;
+          instanceToUpdate.progress = assignedGoal.progress;
+          instanceToUpdate.status = assignedGoal.status;
+
+          await supabase
+            .from('hr_goal_instances')
+            .update({
+              current_value: currentValue,
+              progress: assignedGoal.progress,
+              status: assignedGoal.status,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', instanceToUpdate.id)
+            .then(({ error }) => {
+              if (error) {
+                console.error("Error updating special goal instance:", error);
+              } else {
+                console.log("Updated special goal instance:", {
+                  instanceId: instanceToUpdate.id,
+                  status: assignedGoal.status,
+                  progress: assignedGoal.progress,
+                  currentValue
+                });
+              }
+            });
+        }
       }
 
       const goal: GoalWithDetails = {
@@ -1190,6 +1211,18 @@ export const getEmployeeGoals = async (employeeId: string): Promise<GoalWithDeta
       goals.push(goal);
     }
 
+    console.log("Final Goals:", goals.map(g => ({
+      id: g.id,
+      name: g.name,
+      instances: g.instances?.map(i => ({
+        id: i.id,
+        periodStart: i.periodStart,
+        periodEnd: i.periodEnd,
+        currentValue: i.currentValue,
+        targetValue: i.targetValue,
+        status: i.status
+      }))
+    })));
     return goals;
   } catch (error) {
     console.error('Error in getEmployeeGoals:', error);
