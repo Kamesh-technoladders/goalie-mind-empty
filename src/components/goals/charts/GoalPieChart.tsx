@@ -1,6 +1,6 @@
 
 import React from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 interface ChartDataItem {
   name: string;
@@ -28,7 +28,7 @@ const GoalPieChart: React.FC<GoalPieChartProps> = ({ data }) => {
   return (
     <div className="w-full h-64">
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+        <RechartsPieChart>
           <Pie
             data={filteredData}
             cx="50%"
@@ -48,10 +48,11 @@ const GoalPieChart: React.FC<GoalPieChartProps> = ({ data }) => {
             contentStyle={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
           />
           <Legend />
-        </PieChart>
+        </RechartsPieChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
 export default GoalPieChart;
+export { GoalPieChart as PieChart };

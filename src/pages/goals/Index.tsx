@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import GoalList from "@/components/goals/goals/GoalList";
 import AnimatedCard from "@/components/ui/custom/AnimatedCard";
@@ -24,7 +23,7 @@ import AssignGoalsForm from "@/components/goals/goals/AssignGoalsForm";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PieChart } from "@/components/goals/charts/GoalPieChart";
+import { GoalPieChart } from "@/components/goals/charts/GoalPieChart";
 
 const GoalStatusFilter = {
   ALL: "all",

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Filter } from "lucide-react";
 import GoalCard from "@/components/goals/common/GoalCard";
@@ -67,6 +68,8 @@ const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", classNa
       }
       return 0;
     });
+
+  console.log("GoalList - Filtered Goals:", filteredGoals.length);
 
   return (
     <div className={`w-full ${className}`}>
@@ -147,7 +150,10 @@ const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", classNa
               )[0]
               : undefined;
 
-            if (!relevantInstance) return null;
+            if (!relevantInstance) {
+              console.log(`No relevant instance found for goal: ${goal.id}`);
+              return null;
+            }
 
             return (
               <GoalCard 
@@ -157,6 +163,7 @@ const GoalList: React.FC<GoalListProps> = ({ goals, title = "All Goals", classNa
                 allowManagement={true}
                 onUpdate={() => {
                   // Placeholder for refresh logic
+                  console.log("Goal updated");
                 }}
               />
             );

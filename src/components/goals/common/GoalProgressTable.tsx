@@ -1,20 +1,13 @@
 
 import React from "react";
-import { Employee } from "@/types/goal";
+import { Employee, GoalStatistics } from "@/types/goal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, AlertTriangle, BarChart3 } from "lucide-react";
 
 interface GoalProgressTableProps {
-  employee: Employee;
-  goalStats: {
-    totalGoals: number;
-    completedGoals: number;
-    inProgressGoals: number;
-    overdueGoals: number;
-    pendingGoals: number;
-    completionRate: number;
-  };
+  employee?: Employee;
+  goalStats: GoalStatistics;
 }
 
 const GoalProgressTable: React.FC<GoalProgressTableProps> = ({ employee, goalStats }) => {

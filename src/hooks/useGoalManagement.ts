@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { GoalInstance } from '@/types/goal';
 
 export const useGoalManagement = () => {
-  const toast = useToast();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,7 +25,7 @@ export const useGoalManagement = () => {
       const result = await updateGoalTarget(goalInstanceId, newTargetValue);
       
       if (result) {
-        toast.toast({
+        toast({
           title: "Target updated",
           description: `Goal target updated to ${newTargetValue}`,
         });
@@ -36,7 +36,7 @@ export const useGoalManagement = () => {
         
         return result;
       } else {
-        toast.toast({
+        toast({
           title: "Update failed",
           description: "Could not update the target value. Please try again.",
           variant: "destructive",
@@ -45,7 +45,7 @@ export const useGoalManagement = () => {
       }
     } catch (error) {
       console.error("Error updating target:", error);
-      toast.toast({
+      toast({
         title: "Error",
         description: "An unexpected error occurred.",
         variant: "destructive",
@@ -66,7 +66,7 @@ export const useGoalManagement = () => {
       const result = await extendGoalTarget(goalInstanceId, additionalTarget);
       
       if (result) {
-        toast.toast({
+        toast({
           title: "Goal extended",
           description: `Goal target increased by ${additionalTarget}`,
         });
@@ -77,7 +77,7 @@ export const useGoalManagement = () => {
         
         return result;
       } else {
-        toast.toast({
+        toast({
           title: "Extension failed",
           description: "Could not extend the goal target. Please try again.",
           variant: "destructive",
@@ -86,7 +86,7 @@ export const useGoalManagement = () => {
       }
     } catch (error) {
       console.error("Error extending goal:", error);
-      toast.toast({
+      toast({
         title: "Error",
         description: "An unexpected error occurred.",
         variant: "destructive",
@@ -106,7 +106,7 @@ export const useGoalManagement = () => {
       const result = await deleteGoal(goalId);
       
       if (result) {
-        toast.toast({
+        toast({
           title: "Goal deleted",
           description: "The goal has been permanently removed.",
         });
@@ -117,7 +117,7 @@ export const useGoalManagement = () => {
         
         return true;
       } else {
-        toast.toast({
+        toast({
           title: "Deletion failed",
           description: "Could not delete the goal. Please try again.",
           variant: "destructive",
@@ -126,7 +126,7 @@ export const useGoalManagement = () => {
       }
     } catch (error) {
       console.error("Error deleting goal:", error);
-      toast.toast({
+      toast({
         title: "Error",
         description: "An unexpected error occurred.",
         variant: "destructive",
@@ -146,7 +146,7 @@ export const useGoalManagement = () => {
       const result = await stopGoal(goalInstanceId);
       
       if (result) {
-        toast.toast({
+        toast({
           title: "Goal stopped",
           description: "The goal has been stopped and will no longer be tracked.",
         });
@@ -157,7 +157,7 @@ export const useGoalManagement = () => {
         
         return result;
       } else {
-        toast.toast({
+        toast({
           title: "Stop failed",
           description: "Could not stop the goal. Please try again.",
           variant: "destructive",
@@ -166,7 +166,7 @@ export const useGoalManagement = () => {
       }
     } catch (error) {
       console.error("Error stopping goal:", error);
-      toast.toast({
+      toast({
         title: "Error",
         description: "An unexpected error occurred.",
         variant: "destructive",

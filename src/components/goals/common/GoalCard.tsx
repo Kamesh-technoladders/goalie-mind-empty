@@ -1,20 +1,28 @@
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  BarChart3, Clock, AlertTriangle, CheckCircle2, Calendar, Target,
-  Edit, Trash2, StopCircle, Plus
-} from "lucide-react";
-import { format } from 'date-fns';
 import { 
-  Employee, 
-  GoalInstance, 
-  GoalWithDetails 
-} from "@/types/goal";
+  Calendar, 
+  Clock, 
+  Target, 
+  CheckCircle2, 
+  AlertTriangle, 
+  MoreHorizontal, 
+  User, 
+  Users 
+} from "lucide-react";
+import { GoalInstance, GoalWithDetails } from "@/types/goal";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -22,450 +30,321 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useGoalManagement } from "@/hooks/useGoalManagement";
+import { format } from "date-fns";
 
 interface GoalCardProps {
   goal: GoalWithDetails;
   goalInstance: GoalInstance;
-  employee?: Employee;
-  onUpdate?: () => void;
   allowManagement?: boolean;
+  onUpdate?: () => void;
 }
 
 const GoalCard: React.FC<GoalCardProps> = ({ 
   goal, 
   goalInstance, 
-  employee, 
-  onUpdate,
-  allowManagement = false
+  allowManagement = false,
+  onUpdate
 }) => {
-  const { toast } = useToast();
-  const [loading, setLoading] = useState<boolean>(false);
-  const [showEditDialog, setShowEditDialog] = useState<boolean>(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
-  const [showStopDialog, setShowStopDialog] = useState<boolean>(false);
-  const [showExtendDialog, setShowExtendDialog] = useState<boolean>(false);
-  const [newTargetValue, setNewTargetValue] = useState<number>(goalInstance.targetValue);
-  const [additionalTarget, setAdditionalTarget] = useState<number>(0);
-
-  const isSpecialGoal = goal.name === "Submission" || goal.name === "Onboarding";
-  const isCompleted = goalInstance.status === "completed";
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [isExtendDialogOpen, setIsExtendDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [newTargetValue, setNewTargetValue] = useState(goalInstance.targetValue);
+  const [additionalTargetValue, setAdditionalTargetValue] = useState(0);
   
-  // Status icon and badge styles
-  const statusIcon = () => {
-    switch (goalInstance.status) {
-      case 'completed':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'in-progress':
-        return <BarChart3 className="h-5 w-5 text-blue-500" />;
-      case 'overdue':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
-      default:
-        return <Clock className="h-5 w-5 text-amber-500" />;
+  const { 
+    isLoading,
+    handleUpdateTarget,
+    handleDeleteGoal,
+    handleExtendGoal,
+    handleStopGoal
+  } = useGoalManagement();
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), "MMM d, yyyy");
+    } catch (e) {
+      console.error("Invalid date:", dateStr);
+      return "Invalid date";
     }
   };
 
-  const getBadgeClasses = () => {
-    switch (goalInstance.status) {
-      case 'completed':
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
         return "bg-green-100 text-green-800 border-green-200";
-      case 'in-progress':
+      case "in-progress":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case 'overdue':
+      case "overdue":
         return "bg-red-100 text-red-800 border-red-200";
-      default:
+      case "pending":
         return "bg-amber-100 text-amber-800 border-amber-200";
+      case "stopped":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
-  const getPeriodText = () => {
-    const goalType = goal.assignmentDetails?.goalType || "Standard";
-    const startDate = format(new Date(goalInstance.periodStart), 'MMM d, yyyy');
-    const endDate = format(new Date(goalInstance.periodEnd), 'MMM d, yyyy');
-    return `${goalType} Period: ${startDate} - ${endDate}`;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case "in-progress":
+        return <Clock className="h-4 w-4 text-blue-600" />;
+      case "overdue":
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case "pending":
+        return <Clock className="h-4 w-4 text-amber-600" />;
+      default:
+        return null;
+    }
   };
 
-  const getIntervalTypeText = () => {
-    return goal.assignmentDetails?.goalType ? `${goal.assignmentDetails.goalType} Goal` : "Goal";
-  };
-
-  const handleUpdateTarget = async () => {
-    if (!allowManagement) return;
-    setLoading(true);
+  const handleUpdateClick = async () => {
+    if (newTargetValue <= 0) return;
     
-    try {
-      // Update target value logic would go here
-      // This is a placeholder for the actual API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      toast({
-        title: "Target updated",
-        description: `Target for ${goal.name} updated to ${newTargetValue} ${goal.metricUnit}`,
-      });
-      
+    const result = await handleUpdateTarget(goalInstance.id, newTargetValue);
+    if (result) {
+      setIsUpdateDialogOpen(false);
       if (onUpdate) onUpdate();
-      setShowEditDialog(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update target value",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleDeleteGoal = async () => {
-    if (!allowManagement) return;
-    setLoading(true);
+  const handleExtendClick = async () => {
+    if (additionalTargetValue <= 0) return;
     
-    try {
-      // Delete goal logic would go here
-      // This is a placeholder for the actual API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      toast({
-        title: "Goal deleted",
-        description: `${goal.name} has been deleted`,
-      });
-      
+    const result = await handleExtendGoal(goalInstance.id, additionalTargetValue);
+    if (result) {
+      setIsExtendDialogOpen(false);
       if (onUpdate) onUpdate();
-      setShowDeleteDialog(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete goal",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleStopGoal = async () => {
-    if (!allowManagement) return;
-    setLoading(true);
-    
-    try {
-      // Stop goal logic would go here
-      // This is a placeholder for the actual API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      toast({
-        title: "Goal stopped",
-        description: `${goal.name} has been stopped`,
-      });
-      
+  const handleDeleteClick = async () => {
+    const result = await handleDeleteGoal(goal.id);
+    if (result) {
+      setIsDeleteDialogOpen(false);
       if (onUpdate) onUpdate();
-      setShowStopDialog(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to stop goal",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleExtendGoal = async () => {
-    if (!allowManagement) return;
-    setLoading(true);
-    
-    try {
-      // Extend goal logic would go here
-      // This is a placeholder for the actual API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      toast({
-        title: "Goal extended",
-        description: `${goal.name} target has been increased by ${additionalTarget} ${goal.metricUnit}`,
-      });
-      
-      if (onUpdate) onUpdate();
-      setShowExtendDialog(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to extend goal",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleStopClick = async () => {
+    const result = await handleStopGoal(goalInstance.id);
+    if (result && onUpdate) onUpdate();
   };
 
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-md">
-      <CardHeader className="p-4">
-        <div className="flex justify-between items-start">
-          <Badge variant="outline" className="mb-2">
-            {goal.sector}
-          </Badge>
-          <Badge variant="outline" className={getBadgeClasses()}>
-            <span className="flex items-center">
-              {statusIcon()}
-              <span className="ml-1 capitalize">{goalInstance.status}</span>
-            </span>
-          </Badge>
-        </div>
-        <CardTitle className="text-lg">{goal.name}</CardTitle>
-      </CardHeader>
-      
-      <CardContent className="p-4 pt-0">
-        <div className="text-sm text-gray-500 mb-3">
-          {goal.description}
-        </div>
-        
-        <div className="space-y-4">
-          <div className="flex items-center text-sm text-gray-500">
-            <Calendar className="h-4 w-4 mr-1" />
-            {getPeriodText()}
-          </div>
-          
-          <div className="flex items-center text-sm text-gray-500">
-            <Target className="h-4 w-4 mr-1" />
-            {getIntervalTypeText()}
-          </div>
-          
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span>Progress</span>
-              <span className="font-medium">{Math.round(goalInstance.progress)}%</span>
+    <>
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-lg font-bold mb-1">{goal.name}</CardTitle>
+              <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 mb-2">
+                {goal.sector}
+              </Badge>
             </div>
-            {loading ? (
-              <div className="h-2 w-full bg-gray-100 rounded overflow-hidden">
-                <div className="h-full bg-gray-300 animate-pulse"></div>
-              </div>
-            ) : (
-              <Progress value={goalInstance.progress} className="h-2" />
+            
+            {allowManagement && goalInstance.status !== "completed" && goalInstance.status !== "stopped" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="px-2">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Goal Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setIsUpdateDialogOpen(true)}>
+                    Update Target
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleStopClick}>
+                    Stop Goal
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600">
+                    Delete Goal
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            
+            {allowManagement && goalInstance.status === "completed" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="px-2">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Goal Actions</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setIsExtendDialogOpen(true)}>
+                    Extend Target
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="text-red-600">
+                    Delete Goal
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
-          
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Target</span>
-            <span>
-              {loading ? (
-                <span className="inline-block w-16 h-4 bg-gray-200 rounded animate-pulse"></span>
-              ) : (
+        </CardHeader>
+        
+        <CardContent>
+          <div className="space-y-4">
+            <div className="text-sm text-gray-500">{goal.description}</div>
+            
+            <div className="flex justify-between items-center">
+              <div className="flex items-center text-xs text-gray-500">
+                <Target className="h-4 w-4 mr-1 text-gray-400" />
                 <span>
-                  {goalInstance.currentValue} / {goalInstance.targetValue}
-                  <span className="ml-1 text-xs text-gray-500">{goal.metricUnit}</span>
+                  {goalInstance.currentValue} / {goalInstance.targetValue} {goal.metricUnit}
                 </span>
+              </div>
+              
+              <Badge variant="outline" className={getStatusColor(goalInstance.status)}>
+                <div className="flex items-center">
+                  {getStatusIcon(goalInstance.status)}
+                  <span className="ml-1 capitalize">{goalInstance.status}</span>
+                </div>
+              </Badge>
+            </div>
+            
+            <div>
+              <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
+                <span>Progress</span>
+                <span>{goalInstance.progress}%</span>
+              </div>
+              <Progress value={goalInstance.progress} className="h-2" />
+            </div>
+            
+            <div className="flex justify-between items-center pt-1">
+              <div className="flex items-center text-xs text-gray-500">
+                <Calendar className="h-3 w-3 mr-1" />
+                <span>{formatDate(goalInstance.periodStart)} - {formatDate(goalInstance.periodEnd)}</span>
+              </div>
+              
+              {goal.assignedTo && goal.assignedTo.length > 0 && (
+                <div className="flex items-center text-xs text-gray-500">
+                  {goal.assignedTo.length === 1 ? (
+                    <User className="h-3 w-3 mr-1" />
+                  ) : (
+                    <Users className="h-3 w-3 mr-1" />
+                  )}
+                  <span>{goal.assignedTo.length} {goal.assignedTo.length === 1 ? 'employee' : 'employees'}</span>
+                </div>
               )}
-            </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Update Target Dialog */}
+      <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Target Value</DialogTitle>
+            <DialogDescription>
+              Update the target value for this goal instance.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="targetValue">New Target Value</Label>
+              <Input
+                id="targetValue"
+                type="number"
+                min="1"
+                value={newTargetValue}
+                onChange={(e) => setNewTargetValue(Number(e.target.value))}
+              />
+            </div>
           </div>
           
-          {isSpecialGoal && (
-            <div className="text-xs text-blue-600 italic">
-              *Values auto-calculated from {goal.name} records
-            </div>
-          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateClick} disabled={isLoading || newTargetValue <= 0}>
+              {isLoading ? "Updating..." : "Update Target"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Extend Target Dialog */}
+      <Dialog open={isExtendDialogOpen} onOpenChange={setIsExtendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extend Goal Target</DialogTitle>
+            <DialogDescription>
+              Add additional target value to this completed goal.
+            </DialogDescription>
+          </DialogHeader>
           
-          {employee && (
-            <div className="flex items-center text-sm text-gray-500">
-              <span className="font-medium">Assigned to: </span>
-              <span className="ml-1">{employee.name}</span>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="additionalValue">Additional Target Value</Label>
+              <Input
+                id="additionalValue"
+                type="number"
+                min="1"
+                value={additionalTargetValue}
+                onChange={(e) => setAdditionalTargetValue(Number(e.target.value))}
+              />
             </div>
-          )}
-        </div>
-      </CardContent>
-      
-      <Separator />
-      
-      <CardFooter className="p-4">
-        {allowManagement && isCompleted && (
-          <div className="flex justify-between w-full">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex-1 mr-2"
-              onClick={() => setShowEditDialog(true)}
-            >
-              <Edit className="h-4 w-4 mr-1" /> 
-              Edit Target
-            </Button>
-            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit Target Value</DialogTitle>
-                  <DialogDescription>
-                    Update the target value for this goal.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="target" className="text-right">
-                      Target Value
-                    </Label>
-                    <Input
-                      id="target"
-                      type="number"
-                      value={newTargetValue}
-                      onChange={(e) => setNewTargetValue(Number(e.target.value))}
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
-                  <Button onClick={handleUpdateTarget} disabled={loading}>Save Changes</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
-              <DialogTrigger asChild>
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  className="flex-1"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> 
-                  Extend Goal
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Extend Goal Target</DialogTitle>
-                  <DialogDescription>
-                    This goal is already completed. You can extend it by adding to the target value.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="currentTarget" className="text-right">
-                      Current Target
-                    </Label>
-                    <Input
-                      id="currentTarget"
-                      type="number"
-                      value={goalInstance.targetValue}
-                      disabled
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="additionalTarget" className="text-right">
-                      Additional Target
-                    </Label>
-                    <Input
-                      id="additionalTarget"
-                      type="number"
-                      value={additionalTarget}
-                      onChange={(e) => setAdditionalTarget(Number(e.target.value))}
-                      className="col-span-3"
-                      min="1"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="newTotal" className="text-right">
-                      New Total
-                    </Label>
-                    <Input
-                      id="newTotal"
-                      type="number"
-                      value={goalInstance.targetValue + additionalTarget}
-                      disabled
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowExtendDialog(false)}>Cancel</Button>
-                  <Button onClick={handleExtendGoal} disabled={loading || additionalTarget <= 0}>
-                    Extend Goal
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <div className="text-sm text-gray-500">
+              Current target: {goalInstance.targetValue} {goal.metricUnit}
+            </div>
+            <div className="text-sm font-medium">
+              New target will be: {Number(goalInstance.targetValue) + additionalTargetValue} {goal.metricUnit}
+            </div>
           </div>
-        )}
-        
-        {allowManagement && !isCompleted && (
-          <div className="flex justify-between w-full">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex-1 mr-2"
-              onClick={() => setShowEditDialog(true)}
-            >
-              <Edit className="h-4 w-4 mr-1" /> 
-              Edit
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExtendDialogOpen(false)}>
+              Cancel
             </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex-1 mr-2"
-              onClick={() => setShowStopDialog(true)}
-            >
-              <StopCircle className="h-4 w-4 mr-1" /> 
-              Stop
+            <Button onClick={handleExtendClick} disabled={isLoading || additionalTargetValue <= 0}>
+              {isLoading ? "Extending..." : "Extend Target"}
             </Button>
-            
-            <Dialog open={showStopDialog} onOpenChange={setShowStopDialog}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Stop Goal</DialogTitle>
-                  <DialogDescription>
-                    Are you sure you want to stop tracking this goal? This action can't be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowStopDialog(false)}>Cancel</Button>
-                  <Button variant="destructive" onClick={handleStopGoal} disabled={loading}>
-                    Stop Goal
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex-1"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="h-4 w-4 mr-1" /> 
-              Delete
-            </Button>
-            
-            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Delete Goal</DialogTitle>
-                  <DialogDescription>
-                    Are you sure you want to delete this goal? This action cannot be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
-                  <Button variant="destructive" onClick={handleDeleteGoal} disabled={loading}>
-                    Delete Goal
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
-        
-        {!allowManagement && (
-          <Button 
-            variant="default" 
-            className="w-full" 
-          >
-            View {isSpecialGoal ? "Details" : "& Update Progress"}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Goal</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this goal and all its tracking data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteClick} className="bg-red-600 hover:bg-red-700">
+              {isLoading ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
