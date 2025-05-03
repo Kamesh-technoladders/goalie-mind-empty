@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from "react";
-import GoalList from "@/components/goals/goals/GoalList";
+import EnhancedGoalCard from "@/components/goals/common/EnhancedGoalCard";
+import EmployeeGoalDashboard from "@/components/goals/dashboard/EmployeeGoalDashboard";
 import AnimatedCard from "@/components/ui/custom/AnimatedCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +15,7 @@ import {
   Target,
   AlertTriangle,
   CalendarDays,
+  Filter,
 } from "lucide-react";
 import { getGoalsWithDetails, getSectorsWithCounts } from "@/lib/supabaseData";
 import { GoalType, GoalWithDetails } from "@/types/goal";
@@ -23,7 +26,9 @@ import AssignGoalsForm from "@/components/goals/goals/AssignGoalsForm";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GoalPieChart } from "@/components/goals/charts/GoalPieChart";
+import { calculateGoalStatistics } from "@/lib/goalService";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const GoalStatusFilter = {
   ALL: "all",
@@ -43,162 +48,90 @@ const GoalsIndex = () => {
   const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
   const [createGoalDialogOpen, setCreateGoalDialogOpen] = useState(false);
   const [assignGoalDialogOpen, setAssignGoalDialogOpen] = useState(false);
-  const [showAllGoals, setShowAllGoals] = useState(true); // New state to control showing all goals including expired
+  const [showAllGoals, setShowAllGoals] = useState(true); // State to control showing all goals including expired
   
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const goalsData = await getGoalsWithDetails();
-        const sectorsData = await getSectorsWithCounts();
-        
-        // Fetch departments
-        const { data: departmentsData, error } = await supabase
-          .from('hr_departments')
-          .select('id, name')
-          .order('name');
-        
-        if (error) {
-          console.error("Error fetching departments:", error);
-        } else {
-          setDepartments(departmentsData || []);
-        }
-        
-        setGoals(goalsData);
-        setSectors(sectorsData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchData();
   }, [createGoalDialogOpen, assignGoalDialogOpen]);
   
-  // Filter goals by sector, timeframe, and status, but do not filter by date if showAllGoals is true
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const goalsData = await getGoalsWithDetails();
+      const sectorsData = await getSectorsWithCounts();
+      
+      // Fetch departments
+      const { data: departmentsData, error } = await supabase
+        .from('hr_departments')
+        .select('id, name')
+        .order('name');
+      
+      if (error) {
+        console.error("Error fetching departments:", error);
+      } else {
+        setDepartments(departmentsData || []);
+      }
+      
+      setGoals(goalsData);
+      setSectors(sectorsData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Filter goals by sector, timeframe, and status
   const filteredGoals = goals
     .filter(goal => {
-      // Filter by sector
+      // First, filter by expired status if needed
+      if (!showAllGoals) {
+        const now = new Date();
+        const endDate = new Date(goal.endDate);
+        if (endDate < now) return false;
+      }
+      
+      // Then filter by sector
       if (selectedSector !== "all") {
         return goal.sector.toLowerCase() === selectedSector.toLowerCase();
       }
       return true;
     });
+    
+  // Count goals by timeframe
+  const dailyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Daily')
+  );
   
-  // Group goals by timeframe WITHOUT combining different timeframes into one card
-  const groupGoalsByTimeframe = (goals: GoalWithDetails[], timeframe: GoalType): GoalWithDetails[] => {
-    // For each goal, filter its assignments to only include assignments of the specified timeframe
-    return goals.map(goal => {
-      const timeframeAssignments = goal.assignments?.filter(a => {
-        // First filter by goal type
-        if (a.goalType !== timeframe) {
-          return false;
-        }
-        
-        // Then apply status filter if selected
-        if (selectedStatus !== GoalStatusFilter.ALL) {
-          return a.status === selectedStatus;
-        }
-        
-        return true;
-      }) || [];
-      
-      // If this goal has no assignments for this timeframe, return null
-      if (timeframeAssignments.length === 0) return null;
-      
-      // Calculate the total target/current values and progress for THIS timeframe only
-      const timeframeTargetValue = timeframeAssignments.reduce((sum, a) => sum + a.targetValue, 0);
-      const timeframeCurrentValue = timeframeAssignments.reduce((sum, a) => sum + a.currentValue, 0);
-      const timeframeProgress = timeframeTargetValue > 0 
-        ? Math.min(Math.round((timeframeCurrentValue / timeframeTargetValue) * 100), 100)
-        : 0;
-      
-      // Get employees assigned to this timeframe
-      const assignedToThisTimeframe = timeframeAssignments
-        .map(a => goal.assignedTo?.find(e => e.id === a.employeeId))
-        .filter(Boolean);
-      
-      // Return a new goal object with only the timeframe-specific data
-      return {
-        ...goal,
-        assignments: timeframeAssignments,
-        assignedTo: assignedToThisTimeframe,
-        totalTargetValue: timeframeTargetValue,
-        totalCurrentValue: timeframeCurrentValue,
-        overallProgress: timeframeProgress
-      };
-    }).filter(Boolean) as GoalWithDetails[]; // Filter out null values
-  };
-
-  // Filter goals by status
-  const filterGoalsByStatus = (goals: GoalWithDetails[], status: string): GoalWithDetails[] => {
-    if (status === GoalStatusFilter.ALL) return goals;
-
-    return goals.map(goal => {
-      const statusAssignments = goal.assignments?.filter(a => a.status === status) || [];
-      
-      // If this goal has no assignments for this status, return null
-      if (statusAssignments.length === 0) return null;
-      
-      // Calculate the total target/current values and progress for THIS status only
-      const statusTargetValue = statusAssignments.reduce((sum, a) => sum + a.targetValue, 0);
-      const statusCurrentValue = statusAssignments.reduce((sum, a) => sum + a.currentValue, 0);
-      const statusProgress = statusTargetValue > 0 
-        ? Math.min(Math.round((statusCurrentValue / statusTargetValue) * 100), 100)
-        : 0;
-      
-      // Get employees assigned to this status
-      const assignedToThisStatus = statusAssignments
-        .map(a => goal.assignedTo?.find(e => e.id === a.employeeId))
-        .filter(Boolean);
-      
-      // Return a new goal object with only the status-specific data
-      return {
-        ...goal,
-        assignments: statusAssignments,
-        assignedTo: assignedToThisStatus,
-        totalTargetValue: statusTargetValue,
-        totalCurrentValue: statusCurrentValue,
-        overallProgress: statusProgress
-      };
-    }).filter(Boolean) as GoalWithDetails[]; // Filter out null values
-  };
+  const weeklyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Weekly')
+  );
   
-  // Create separate goal lists for each timeframe
-  const dailyGoals = groupGoalsByTimeframe(filteredGoals, 'Daily');
-  const weeklyGoals = groupGoalsByTimeframe(filteredGoals, 'Weekly');
-  const monthlyGoals = groupGoalsByTimeframe(filteredGoals, 'Monthly');
-  const yearlyGoals = groupGoalsByTimeframe(filteredGoals, 'Yearly');
+  const monthlyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Monthly')
+  );
+  
+  const yearlyGoals = filteredGoals.filter(goal => 
+    goal.assignments?.some(a => a.goalType === 'Yearly')
+  );
   
   // Apply timeframe filter when a specific timeframe is selected
   let timeframeFilteredGoals = filteredGoals;
   if (selectedTimeframe !== 'all') {
-    timeframeFilteredGoals = groupGoalsByTimeframe(filteredGoals, selectedTimeframe as GoalType);
+    timeframeFilteredGoals = filteredGoals.filter(goal =>
+      goal.assignments?.some(a => a.goalType === selectedTimeframe)
+    );
   }
   
   // Apply status filter if selected
   if (selectedStatus !== GoalStatusFilter.ALL) {
-    timeframeFilteredGoals = filterGoalsByStatus(timeframeFilteredGoals, selectedStatus);
+    timeframeFilteredGoals = timeframeFilteredGoals.filter(goal =>
+      goal.assignments?.some(a => a.status === selectedStatus)
+    );
   }
   
-  // Goals statistics - calculated across all timeframes
-  const totalGoals = goals.length;
-  const inProgressGoals = goals.filter(
-    goal => goal.assignments?.some(a => a.status === "in-progress")
-  ).length;
-  
-  const completedGoals = goals.filter(
-    goal => goal.assignments?.every(a => a.status === "completed")
-  ).length;
-  
-  const pendingGoals = goals.filter(
-    goal => goal.assignments?.every(a => a.status === "pending")
-  ).length;
-  
-  const overdueGoals = goals.filter(
-    goal => goal.assignments?.some(a => a.status === "overdue")
-  ).length;
+  // Calculate goals statistics
+  const goalStats = calculateGoalStatistics(filteredGoals);
   
   // Count unique employees assigned to goals
   const uniqueEmployeeIds = new Set<string>();
@@ -208,47 +141,7 @@ const GoalsIndex = () => {
     }
   });
   const assignedEmployeesCount = uniqueEmployeeIds.size;
-  
-  // Count goals by type
-  const goalsByType = goals.reduce((acc, goal) => {
-    if (goal.assignments) {
-      goal.assignments.forEach(assignment => {
-        acc[assignment.goalType] = (acc[assignment.goalType] || 0) + 1;
-      });
-    }
-    return acc;
-  }, {} as Record<string, number>);
 
-  const handleTimeframeChange = (timeframe: "all" | GoalType) => {
-    setSelectedTimeframe(timeframe);
-  };
-
-  const handleStatusChange = (status: string) => {
-    setSelectedStatus(status);
-  };
-  
-  // Function to get icon by status
-  const getStatusIcon = (status: string) => {
-    switch(status) {
-      case 'in-progress': return <BarChart3 className="h-5 w-5 text-blue-500" />;
-      case 'completed': return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'overdue': return <AlertTriangle className="h-5 w-5 text-red-500" />;
-      case 'pending': return <Clock className="h-5 w-5 text-amber-500" />;
-      default: return null;
-    }
-  };
-
-  // Function to get timeframe icon
-  const getTimeframeIcon = (timeframe: string) => {
-    switch(timeframe) {
-      case 'Daily': return <CalendarDays className="h-5 w-5" />;
-      case 'Weekly': return <Calendar className="h-5 w-5" />;
-      case 'Monthly': return <Calendar className="h-5 w-5" />;
-      case 'Yearly': return <Calendar className="h-5 w-5" />;
-      default: return <Calendar className="h-5 w-5" />;
-    }
-  };
-  
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="container mx-auto px-4 pt-24 pb-12">
@@ -312,7 +205,7 @@ const GoalsIndex = () => {
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm">Total Goals</p>
-                  <h3 className="text-2xl font-bold">{totalGoals}</h3>
+                  <h3 className="text-2xl font-bold">{goalStats.totalGoals}</h3>
                   <div className="flex items-center mt-1">
                     <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-100">
                       {sectors.length} Sectors
@@ -331,10 +224,10 @@ const GoalsIndex = () => {
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm">In Progress</p>
-                  <h3 className="text-2xl font-bold">{inProgressGoals}</h3>
+                  <h3 className="text-2xl font-bold">{goalStats.inProgressGoals}</h3>
                   <div className="flex items-center mt-1">
                     <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-100">
-                      {totalGoals > 0 ? Math.round((inProgressGoals / totalGoals) * 100) : 0}% of total
+                      {goalStats.totalGoals > 0 ? Math.round((goalStats.inProgressGoals / goalStats.totalGoals) * 100) : 0}% of total
                     </Badge>
                   </div>
                 </div>
@@ -350,10 +243,10 @@ const GoalsIndex = () => {
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm">Completed</p>
-                  <h3 className="text-2xl font-bold">{completedGoals}</h3>
+                  <h3 className="text-2xl font-bold">{goalStats.completedGoals}</h3>
                   <div className="flex items-center mt-1">
                     <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-100">
-                      {totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0}% of total
+                      {goalStats.totalGoals > 0 ? Math.round((goalStats.completedGoals / goalStats.totalGoals) * 100) : 0}% of total
                     </Badge>
                   </div>
                 </div>
@@ -369,10 +262,10 @@ const GoalsIndex = () => {
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm">Overdue</p>
-                  <h3 className="text-2xl font-bold">{overdueGoals}</h3>
+                  <h3 className="text-2xl font-bold">{goalStats.overdueGoals}</h3>
                   <div className="flex items-center mt-1">
                     <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-100">
-                      {totalGoals > 0 ? Math.round((overdueGoals / totalGoals) * 100) : 0}% of total
+                      {goalStats.totalGoals > 0 ? Math.round((goalStats.overdueGoals / goalStats.totalGoals) * 100) : 0}% of total
                     </Badge>
                   </div>
                 </div>
@@ -389,49 +282,16 @@ const GoalsIndex = () => {
                 <div>
                   <p className="text-gray-500 text-sm">Assigned To</p>
                   <h3 className="text-2xl font-bold">{assignedEmployeesCount}</h3>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {Object.entries(goalsByType).map(([type, count]) => (
-                      <Badge key={type} variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-100">
-                        {count} {type}
-                      </Badge>
-                    ))}
+                  <div className="flex items-center mt-1">
+                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-100">
+                      {goalStats.completionRate}% completion rate
+                    </Badge>
                   </div>
                 </div>
               </AnimatedCard>
             </div>
           )}
 
-          {/* Goal Distribution Chart */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <Card className="p-6 bg-white">
-              <h3 className="font-semibold mb-4">Goal Status Distribution</h3>
-              <div className="h-64">
-                <PieChart 
-                  data={[
-                    { name: 'Completed', value: completedGoals, color: '#10b981' },
-                    { name: 'In Progress', value: inProgressGoals, color: '#3b82f6' },
-                    { name: 'Overdue', value: overdueGoals, color: '#ef4444' },
-                    { name: 'Pending', value: pendingGoals, color: '#f59e0b' }
-                  ]} 
-                />
-              </div>
-            </Card>
-            
-            <Card className="p-6 bg-white">
-              <h3 className="font-semibold mb-4">Goals by Timeframe</h3>
-              <div className="h-64">
-                <PieChart 
-                  data={[
-                    { name: 'Daily', value: dailyGoals.length, color: '#8b5cf6' },
-                    { name: 'Weekly', value: weeklyGoals.length, color: '#ec4899' },
-                    { name: 'Monthly', value: monthlyGoals.length, color: '#06b6d4' },
-                    { name: 'Yearly', value: yearlyGoals.length, color: '#f97316' }
-                  ]} 
-                />
-              </div>
-            </Card>
-          </div>
-          
           {/* Department Tabs */}
           <Tabs defaultValue="all" className="w-full mb-6">
             <TabsList className="flex overflow-x-auto max-w-full">
@@ -458,17 +318,18 @@ const GoalsIndex = () => {
           
           {/* Main filtering tabs */}
           <div className="flex flex-col gap-4 mb-6 bg-white p-4 rounded-lg shadow-sm">
-            <h3 className="font-semibold">Filter Goals</h3>
-            
             <div className="flex justify-between items-center mb-2">
-              <h4 className="text-sm text-gray-500">Options</h4>
-              <Button
-                variant={showAllGoals ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowAllGoals(!showAllGoals)}
-              >
-                {showAllGoals ? "Showing All Goals" : "Showing Active Goals Only"}
-              </Button>
+              <h3 className="font-semibold">Filter Goals</h3>
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="show-all-switch"
+                  checked={showAllGoals} 
+                  onCheckedChange={setShowAllGoals} 
+                />
+                <Label htmlFor="show-all-switch">
+                  {showAllGoals ? "Showing All Goals" : "Showing Active Goals Only"}
+                </Label>
+              </div>
             </div>
             
             {/* Timeframe filter */}
@@ -481,10 +342,12 @@ const GoalsIndex = () => {
                     variant={selectedTimeframe === timeframe ? "default" : "outline"}
                     size="sm"
                     className="flex items-center gap-1"
-                    onClick={() => handleTimeframeChange(timeframe as any)}
+                    onClick={() => setSelectedTimeframe(timeframe as any)}
                   >
-                    {getTimeframeIcon(timeframe)}
-                    <span className="hidden sm:inline">{timeframe === "all" ? "All Timeframes" : timeframe}</span>
+                    {timeframe === "all" ? <Calendar className="h-4 w-4 mr-1" /> : 
+                     timeframe === "Daily" ? <CalendarDays className="h-4 w-4 mr-1" /> :
+                     <Calendar className="h-4 w-4 mr-1" />}
+                    <span>{timeframe === "all" ? "All Timeframes" : timeframe}</span>
                   </Button>
                 ))}
               </div>
@@ -495,20 +358,20 @@ const GoalsIndex = () => {
               <h4 className="text-sm text-gray-500 mb-2">Status</h4>
               <div className="flex flex-wrap gap-2">
                 {[
-                  {id: GoalStatusFilter.ALL, name: "All Statuses"},
-                  {id: GoalStatusFilter.PENDING, name: "Pending"},
-                  {id: GoalStatusFilter.IN_PROGRESS, name: "In Progress"},
-                  {id: GoalStatusFilter.COMPLETED, name: "Completed"},
-                  {id: GoalStatusFilter.OVERDUE, name: "Overdue"}
+                  {id: GoalStatusFilter.ALL, name: "All Statuses", icon: <Filter className="h-4 w-4 mr-1" />},
+                  {id: GoalStatusFilter.PENDING, name: "Pending", icon: <Clock className="h-4 w-4 mr-1 text-amber-500" />},
+                  {id: GoalStatusFilter.IN_PROGRESS, name: "In Progress", icon: <BarChart3 className="h-4 w-4 mr-1 text-blue-500" />},
+                  {id: GoalStatusFilter.COMPLETED, name: "Completed", icon: <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" />},
+                  {id: GoalStatusFilter.OVERDUE, name: "Overdue", icon: <AlertTriangle className="h-4 w-4 mr-1 text-red-500" />}
                 ].map((status) => (
                   <Button
                     key={status.id}
                     variant={selectedStatus === status.id ? "default" : "outline"}
                     size="sm" 
                     className="flex items-center gap-1"
-                    onClick={() => handleStatusChange(status.id)}
+                    onClick={() => setSelectedStatus(status.id)}
                   >
-                    {status.id !== GoalStatusFilter.ALL ? getStatusIcon(status.id) : null}
+                    {status.icon}
                     <span>{status.name}</span>
                   </Button>
                 ))}
@@ -522,45 +385,16 @@ const GoalsIndex = () => {
               <p className="mt-2 text-gray-500">Loading goals data...</p>
             </div>
           ) : (
-            <>
-              {selectedTimeframe === "all" && selectedStatus === GoalStatusFilter.ALL ? (
-                <>
-                  {/* Display goals separated by timeframe */}
-                  {dailyGoals.length > 0 && (
-                    <GoalList goals={dailyGoals} title="Daily Goals" showAllGoals={showAllGoals} />
-                  )}
-                  
-                  {weeklyGoals.length > 0 && (
-                    <GoalList goals={weeklyGoals} title="Weekly Goals" className="mt-10" showAllGoals={showAllGoals} />
-                  )}
-                  
-                  {monthlyGoals.length > 0 && (
-                    <GoalList goals={monthlyGoals} title="Monthly Goals" className="mt-10" showAllGoals={showAllGoals} />
-                  )}
-                  
-                  {yearlyGoals.length > 0 && (
-                    <GoalList goals={yearlyGoals} title="Yearly Goals" className="mt-10" showAllGoals={showAllGoals} />
-                  )}
-                  
-                  {dailyGoals.length === 0 && weeklyGoals.length === 0 && 
-                   monthlyGoals.length === 0 && yearlyGoals.length === 0 && (
-                    <div className="text-center py-10 bg-gray-50 rounded-lg">
-                      <p className="text-gray-500">No goals found</p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <GoalList 
-                  goals={timeframeFilteredGoals}
-                  showAllGoals={showAllGoals}
-                  title={
-                    selectedTimeframe !== "all" 
-                      ? `${selectedTimeframe} Goals${selectedStatus !== GoalStatusFilter.ALL ? ` (${selectedStatus})` : ""}` 
-                      : `${selectedStatus !== GoalStatusFilter.ALL ? `${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)} Goals` : "All Goals"}`
-                  }
-                />
-              )}
-            </>
+            <EmployeeGoalDashboard 
+              goals={timeframeFilteredGoals}
+              loading={loading}
+              onRefresh={fetchData}
+              title={
+                selectedTimeframe !== "all" 
+                  ? `${selectedTimeframe} Goals${selectedStatus !== GoalStatusFilter.ALL ? ` (${selectedStatus})` : ""}` 
+                  : `${selectedStatus !== GoalStatusFilter.ALL ? `${selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)} Goals` : "All Goals"}`
+              }
+            />
           )}
         </section>
       </main>
