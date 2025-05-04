@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { GoalInstance } from "@/types/goal";
 
@@ -193,5 +194,50 @@ export const deleteGoal = async (
   } catch (error) {
     console.error("Exception deleting goal:", error);
     return false;
+  }
+};
+
+/**
+ * Creates a new goal with the specified details
+ */
+export const createGoal = async (goalData: {
+  name: string;
+  description: string;
+  sector: string;
+  targetValue: number;
+  metricType: string;
+  metricUnit: string;
+  startDate: string;
+  endDate: string;
+}): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('hr_goals')
+      .insert([
+        {
+          name: goalData.name,
+          description: goalData.description,
+          sector: goalData.sector,
+          target_value: goalData.targetValue,
+          metric_type: goalData.metricType,
+          metric_unit: goalData.metricUnit,
+          start_date: goalData.startDate,
+          end_date: goalData.endDate,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+      ])
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error("Error creating goal:", error);
+      return null;
+    }
+
+    return data.id;
+  } catch (error) {
+    console.error("Exception creating goal:", error);
+    return null;
   }
 };

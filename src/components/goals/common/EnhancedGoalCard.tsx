@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -16,7 +16,9 @@ import {
   UserPlus,
   UserMinus,
   Edit,
-  Trash2
+  Trash2,
+  History,
+  TrendingUp
 } from "lucide-react";
 import { GoalInstance, GoalWithDetails, AssignedGoal } from "@/types/goal";
 import { 
@@ -49,31 +51,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useGoalManagement } from "@/hooks/useGoalManagement";
 import { format } from "date-fns";
-import { 
-  updateEmployeeGoalTarget, 
-  extendEmployeeGoalTarget, 
-  removeEmployeeFromGoal
-} from "@/lib/goalService";
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { getGoalDetails } from "@/lib/goalService";
 
 interface EmployeeGoalCardProps {
-  goal: GoalWithDetails;
+  goal?: GoalWithDetails;
+  goalId?: string;
   onUpdate?: () => void;
   showAllGoals?: boolean;
 }
 
 const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({ 
-  goal, 
+  goal: initialGoal, 
+  goalId,
   onUpdate,
   showAllGoals = true
 }) => {
   const { toast } = useToast();
   const { 
-    isLoading,
+    isLoading: managementLoading,
     handleDeleteGoal,
   } = useGoalManagement();
+
+  const [goal, setGoal] = useState<GoalWithDetails | undefined>(initialGoal);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>("current");
   
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEmployeeManagementOpen, setIsEmployeeManagementOpen] = useState(false);
@@ -82,6 +87,79 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
   const [isExtendDialogOpen, setIsExtendDialogOpen] = useState(false);
   const [newTargetValue, setNewTargetValue] = useState(0);
   const [additionalTargetValue, setAdditionalTargetValue] = useState(0);
+
+  // Fetch goal data if goalId is provided
+  useEffect(() => {
+    if (goalId && !initialGoal) {
+      const fetchGoal = async () => {
+        setIsLoading(true);
+        try {
+          const goalData = await getGoalDetails(goalId);
+          if (goalData) {
+            setGoal(goalData);
+          } else {
+            toast({
+              title: "Error",
+              description: "Could not fetch goal details",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching goal:", error);
+          toast({
+            title: "Error",
+            description: "An unexpected error occurred while fetching goal details",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchGoal();
+    }
+  }, [goalId, initialGoal, toast]);
+
+  // Helper function to group instances by status
+  const getGoalInstances = () => {
+    if (!goal?.assignments) return { active: [], history: [], upcoming: [] };
+
+    // Get all instances across all assignments
+    const allInstances: GoalInstance[] = [];
+    goal.assignments.forEach(assignment => {
+      const instances = goal.instances?.filter(
+        instance => instance.assigned_goal_id === assignment.id
+      ) || [];
+      allInstances.push(...instances);
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Sort instances by period_start in descending order (newest first)
+    const sortedInstances = [...allInstances].sort((a, b) => {
+      return new Date(b.period_start).getTime() - new Date(a.period_start).getTime();
+    });
+
+    // Group instances by their status relative to current date
+    const active = sortedInstances.filter(instance => {
+      const start = new Date(instance.period_start);
+      const end = new Date(instance.period_end);
+      return start <= today && end >= today;
+    });
+
+    const history = sortedInstances.filter(instance => {
+      const end = new Date(instance.period_end);
+      return end < today;
+    });
+
+    const upcoming = sortedInstances.filter(instance => {
+      const start = new Date(instance.period_start);
+      return start > today;
+    });
+
+    return { active, history, upcoming };
+  };
 
   const formatDate = (dateStr: string) => {
     try {
@@ -125,6 +203,8 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
   };
 
   const handleDeleteClick = async () => {
+    if (!goal) return;
+    
     const result = await handleDeleteGoal(goal.id);
     if (result) {
       setIsDeleteDialogOpen(false);
@@ -136,7 +216,8 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
     if (!selectedAssignedGoal || newTargetValue <= 0) return;
     
     try {
-      const result = await updateEmployeeGoalTarget(
+      // Use the function from your hook
+      const result = await useGoalManagement().handleUpdateEmployeeGoalTarget(
         selectedAssignedGoal.id,
         newTargetValue
       );
@@ -169,7 +250,8 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
     if (!selectedAssignedGoal || additionalTargetValue <= 0) return;
     
     try {
-      const result = await extendEmployeeGoalTarget(
+      // Use the function from your hook
+      const result = await useGoalManagement().handleExtendEmployeeGoal(
         selectedAssignedGoal.id,
         additionalTargetValue
       );
@@ -200,7 +282,8 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
 
   const handleRemoveEmployeeFromGoal = async (assignedGoalId: string) => {
     try {
-      const result = await removeEmployeeFromGoal(assignedGoalId);
+      // Use the function from your hook
+      const result = await useGoalManagement().handleRemoveEmployeeFromGoal(assignedGoalId);
       
       if (result) {
         toast({
@@ -226,6 +309,54 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
     }
   };
 
+  // Display loading state if needed
+  if (isLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex justify-center items-center h-40">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <span className="ml-2">Loading goal data...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Display error state if no goal data
+  if (!goal) {
+    return (
+      <Card className="overflow-hidden">
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+            <h3 className="text-lg font-medium">Goal not found</h3>
+            <p className="text-sm text-gray-500">This goal might have been deleted or no longer exists</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Group instances by status
+  const { active, history, upcoming } = getGoalInstances();
+  const hasHistoricalData = history.length > 0;
+  const hasUpcomingData = upcoming.length > 0;
+
+  const getCurrentActivePeriod = () => {
+    if (active.length === 0) return "No active period";
+    
+    // Find the active instance for the goal type
+    const instance = active[0];
+    return `${formatDate(instance.period_start)} - ${formatDate(instance.period_end)}`;
+  };
+
+  // Determine the goal timeframe type from assignments
+  const getGoalTimeframe = () => {
+    if (!goal.assignments || goal.assignments.length === 0) return "Unknown";
+    return goal.assignments[0].goalType || "Unknown";
+  };
+
   return (
     <>
       <Card className="overflow-hidden">
@@ -233,9 +364,14 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-lg font-bold mb-1">{goal.name}</CardTitle>
-              <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 mb-2">
-                {goal.sector}
-              </Badge>
+              <div className="flex flex-wrap gap-2 mb-2">
+                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
+                  {goal.sector}
+                </Badge>
+                <Badge variant="outline" className="bg-indigo-100 text-indigo-800 border-indigo-200">
+                  {getGoalTimeframe()}
+                </Badge>
+              </div>
             </div>
             
             <DropdownMenu>
@@ -266,121 +402,237 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
         </CardHeader>
         
         <CardContent>
-          <div className="space-y-4">
-            <div className="text-sm text-gray-500">{goal.description}</div>
-            
-            <div>
-              <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
-                <span>Overall Progress</span>
-                <span>{goal.overallProgress ?? 0}%</span>
-              </div>
-              <Progress value={goal.overallProgress ?? 0} className="h-2" />
-            </div>
-            
-            <div className="flex justify-between items-center text-sm">
-              <div className="flex items-center text-gray-500">
-                <Target className="h-4 w-4 mr-1 text-gray-400" />
-                <span>
-                  {goal.totalCurrentValue ?? 0} / {goal.totalTargetValue ?? 0} {goal.metricUnit}
-                </span>
-              </div>
-              
-              <div className="flex items-center text-xs text-gray-500">
-                <Calendar className="h-3 w-3 mr-1" />
-                <span>{formatDate(goal.startDate)} - {formatDate(goal.endDate)}</span>
-              </div>
-            </div>
+          <Tabs defaultValue="current" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4 w-full">
+              <TabsTrigger value="current" className="flex-1">
+                <Clock className="h-4 w-4 mr-2" />
+                Current Period
+              </TabsTrigger>
+              {hasHistoricalData && (
+                <TabsTrigger value="history" className="flex-1">
+                  <History className="h-4 w-4 mr-2" />
+                  History
+                </TabsTrigger>
+              )}
+              {hasUpcomingData && (
+                <TabsTrigger value="upcoming" className="flex-1">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Upcoming
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-            {goal.assignedTo && goal.assignedTo.length > 0 && (
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="employees">
-                  <AccordionTrigger className="text-sm py-2">
-                    <span className="flex items-center">
-                      {goal.assignedTo.length === 1 ? (
-                        <User className="h-3 w-3 mr-1" />
-                      ) : (
-                        <Users className="h-3 w-3 mr-1" />
-                      )}
-                      <span>{goal.assignedTo.length} {goal.assignedTo.length === 1 ? 'employee' : 'employees'}</span>
+            <TabsContent value="current" className="mt-0">
+              <div className="space-y-4">
+                <div className="text-sm text-gray-500">{goal.description}</div>
+                
+                <div>
+                  <div className="flex justify-between items-center text-xs text-gray-500 mb-1">
+                    <span>Overall Progress</span>
+                    <span>{goal.overallProgress ?? 0}%</span>
+                  </div>
+                  <Progress value={goal.overallProgress ?? 0} className="h-2" />
+                </div>
+                
+                <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center text-gray-500">
+                    <Target className="h-4 w-4 mr-1 text-gray-400" />
+                    <span>
+                      {goal.totalCurrentValue ?? 0} / {goal.totalTargetValue ?? 0} {goal.metricUnit}
                     </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <ScrollArea className="max-h-48">
-                      <div className="space-y-2">
-                        {goal.assignments?.map((assignment) => {
-                          const employee = assignment.employee;
-                          if (!employee) return null;
-                          
-                          return (
-                            <div key={assignment.id} className="flex items-center justify-between px-2 py-1 rounded-md hover:bg-gray-50">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium">
-                                  {employee.first_name} {employee.last_name}
-                                </span>
-                                <div className="flex items-center text-xs text-gray-500 mt-1">
-                                  <Target className="h-3 w-3 mr-1" />
-                                  <span>
-                                    {assignment.current_value} / {assignment.target_value} {goal.metricUnit}
-                                  </span>
-                                  <Badge 
-                                    variant="outline"
-                                    className={`${getStatusColor(assignment.status)} ml-2 text-xs px-1 py-0`}
-                                  >
-                                    {assignment.status}
-                                  </Badge>
-                                </div>
-                              </div>
+                  </div>
+                  
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    <span>{getCurrentActivePeriod()}</span>
+                  </div>
+                </div>
 
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelectedAssignedGoal(assignment);
-                                      setNewTargetValue(assignment.target_value);
-                                      setIsUpdateDialogOpen(true);
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit Target
-                                  </DropdownMenuItem>
-                                  
-                                  {assignment.status === "completed" && (
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setSelectedAssignedGoal(assignment);
-                                        setAdditionalTargetValue(Math.round(assignment.target_value * 0.1)); // Default 10% more
-                                        setIsExtendDialogOpen(true);
-                                      }}
-                                    >
-                                      <Target className="h-4 w-4 mr-2" />
-                                      Extend Goal
-                                    </DropdownMenuItem>
-                                  )}
-                                  
-                                  <DropdownMenuItem
-                                    onClick={() => handleRemoveEmployeeFromGoal(assignment.id)}
-                                    className="text-red-600"
-                                  >
-                                    <UserMinus className="h-4 w-4 mr-2" />
-                                    Remove Employee
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+                {goal.assignedTo && goal.assignedTo.length > 0 && (
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="employees">
+                      <AccordionTrigger className="text-sm py-2">
+                        <span className="flex items-center">
+                          {goal.assignedTo.length === 1 ? (
+                            <User className="h-3 w-3 mr-1" />
+                          ) : (
+                            <Users className="h-3 w-3 mr-1" />
+                          )}
+                          <span>{goal.assignedTo.length} {goal.assignedTo.length === 1 ? 'employee' : 'employees'}</span>
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ScrollArea className="max-h-48">
+                          <div className="space-y-2">
+                            {goal.assignments?.map((assignment) => {
+                              const employee = assignment.employee;
+                              if (!employee) return null;
+                              
+                              // Find active instance for this employee
+                              const employeeActiveInstance = active.find(
+                                instance => instance.assigned_goal_id === assignment.id
+                              );
+                              
+                              // Use instance values if available, otherwise use assignment values
+                              const currentValue = employeeActiveInstance?.current_value ?? assignment.current_value;
+                              const targetValue = employeeActiveInstance?.target_value ?? assignment.target_value;
+                              const status = employeeActiveInstance?.status ?? assignment.status;
+                              const progress = employeeActiveInstance?.progress ?? assignment.progress;
+                              
+                              return (
+                                <div key={assignment.id} className="flex items-center justify-between px-2 py-1 rounded-md hover:bg-gray-50">
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">
+                                      {employee.first_name} {employee.last_name}
+                                    </span>
+                                    <div className="flex items-center text-xs text-gray-500 mt-1">
+                                      <Target className="h-3 w-3 mr-1" />
+                                      <span>
+                                        {currentValue} / {targetValue} {goal.metricUnit}
+                                      </span>
+                                      <Badge 
+                                        variant="outline"
+                                        className={`${getStatusColor(status)} ml-2 text-xs px-1 py-0`}
+                                      >
+                                        {status}
+                                      </Badge>
+                                    </div>
+                                  </div>
+
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedAssignedGoal(assignment);
+                                          setNewTargetValue(targetValue);
+                                          setIsUpdateDialogOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit Target
+                                      </DropdownMenuItem>
+                                      
+                                      {status === "completed" && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedAssignedGoal(assignment);
+                                            setAdditionalTargetValue(Math.round(targetValue * 0.1)); // Default 10% more
+                                            setIsExtendDialogOpen(true);
+                                          }}
+                                        >
+                                          <Target className="h-4 w-4 mr-2" />
+                                          Extend Goal
+                                        </DropdownMenuItem>
+                                      )}
+                                      
+                                      <DropdownMenuItem
+                                        onClick={() => handleRemoveEmployeeFromGoal(assignment.id)}
+                                        className="text-red-600"
+                                      >
+                                        <UserMinus className="h-4 w-4 mr-2" />
+                                        Remove Employee
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                )}
+              </div>
+            </TabsContent>
+
+            {hasHistoricalData && (
+              <TabsContent value="history" className="mt-0 space-y-4">
+                <div className="text-sm font-medium">Historical Performance</div>
+                <ScrollArea className="max-h-48">
+                  <div className="space-y-2">
+                    {history.map((instance) => {
+                      // Find the assigned goal for this instance
+                      const assignment = goal.assignments?.find(a => a.id === instance.assigned_goal_id);
+                      if (!assignment) return null;
+
+                      const employee = assignment.employee;
+                      if (!employee) return null;
+
+                      return (
+                        <div key={instance.id} className="border rounded-md p-2 text-sm">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="font-medium">
+                              {employee.first_name} {employee.last_name}
+                            </span>
+                            <Badge 
+                              variant="outline"
+                              className={`${getStatusColor(instance.status)} text-xs`}
+                            >
+                              {instance.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            <span>{formatDate(instance.period_start)} - {formatDate(instance.period_end)}</span>
+                          </div>
+                          <div className="mt-1 text-xs">
+                            Progress: {instance.current_value} / {instance.target_value} {goal.metricUnit} ({instance.progress}%)
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
             )}
-          </div>
+
+            {hasUpcomingData && (
+              <TabsContent value="upcoming" className="mt-0 space-y-4">
+                <div className="text-sm font-medium">Upcoming Periods</div>
+                <ScrollArea className="max-h-48">
+                  <div className="space-y-2">
+                    {upcoming.map((instance) => {
+                      // Find the assigned goal for this instance
+                      const assignment = goal.assignments?.find(a => a.id === instance.assigned_goal_id);
+                      if (!assignment) return null;
+
+                      const employee = assignment.employee;
+                      if (!employee) return null;
+
+                      return (
+                        <div key={instance.id} className="border rounded-md p-2 text-sm">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="font-medium">
+                              {employee.first_name} {employee.last_name}
+                            </span>
+                            <Badge 
+                              variant="outline"
+                              className="bg-blue-100 text-blue-800 border-blue-200 text-xs"
+                            >
+                              Upcoming
+                            </Badge>
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            <span>{formatDate(instance.period_start)} - {formatDate(instance.period_end)}</span>
+                          </div>
+                          <div className="mt-1 text-xs">
+                            Target: {instance.target_value} {goal.metricUnit}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            )}
+          </Tabs>
         </CardContent>
       </Card>
       
@@ -419,8 +671,8 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
             <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateTargetClick} disabled={isLoading || newTargetValue <= 0}>
-              {isLoading ? "Updating..." : "Update Target"}
+            <Button onClick={handleUpdateTargetClick} disabled={managementLoading || newTargetValue <= 0}>
+              {managementLoading ? "Updating..." : "Update Target"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -463,8 +715,8 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
             <Button variant="outline" onClick={() => setIsExtendDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleExtendGoalClick} disabled={isLoading || additionalTargetValue <= 0}>
-              {isLoading ? "Extending..." : "Extend Target"}
+            <Button onClick={handleExtendGoalClick} disabled={managementLoading || additionalTargetValue <= 0}>
+              {managementLoading ? "Extending..." : "Extend Target"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -547,7 +799,7 @@ const EnhancedGoalCard: React.FC<EmployeeGoalCardProps> = ({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteClick} className="bg-red-600 hover:bg-red-700">
-              {isLoading ? "Deleting..." : "Delete"}
+              {managementLoading ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

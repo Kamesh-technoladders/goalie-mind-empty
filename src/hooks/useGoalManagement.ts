@@ -2,15 +2,10 @@
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { 
-  updateGoalTarget, 
-  extendGoalTarget, 
-  deleteGoal, 
-  stopGoal 
-} from '@/lib/supabaseData';
-import { 
   updateEmployeeGoalTarget,
   extendEmployeeGoalTarget,
-  removeEmployeeFromGoal
+  removeEmployeeFromGoal,
+  deleteGoal as deleteGoalService,
 } from '@/lib/goalService';
 import { useQueryClient } from '@tanstack/react-query';
 import { GoalInstance, GoalWithDetails, AssignedGoal } from '@/types/goal';
@@ -20,95 +15,13 @@ export const useGoalManagement = () => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleUpdateTarget = async (
-    goalInstanceId: string, 
-    newTargetValue: number
-  ): Promise<GoalInstance | null> => {
-    setIsLoading(true);
-
-    try {
-      const result = await updateGoalTarget(goalInstanceId, newTargetValue);
-      
-      if (result) {
-        toast({
-          title: "Target updated",
-          description: `Goal target updated to ${newTargetValue}`,
-        });
-        
-        // Invalidate relevant queries to refresh data
-        queryClient.invalidateQueries({ queryKey: ["employeeGoals"] });
-        queryClient.invalidateQueries({ queryKey: ["goalDetails"] });
-        
-        return result;
-      } else {
-        toast({
-          title: "Update failed",
-          description: "Could not update the target value. Please try again.",
-          variant: "destructive",
-        });
-        return null;
-      }
-    } catch (error) {
-      console.error("Error updating target:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred.",
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleExtendGoal = async (
-    goalInstanceId: string,
-    additionalTarget: number
-  ): Promise<GoalInstance | null> => {
-    setIsLoading(true);
-
-    try {
-      const result = await extendGoalTarget(goalInstanceId, additionalTarget);
-      
-      if (result) {
-        toast({
-          title: "Goal extended",
-          description: `Goal target increased by ${additionalTarget}`,
-        });
-        
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: ["employeeGoals"] });
-        queryClient.invalidateQueries({ queryKey: ["goalDetails"] });
-        
-        return result;
-      } else {
-        toast({
-          title: "Extension failed",
-          description: "Could not extend the goal target. Please try again.",
-          variant: "destructive",
-        });
-        return null;
-      }
-    } catch (error) {
-      console.error("Error extending goal:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred.",
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleDeleteGoal = async (
     goalId: string
   ): Promise<boolean> => {
     setIsLoading(true);
 
     try {
-      const result = await deleteGoal(goalId);
+      const result = await deleteGoalService(goalId);
       
       if (result) {
         toast({
@@ -142,47 +55,6 @@ export const useGoalManagement = () => {
     }
   };
 
-  const handleStopGoal = async (
-    goalInstanceId: string
-  ): Promise<GoalInstance | null> => {
-    setIsLoading(true);
-
-    try {
-      const result = await stopGoal(goalInstanceId);
-      
-      if (result) {
-        toast({
-          title: "Goal stopped",
-          description: "The goal has been stopped and will no longer be tracked.",
-        });
-        
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: ["employeeGoals"] });
-        queryClient.invalidateQueries({ queryKey: ["goalDetails"] });
-        
-        return result;
-      } else {
-        toast({
-          title: "Stop failed",
-          description: "Could not stop the goal. Please try again.",
-          variant: "destructive",
-        });
-        return null;
-      }
-    } catch (error) {
-      console.error("Error stopping goal:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred.",
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // New functions using goalService.ts for employee-specific operations
   const handleUpdateEmployeeGoalTarget = async (
     assignedGoalId: string,
     newTargetValue: number
@@ -307,11 +179,7 @@ export const useGoalManagement = () => {
 
   return {
     isLoading,
-    handleUpdateTarget,
-    handleExtendGoal,
     handleDeleteGoal,
-    handleStopGoal,
-    // New employee-specific functions
     handleUpdateEmployeeGoalTarget,
     handleExtendEmployeeGoal,
     handleRemoveEmployeeFromGoal

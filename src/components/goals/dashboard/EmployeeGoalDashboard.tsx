@@ -230,7 +230,7 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
             {filteredGoals.map((goal) => (
               <EnhancedGoalCard 
                 key={goal.id}
-                goal={goal}
+                goal={goal}  // Pass the full goal object for backward compatibility
                 onUpdate={onRefresh}
               />
             ))}
