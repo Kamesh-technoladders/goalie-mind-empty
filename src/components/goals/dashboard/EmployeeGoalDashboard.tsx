@@ -34,6 +34,7 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
   onRefresh
 }) => {
   const { toast } = useToast();
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState<"all" | GoalType>("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [filteredGoals, setFilteredGoals] = useState<GoalWithDetails[]>(goals);
@@ -81,6 +82,34 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
 
   const handleTimeframeChange = (timeframe: string) => {
     setSelectedTimeframe(timeframe as "all" | GoalType);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // First, update special goals on the server
+      const { updateSpecialGoals } = await import('@/lib/supabaseData');
+      await updateSpecialGoals();
+      
+      // Then trigger the regular refresh
+      if (onRefresh) {
+        onRefresh();
+      }
+      
+      toast({
+        title: "Goals refreshed",
+        description: "Goal values have been updated from the server.",
+      });
+    } catch (error) {
+      console.error("Error refreshing goals:", error);
+      toast({
+        title: "Refresh failed",
+        description: "Could not refresh goals. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshing(false);
+    }
   };
   
   // Data for the pie charts
@@ -160,16 +189,14 @@ const EmployeeGoalDashboard: React.FC<EmployeeGoalDashboardProps> = ({
           </DropdownMenu>
           
           {/* Refresh button */}
-          {onRefresh && (
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={onRefresh}
-              disabled={loading}
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
-          )}
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing || loading}
+          >
+            {refreshing ? "Refreshing..." : loading ? "Loading..." : "Refresh"}
+          </Button>
         </div>
       </div>
       

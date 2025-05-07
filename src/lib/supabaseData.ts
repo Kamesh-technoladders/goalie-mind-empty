@@ -241,3 +241,43 @@ export const createGoal = async (goalData: {
     return null;
   }
 };
+
+/**
+ * Forces an update of the Submission and Onboarding goals calculation
+ */
+export const updateSpecialGoals = async (): Promise<boolean> => {
+  try {
+    // Call the RPC function to update special goals
+    const { error } = await supabase.rpc('update_special_goal_values');
+    
+    if (error) {
+      console.error("Error updating special goals:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Exception updating special goals:", error);
+    return false;
+  }
+};
+
+/**
+ * Updates a specific special goal (Submission or Onboarding)
+ */
+export const updateSpecificSpecialGoal = async (goalId: string): Promise<boolean> => {
+  try {
+    // Call the RPC function to update a specific special goal
+    const { data, error } = await supabase.rpc('update_specific_special_goal', { goal_id: goalId });
+    
+    if (error) {
+      console.error("Error updating specific special goal:", error);
+      return false;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Exception updating specific special goal:", error);
+    return false;
+  }
+};

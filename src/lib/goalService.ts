@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { GoalInstance, GoalWithDetails, Employee, GoalStatistics, AssignedGoal } from "@/types/goal";
 
@@ -340,4 +339,25 @@ export const getAvailableEmployees = async (): Promise<Employee[]> => {
     console.error("Error fetching available employees:", error);
     return [];
   }
+};
+
+/**
+ * Re-export the deleteGoal function from supabaseData
+ */
+export { deleteGoal } from '@/lib/supabaseData';
+
+/**
+ * Forces an update of the Submission and Onboarding goals calculation
+ */
+export const updateSpecialGoals = async (): Promise<boolean> => {
+  const { updateSpecialGoals } = await import('@/lib/supabaseData');
+  return updateSpecialGoals();
+};
+
+/**
+ * Updates a specific special goal (Submission or Onboarding)
+ */
+export const updateSpecificSpecialGoal = async (goalId: string): Promise<boolean> => {
+  const { updateSpecificSpecialGoal } = await import('@/lib/supabaseData');
+  return updateSpecificSpecialGoal(goalId);
 };

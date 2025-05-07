@@ -1582,6 +1582,7 @@ export type Database = {
           gender: string | null
           hire_type: string | null
           id: string
+          joining_date: string | null
           last_name: string
           marital_status: string | null
           organization_id: string
@@ -1621,6 +1622,7 @@ export type Database = {
           gender?: string | null
           hire_type?: string | null
           id?: string
+          joining_date?: string | null
           last_name: string
           marital_status?: string | null
           organization_id: string
@@ -1660,6 +1662,7 @@ export type Database = {
           gender?: string | null
           hire_type?: string | null
           id?: string
+          joining_date?: string | null
           last_name?: string
           marital_status?: string | null
           organization_id?: string
@@ -2451,7 +2454,7 @@ export type Database = {
             foreignKeyName: "hr_project_employees_assign_employee_fkey"
             columns: ["assign_employee"]
             isOneToOne: false
-            referencedRelation: "hr_profiles"
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
           {
@@ -2805,6 +2808,24 @@ export type Database = {
         }
         Relationships: []
       }
+      log_table: {
+        Row: {
+          created_at: string | null
+          id: number
+          message: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+        }
+        Relationships: []
+      }
       payment_custom_deductions: {
         Row: {
           amount: number
@@ -2913,7 +2934,7 @@ export type Database = {
           {
             foreignKeyName: "payment_deductions_payment_id_fkey"
             columns: ["payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "payment_records"
             referencedColumns: ["id"]
           },
@@ -2924,12 +2945,14 @@ export type Database = {
           basic_salary: number
           conveyance_allowance: number
           created_at: string
+          ctc: number | null
           fixed_allowance: number
           hourly_rate: number | null
           house_rent_allowance: number
           id: string
           is_ctc_mode: boolean
           payment_id: string
+          payslipEnabled: boolean | null
           total_earnings: number
           total_hours_worked: number | null
           updated_at: string
@@ -2938,12 +2961,14 @@ export type Database = {
           basic_salary: number
           conveyance_allowance: number
           created_at?: string
+          ctc?: number | null
           fixed_allowance: number
           hourly_rate?: number | null
           house_rent_allowance: number
           id?: string
           is_ctc_mode?: boolean
           payment_id: string
+          payslipEnabled?: boolean | null
           total_earnings: number
           total_hours_worked?: number | null
           updated_at?: string
@@ -2952,12 +2977,14 @@ export type Database = {
           basic_salary?: number
           conveyance_allowance?: number
           created_at?: string
+          ctc?: number | null
           fixed_allowance?: number
           hourly_rate?: number | null
           house_rent_allowance?: number
           id?: string
           is_ctc_mode?: boolean
           payment_id?: string
+          payslipEnabled?: boolean | null
           total_earnings?: number
           total_hours_worked?: number | null
           updated_at?: string
@@ -2966,7 +2993,7 @@ export type Database = {
           {
             foreignKeyName: "payment_earnings_payment_id_fkey"
             columns: ["payment_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "payment_records"
             referencedColumns: ["id"]
           },
@@ -3471,9 +3498,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      log_message: {
+        Args: { message: string }
+        Returns: undefined
+      }
       text_to_bytea: {
         Args: { data: string }
         Returns: string
+      }
+      update_special_goal_values: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       urlencode: {
         Args: { data: Json } | { string: string } | { string: string }

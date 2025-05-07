@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,172 +50,41 @@ const EmployeeGoalCard: React.FC<EmployeeGoalCardProps> = ({ goal, goalInstance,
   });
 
   useEffect(() => {
-    const calculateStatus = (current: number, target: number, endDateStr: string): string => {
-      const now = new Date();
-      const endDate = new Date(endDateStr);
-      endDate.setHours(23, 59, 59, 999);
-
-      if (current >= target) return 'completed';
-      if (now > endDate && current < target) return 'overdue';
-      if (current > 0) return 'in-progress';
-      return 'pending';
-    };
-
-    const updateInstanceStatus = async (newStatus: string, newProgress: number, newCurrentValue: number) => {
-      try {
-        const { error } = await supabase
-          .from("hr_goal_instances")
-          .update({
-            status: newStatus,
-            progress: newProgress,
-            current_value: newCurrentValue,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", goalInstance.id);
-
-        if (error) {
-          console.error("Error updating goal instance status:", error);
-        }
-      } catch (err) {
-        console.error("Unexpected error updating goal instance:", err);
-      }
-    };
-
-    if (!isSpecialGoal) {
-      const targetValue = goalInstance.targetValue ?? 0;
-      const newProgress = targetValue > 0 ? Math.min(Math.round((currentValue / targetValue) * 100), 100) : 0;
-      const newStatus = calculateStatus(currentValue, targetValue, goalInstance.periodEnd);
-
+    const updateInstanceIfNeeded = async () => {
+      // Load the initial values from the instance
       setCurrentValue(goalInstance.currentValue ?? 0);
-      setStatus(newStatus);
-      setProgress(newProgress);
+      setStatus(goalInstance.status ?? 'pending');
+      setProgress(goalInstance.progress ?? 0);
       setLoading(false);
-
-      // Update database with calculated status and progress
-      updateInstanceStatus(newStatus, newProgress, currentValue);
-
-      console.log("EmployeeGoalCard: Regular Goal Data", {
-        currentValue: goalInstance.currentValue ?? 0,
-        status: newStatus,
-        progress: newProgress
-      });
-      return;
-    }
-
-    const fetchCurrentValue = async () => {
-      setLoading(true);
-      let subStatusId: string | null = null;
-      if (goal.name === "Submission") {
-        subStatusId = "71706ff4-1bab-4065-9692-2a1237629dda";
-      } else if (goal.name === "Onboarding") {
-        subStatusId = "c9716374-3477-4606-877a-dfa5704e7680";
-      }
-
-      console.log("fetchCurrentValue: Starting Fetch", {
-        goalName: goal.name,
-        subStatusId,
-        goalInstance
-      });
-
-      if (!subStatusId) {
-        const fallbackStatus = calculateStatus(goalInstance.currentValue ?? 0, goalInstance.targetValue ?? 0, goalInstance.periodEnd);
-        console.log("fetchCurrentValue: Fallback Data", {
-          currentValue: goalInstance.currentValue ?? 0,
-          status: fallbackStatus,
-          progress: goalInstance.progress ?? 0
-        });
-        setCurrentValue(goalInstance.currentValue ?? 0);
-        setStatus(fallbackStatus);
-        setProgress(goalInstance.progress ?? 0);
-        setLoading(false);
-        updateInstanceStatus(fallbackStatus, goalInstance.progress ?? 0, goalInstance.currentValue ?? 0);
-        return;
-      }
-
-      try {
-        const periodEndPlusOne = new Date(goalInstance.periodEnd);
-        periodEndPlusOne.setDate(periodEndPlusOne.getDate() + 1);
-
-        console.log("fetchCurrentValue: Supabase Query Parameters", {
-          sub_status_id: subStatusId,
-          candidate_owner: employee.id,
-          period_start: goalInstance.periodStart,
-          period_end: periodEndPlusOne.toISOString().split("T")[0]
-        });
-
-        const { data, error } = await supabase
-          .from("hr_status_change_counts")
-          .select("count")
-          .eq("sub_status_id", subStatusId)
-          .eq("candidate_owner", employee.id)
-          .gte("created_at", goalInstance.periodStart)
-          .lt("created_at", periodEndPlusOne.toISOString().split("T")[0]);
-
-        if (error) {
-          console.error("fetchCurrentValue: Supabase Error", {
-            error,
-            fallbackData: {
-              currentValue: goalInstance.currentValue ?? 0,
-              status: goalInstance.status ?? 'pending',
-              progress: goalInstance.progress ?? 0
-            }
-          });
-          const fallbackStatus = calculateStatus(goalInstance.currentValue ?? 0, goalInstance.targetValue ?? 0, goalInstance.periodEnd);
-          setCurrentValue(goalInstance.currentValue ?? 0);
-          setStatus(fallbackStatus);
-          setProgress(goalInstance.progress ?? 0);
-          setLoading(false);
-          updateInstanceStatus(fallbackStatus, goalInstance.progress ?? 0, goalInstance.currentValue ?? 0);
-          return;
+      
+      // If this is a special goal, also try to refresh the data from the server
+      if (isSpecialGoal) {
+        try {
+          // Rather than calculating in frontend, trigger the server to update
+          const { updateSpecificSpecialGoal } = await import('@/lib/supabaseData');
+          await updateSpecificSpecialGoal(goal.id);
+          
+          // Fetch the updated instance data after the server has updated it
+          const { data, error } = await supabase
+            .from("hr_goal_instances")
+            .select("*")
+            .eq("id", goalInstance.id)
+            .single();
+            
+          if (!error && data) {
+            console.log("SpecialGoal: Fetched updated instance data", data);
+            setCurrentValue(data.current_value ?? 0);
+            setStatus(data.status ?? 'pending');
+            setProgress(data.progress ?? 0);
+          }
+        } catch (err) {
+          console.error("Error refreshing special goal data:", err);
         }
-
-        console.log("fetchCurrentValue: Supabase Response", {
-          data,
-          recordCount: data.length
-        });
-
-        const totalCount = data.reduce((sum: number, record: { count: number }) => sum + record.count, 0);
-        const targetValue = goalInstance.targetValue ?? 0;
-        const newProgress = targetValue > 0 ? Math.min(Math.round((totalCount / targetValue) * 100), 100) : 0;
-        const newStatus = calculateStatus(totalCount, targetValue, goalInstance.periodEnd);
-
-        console.log("fetchCurrentValue: Calculated Results", {
-          totalCount,
-          progress: newProgress,
-          status: newStatus,
-          targetValue,
-          period: {
-            start: goalInstance.periodStart,
-            end: goalInstance.periodEnd,
-            now: new Date().toISOString()
-          }
-        });
-
-        setCurrentValue(totalCount);
-        setProgress(newProgress);
-        setStatus(newStatus);
-        setLoading(false);
-        updateInstanceStatus(newStatus, newProgress, totalCount);
-      } catch (err) {
-        console.error("fetchCurrentValue: Unexpected Error", {
-          error: err,
-          fallbackData: {
-            currentValue: goalInstance.currentValue ?? 0,
-            status: goalInstance.status ?? 'pending',
-            progress: goalInstance.progress ?? 0
-          }
-        });
-        const fallbackStatus = calculateStatus(goalInstance.currentValue ?? 0, goalInstance.targetValue ?? 0, goalInstance.periodEnd);
-        setCurrentValue(goalInstance.currentValue ?? 0);
-        setStatus(fallbackStatus);
-        setProgress(goalInstance.progress ?? 0);
-        setLoading(false);
-        updateInstanceStatus(fallbackStatus, goalInstance.progress ?? 0, goalInstance.currentValue ?? 0);
       }
     };
 
-    fetchCurrentValue();
-  }, [goal.id, goalInstance.id, employee.id, goalInstance.periodStart, goalInstance.periodEnd, goalInstance.currentValue]);
+    updateInstanceIfNeeded();
+  }, [goal.id, goalInstance.id, isSpecialGoal]);
 
   const getPeriodText = () => {
     const goalType = goal.assignmentDetails?.goalType || "Standard";
