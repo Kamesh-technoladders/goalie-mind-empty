@@ -1,4 +1,5 @@
-// components/ui/HiddenContactCell.tsx
+
+// src/components/ui/HiddenContactCell.tsx
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TableCell } from "@/components/ui/table";
