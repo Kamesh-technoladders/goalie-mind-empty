@@ -32,6 +32,8 @@ import StatusSettings from "./pages/jobs/StatusSettings";
 import ResumeAnalysisDetailView from "./pages/jobs/ResumeAnalysisDetailView";
 import SharedProfile from "./pages/jobs/SharedProfile"
 import ReportsPage from "./pages/reports/Index";
+import ClientManagementDashboard from "./pages/client-dashboard/ClientManagementDashboard";
+import ClientCandidatesView from "./pages/client-dashboard/ClientCandidatesView";
 
 function App() {
   return (
@@ -98,9 +100,12 @@ function App() {
             <Route path="/jobs/edit/:id" element={<JobDescription />} />
             <Route path="/jobstatuses" element={<StatusSettings />} />
 
+            {/* Client Dashboard (New) */}
+            <Route path="/client-dashboard" element={<ClientManagementDashboard />} />
+            <Route path="/client-dashboard/:clientName/candidates" element={<ClientCandidatesView />} />
 
-                        {/* Reports */}
-        <Route path="/reports" element={<ReportsPage />} />
+            {/* Reports */}
+            <Route path="/reports" element={<ReportsPage />} />
           </Route>
         </Route>
       </Routes>
