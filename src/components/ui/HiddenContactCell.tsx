@@ -1,10 +1,9 @@
-
-import { useState } from 'react';
-import { Check, Copy, Mail, Phone } from 'lucide-react';
-import { TableCell } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { toast } from 'sonner';
+// components/ui/HiddenContactCell.tsx
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { TableCell } from "@/components/ui/table";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Mail, Phone, Copy, Check } from "lucide-react";
 
 interface HiddenContactCellProps {
   email?: string;
@@ -12,13 +11,12 @@ interface HiddenContactCellProps {
   candidateId: string;
 }
 
-export const HiddenContactCell = ({ email, phone, candidateId }: HiddenContactCellProps) => {
+const HiddenContactCell = ({ email, phone, candidateId }: HiddenContactCellProps) => {
   const [justCopiedEmail, setJustCopiedEmail] = useState(false);
   const [justCopiedPhone, setJustCopiedPhone] = useState(false);
 
   const copyToClipboard = (value: string, field: "Email" | "Phone") => {
     navigator.clipboard.writeText(value);
-    
     if (field === "Email") {
       setJustCopiedEmail(true);
       setTimeout(() => setJustCopiedEmail(false), 2000);
@@ -26,8 +24,6 @@ export const HiddenContactCell = ({ email, phone, candidateId }: HiddenContactCe
       setJustCopiedPhone(true);
       setTimeout(() => setJustCopiedPhone(false), 2000);
     }
-    
-    toast.success(`${field} copied to clipboard`);
   };
 
   if (!email && !phone) {
@@ -61,7 +57,10 @@ export const HiddenContactCell = ({ email, phone, candidateId }: HiddenContactCe
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyToClipboard(email, "Email")}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent table row click
+                  copyToClipboard(email, "Email");
+                }}
                 className="h-6 w-6 p-0 flex-shrink-0"
                 aria-label="Copy email"
               >
@@ -98,7 +97,10 @@ export const HiddenContactCell = ({ email, phone, candidateId }: HiddenContactCe
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => copyToClipboard(phone, "Phone")}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent table row click
+                  copyToClipboard(phone, "Phone");
+                }}
                 className="h-6 w-6 p-0 flex-shrink-0"
                 aria-label="Copy phone"
               >
@@ -118,3 +120,5 @@ export const HiddenContactCell = ({ email, phone, candidateId }: HiddenContactCe
     </TableCell>
   );
 };
+
+export default HiddenContactCell;
