@@ -1729,7 +1729,9 @@ export type Database = {
           first_name: string
           gender: string | null
           id: string
+          last_login: string | null
           last_name: string
+          last_working_day: string | null
           marital_status: string | null
           organization_id: string
           pan_number: string | null
@@ -1740,6 +1742,8 @@ export type Database = {
           present_address: Json | null
           profile_picture_url: string | null
           role_id: string | null
+          shift_id: string | null
+          status: string | null
           uan_number: string | null
           uan_url: string | null
           updated_at: string | null
@@ -1765,7 +1769,9 @@ export type Database = {
           first_name: string
           gender?: string | null
           id?: string
+          last_login?: string | null
           last_name: string
+          last_working_day?: string | null
           marital_status?: string | null
           organization_id: string
           pan_number?: string | null
@@ -1776,6 +1782,8 @@ export type Database = {
           present_address?: Json | null
           profile_picture_url?: string | null
           role_id?: string | null
+          shift_id?: string | null
+          status?: string | null
           uan_number?: string | null
           uan_url?: string | null
           updated_at?: string | null
@@ -1801,7 +1809,9 @@ export type Database = {
           first_name?: string
           gender?: string | null
           id?: string
+          last_login?: string | null
           last_name?: string
+          last_working_day?: string | null
           marital_status?: string | null
           organization_id?: string
           pan_number?: string | null
@@ -1812,6 +1822,8 @@ export type Database = {
           present_address?: Json | null
           profile_picture_url?: string | null
           role_id?: string | null
+          shift_id?: string | null
+          status?: string | null
           uan_number?: string | null
           uan_url?: string | null
           updated_at?: string | null
@@ -1844,6 +1856,13 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "hr_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_employees_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "hr_shifts"
             referencedColumns: ["id"]
           },
         ]
@@ -2716,6 +2735,50 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_shifts: {
+        Row: {
+          break_duration_minutes: number | null
+          created_at: string | null
+          days_of_week: string[] | null
+          end_time: string
+          id: string
+          name: string
+          organization_id: string | null
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          break_duration_minutes?: number | null
+          created_at?: string | null
+          days_of_week?: string[] | null
+          end_time: string
+          id?: string
+          name: string
+          organization_id?: string | null
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          break_duration_minutes?: number | null
+          created_at?: string | null
+          days_of_week?: string[] | null
+          end_time?: string
+          id?: string
+          name?: string
+          organization_id?: string | null
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_shifts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_status_change_counts: {
         Row: {
           candidate_id: string
@@ -2784,6 +2847,107 @@ export type Database = {
             columns: ["sub_status_id"]
             isOneToOne: false
             referencedRelation: "job_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_team_members: {
+        Row: {
+          employee_id: string | null
+          id: string
+          joined_at: string | null
+          organization_id: string | null
+          team_id: string | null
+        }
+        Insert: {
+          employee_id?: string | null
+          id?: string
+          joined_at?: string | null
+          organization_id?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          employee_id?: string | null
+          id?: string
+          joined_at?: string | null
+          organization_id?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_team_members_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_team_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "hr_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_teams: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          id: string
+          name: string
+          organization_id: string | null
+          team_lead_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          organization_id?: string | null
+          team_lead_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string | null
+          team_lead_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_teams_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_teams_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_teams_team_lead_id_fkey"
+            columns: ["team_lead_id"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
         ]

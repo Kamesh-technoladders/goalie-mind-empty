@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import supabase from "../../config/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Table,
   TableBody,
