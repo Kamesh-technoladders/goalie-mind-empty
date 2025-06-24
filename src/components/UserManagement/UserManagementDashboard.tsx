@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import AddUserModal from './AddUserModal';
 import UserDetailsModal from './UserDetailsModal';
 import BulkActionsBar from './BulkActionsBar';
@@ -97,7 +97,7 @@ const UserManagementDashboard = () => {
         last_name: emp.last_name,
         email: emp.email,
         phone: emp.phone,
-        status: emp.status || 'active',
+        status: (emp.status || 'active') as 'active' | 'inactive' | 'terminated',
         employment_start_date: emp.employment_start_date,
         last_login: emp.last_login,
         role_name: emp.hr_roles?.name,
@@ -295,12 +295,10 @@ const UserManagementDashboard = () => {
             <BulkActionsBar
               selectedCount={selectedUsers.length}
               onDeactivate={() => {
-                // Handle bulk deactivate
                 selectedUsers.forEach(userId => handleStatusChange(userId, 'inactive'));
                 setSelectedUsers([]);
               }}
               onActivate={() => {
-                // Handle bulk activate
                 selectedUsers.forEach(userId => handleStatusChange(userId, 'active'));
                 setSelectedUsers([]);
               }}

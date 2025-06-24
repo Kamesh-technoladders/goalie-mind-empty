@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -34,6 +34,7 @@ interface FormData {
   phone?: string;
   role_id?: string;
   department_id?: string;
+  shift_id?: string;
   employment_start_date?: string;
 }
 
@@ -45,30 +46,34 @@ const AddUserModal = ({ isOpen, onClose, onSuccess }: AddUserModalProps) => {
     phone: '',
     role_id: '',
     department_id: '',
+    shift_id: '',
     employment_start_date: ''
   });
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState<Array<{id: string, name: string}>>([]);
   const [departments, setDepartments] = useState<Array<{id: string, name: string}>>([]);
+  const [shifts, setShifts] = useState<Array<{id: string, name: string}>>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
-      fetchRolesAndDepartments();
+      fetchRolesDepartmentsAndShifts();
     }
   }, [isOpen]);
 
-  const fetchRolesAndDepartments = async () => {
+  const fetchRolesDepartmentsAndShifts = async () => {
     try {
-      const [rolesResponse, departmentsResponse] = await Promise.all([
+      const [rolesResponse, departmentsResponse, shiftsResponse] = await Promise.all([
         supabase.from('hr_roles').select('id, name'),
-        supabase.from('hr_departments').select('id, name')
+        supabase.from('hr_departments').select('id, name'),
+        supabase.from('hr_shifts').select('id, name')
       ]);
 
       if (rolesResponse.data) setRoles(rolesResponse.data);
       if (departmentsResponse.data) setDepartments(departmentsResponse.data);
+      if (shiftsResponse.data) setShifts(shiftsResponse.data);
     } catch (error) {
-      console.error('Error fetching roles and departments:', error);
+      console.error('Error fetching roles, departments, and shifts:', error);
     }
   };
 
@@ -128,6 +133,7 @@ const AddUserModal = ({ isOpen, onClose, onSuccess }: AddUserModalProps) => {
       phone: '',
       role_id: '',
       department_id: '',
+      shift_id: '',
       employment_start_date: ''
     });
   };
@@ -143,7 +149,7 @@ const AddUserModal = ({ isOpen, onClose, onSuccess }: AddUserModalProps) => {
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
-            Create a new user account and assign roles and departments.
+            Create a new user account and assign roles, departments, and shifts.
           </DialogDescription>
         </DialogHeader>
         
@@ -220,6 +226,24 @@ const AddUserModal = ({ isOpen, onClose, onSuccess }: AddUserModalProps) => {
                 {departments.map((dept) => (
                   <SelectItem key={dept.id} value={dept.id}>
                     {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="shift">Shift</Label>
+            <Select value={formData.shift_id} onValueChange={(value) => 
+              setFormData(prev => ({ ...prev, shift_id: value }))
+            }>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a shift" />
+              </SelectTrigger>
+              <SelectContent>
+                {shifts.map((shift) => (
+                  <SelectItem key={shift.id} value={shift.id}>
+                    {shift.name}
                   </SelectItem>
                 ))}
               </SelectContent>

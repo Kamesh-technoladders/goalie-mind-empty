@@ -2,9 +2,10 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCog, Shield, Building } from "lucide-react";
+import { Users, UserCog, Shield, Building, Clock } from "lucide-react";
 import UserManagementDashboard from './UserManagementDashboard';
 import TeamManagement from './TeamManagement';
+import ShiftManagement from './ShiftManagement';
 import UserManagementTree from './UserManagementTree';
 
 const EnhancedUserManagement = () => {
@@ -19,7 +20,7 @@ const EnhancedUserManagement = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Users
@@ -27,6 +28,10 @@ const EnhancedUserManagement = () => {
               <TabsTrigger value="teams" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
                 Teams
+              </TabsTrigger>
+              <TabsTrigger value="shifts" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Shifts
               </TabsTrigger>
               <TabsTrigger value="roles" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
@@ -44,6 +49,10 @@ const EnhancedUserManagement = () => {
 
             <TabsContent value="teams" className="mt-6">
               <TeamManagement />
+            </TabsContent>
+
+            <TabsContent value="shifts" className="mt-6">
+              <ShiftManagement />
             </TabsContent>
 
             <TabsContent value="roles" className="mt-6">
