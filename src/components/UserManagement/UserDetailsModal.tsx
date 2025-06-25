@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -33,6 +32,7 @@ import {
   Save,
   X
 } from "lucide-react";
+import UserPermissionsDialog from './UserPermissionsDialog';
 
 interface UserDetailsModalProps {
   user: {
@@ -67,6 +67,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
   const [roles, setRoles] = useState<Array<{id: string, name: string}>>([]);
   const [departments, setDepartments] = useState<Array<{id: string, name: string}>>([]);
   const [userActivity, setUserActivity] = useState<any[]>([]);
+  const [showPermissions, setShowPermissions] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -156,50 +157,44 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                {user.first_name} {user.last_name}
-              </DialogTitle>
-              <DialogDescription className="flex items-center gap-2 mt-1">
-                {getStatusBadge(user.status)}
-                <span className="text-sm text-muted-foreground">•</span>
-                <span className="text-sm text-muted-foreground">{user.email}</span>
-              </DialogDescription>
-            </div>
-            <div className="flex gap-2">
-              {!isEditing ? (
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-              ) : (
-                <div className="flex gap-1">
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                    <X className="h-4 w-4" />
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  {user.first_name} {user.last_name}
+                </DialogTitle>
+                <DialogDescription className="flex items-center gap-2 mt-1">
+                  {getStatusBadge(user.status)}
+                  <span className="text-sm text-muted-foreground">•</span>
+                  <span className="text-sm text-muted-foreground">{user.email}</span>
+                </DialogDescription>
+              </div>
+              <div className="flex gap-2">
+                {!isEditing ? (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
                   </Button>
-                  <Button size="sm" onClick={handleSave} disabled={loading}>
-                    <Save className="h-4 w-4 mr-1" />
-                    Save
-                  </Button>
-                </div>
-              )}
+                ) : (
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={loading}>
+                      <Save className="h-4 w-4 mr-1" />
+                      Save
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
-        <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="details" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Personal Information</CardTitle>
@@ -322,66 +317,59 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="permissions">
-            <Card>
-              <CardHeader>
-                <CardTitle>Role Permissions</CardTitle>
-                <CardDescription>
-                  Permissions are managed through role assignments
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">
-                  Current role: <strong>{user.role_name || 'No role assigned'}</strong>
-                </div>
-                <div className="mt-4 text-sm text-muted-foreground">
-                  To modify permissions, update the user's role in the Details tab.
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Work time and login history
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {user.last_login && (
-                  <div className="mb-4 p-3 bg-muted rounded-lg">
-                    <div className="text-sm font-medium">Last Login</div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(user.last_login).toLocaleString()}
-                    </div>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Role & Permissions</Label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <Label className="font-medium">Current Role</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {user.role_name || 'No role assigned'}
+                    </p>
                   </div>
-                )}
-                
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Recent Work Sessions</div>
-                  {userActivity.length > 0 ? (
-                    <div className="space-y-2">
-                      {userActivity.slice(0, 5).map((activity, index) => (
-                        <div key={index} className="flex justify-between items-center text-sm p-2 bg-muted rounded">
-                          <span>{new Date(activity.date).toLocaleDateString()}</span>
-                          <span>{activity.duration_minutes ? `${Math.round(activity.duration_minutes / 60)}h ${activity.duration_minutes % 60}m` : 'In progress'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">No recent activity</div>
-                  )}
+                  <Badge variant="outline">{user.role_name || 'None'}</Badge>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+                
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowPermissions(true)}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Manage Individual Permissions
+                </Button>
+                
+                <p className="text-xs text-muted-foreground">
+                  Individual permissions override role-based permissions and control menu access.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Permissions Dialog */}
+      {user && (
+        <UserPermissionsDialog
+          open={showPermissions}
+          onOpenChange={setShowPermissions}
+          user={user}
+          onSuccess={() => {
+            setShowPermissions(false);
+            onUpdate();
+          }}
+        />
+      )}
+    </>
   );
 };
 

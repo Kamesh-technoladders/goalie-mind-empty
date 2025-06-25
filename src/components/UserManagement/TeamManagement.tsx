@@ -121,9 +121,9 @@ const TeamManagement = () => {
         department_name: team.department?.name || 'No department',
         member_count: Array.isArray(team.team_members) ? team.team_members.length : 0,
         parent_team_id: team.parent_team_id,
-        team_type: team.team_type,
-        level: team.level,
-        is_active: team.is_active
+        team_type: (team.team_type || 'team') as 'department' | 'team' | 'sub_team',
+        level: team.level || 0,
+        is_active: team.is_active !== false
       })) || [];
 
       // Build hierarchical structure
