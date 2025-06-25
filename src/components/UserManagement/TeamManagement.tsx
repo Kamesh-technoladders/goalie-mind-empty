@@ -39,10 +39,18 @@ import {
   Plus, 
   Edit,
   Trash2,
-  UserPlus
+  UserPlus,
+  ChevronRight,
+  ChevronDown,
+  Settings,
+  Shield,
+  Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import TeamDetailView from './TeamDetailView';
+import TeamPermissionsDialog from './TeamPermissionsDialog';
+import CreateTeamDialog from './CreateTeamDialog';
 
 interface Team {
   id: string;
@@ -51,20 +59,34 @@ interface Team {
   team_lead_name?: string;
   department_name?: string;
   member_count: number;
+  parent_team_id?: string;
+  team_type: 'department' | 'team' | 'sub_team';
+  level: number;
+  is_active: boolean;
+  children?: Team[];
+}
+
+interface Department {
+  id: string;
+  name: string;
+}
+
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
 }
 
 const TeamManagement = () => {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [departments, setDepartments] = useState<Array<{id: string, name: string}>>([]);
-  const [employees, setEmployees] = useState<Array<{id: string, first_name: string, last_name: string}>>([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    team_lead_id: '',
-    department_id: ''
-  });
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -82,7 +104,10 @@ const TeamManagement = () => {
           team_lead:hr_employees!team_lead_id(first_name, last_name),
           department:hr_departments(name),
           team_members:hr_team_members(count)
-        `);
+        `)
+        .eq('is_active', true)
+        .order('level')
+        .order('name');
 
       if (error) throw error;
 
@@ -94,10 +119,16 @@ const TeamManagement = () => {
           ? `${team.team_lead.first_name} ${team.team_lead.last_name}`
           : 'No lead assigned',
         department_name: team.department?.name || 'No department',
-        member_count: Array.isArray(team.team_members) ? team.team_members.length : 0
+        member_count: Array.isArray(team.team_members) ? team.team_members.length : 0,
+        parent_team_id: team.parent_team_id,
+        team_type: team.team_type,
+        level: team.level,
+        is_active: team.is_active
       })) || [];
 
-      setTeams(formattedTeams);
+      // Build hierarchical structure
+      const hierarchicalTeams = buildTeamHierarchy(formattedTeams);
+      setTeams(hierarchicalTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
       toast({
@@ -108,6 +139,31 @@ const TeamManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const buildTeamHierarchy = (teams: Team[]): Team[] => {
+    const teamMap = new Map<string, Team>();
+    const rootTeams: Team[] = [];
+
+    // Create map of all teams
+    teams.forEach(team => {
+      teamMap.set(team.id, { ...team, children: [] });
+    });
+
+    // Build hierarchy
+    teams.forEach(team => {
+      if (team.parent_team_id) {
+        const parent = teamMap.get(team.parent_team_id);
+        if (parent) {
+          parent.children = parent.children || [];
+          parent.children.push(teamMap.get(team.id)!);
+        }
+      } else {
+        rootTeams.push(teamMap.get(team.id)!);
+      }
+    });
+
+    return rootTeams;
   };
 
   const fetchDepartmentsAndEmployees = async () => {
@@ -124,58 +180,13 @@ const TeamManagement = () => {
     }
   };
 
-  const handleCreateTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      // Get current user's organization_id
-      const { data: currentUser } = await supabase.auth.getUser();
-      if (!currentUser.user) throw new Error('Not authenticated');
-
-      const { data: userProfile } = await supabase
-        .from('hr_employees')
-        .select('organization_id')
-        .eq('id', currentUser.user.id)
-        .single();
-
-      if (!userProfile) throw new Error('User profile not found');
-
-      const { error } = await supabase
-        .from('hr_teams')
-        .insert([{
-          ...formData,
-          organization_id: userProfile.organization_id,
-          team_lead_id: formData.team_lead_id || null,
-          department_id: formData.department_id || null
-        }]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Team created successfully",
-      });
-
-      setShowCreateModal(false);
-      setFormData({ name: '', description: '', team_lead_id: '', department_id: '' });
-      fetchTeams();
-    } catch (error) {
-      console.error('Error creating team:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create team",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleDeleteTeam = async (teamId: string) => {
     if (!confirm('Are you sure you want to delete this team?')) return;
 
     try {
       const { error } = await supabase
         .from('hr_teams')
-        .delete()
+        .update({ is_active: false })
         .eq('id', teamId);
 
       if (error) throw error;
@@ -196,11 +207,119 @@ const TeamManagement = () => {
     }
   };
 
+  const toggleTeamExpansion = (teamId: string) => {
+    const newExpanded = new Set(expandedTeams);
+    if (newExpanded.has(teamId)) {
+      newExpanded.delete(teamId);
+    } else {
+      newExpanded.add(teamId);
+    }
+    setExpandedTeams(newExpanded);
+  };
+
+  const renderTeamRow = (team: Team, depth: number = 0) => {
+    const hasChildren = team.children && team.children.length > 0;
+    const isExpanded = expandedTeams.has(team.id);
+    const paddingLeft = depth * 24;
+
+    const filteredChildren = team.children?.filter(child =>
+      child.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
+
+    const shouldShowTeam = team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      filteredChildren.length > 0;
+
+    if (!shouldShowTeam) return null;
+
+    return (
+      <React.Fragment key={team.id}>
+        <TableRow className="hover:bg-muted/50">
+          <TableCell style={{ paddingLeft: `${16 + paddingLeft}px` }}>
+            <div className="flex items-center gap-2">
+              {hasChildren && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleTeamExpansion(team.id)}
+                  className="h-6 w-6 p-0"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              <span className="font-medium">{team.name}</span>
+              <Badge variant="outline" className="text-xs">
+                {team.team_type}
+              </Badge>
+            </div>
+          </TableCell>
+          <TableCell>
+            <Badge variant="outline">{team.department_name}</Badge>
+          </TableCell>
+          <TableCell>{team.team_lead_name}</TableCell>
+          <TableCell>
+            <Badge variant="secondary">{team.member_count} members</Badge>
+          </TableCell>
+          <TableCell className="max-w-xs truncate">
+            {team.description || 'No description'}
+          </TableCell>
+          <TableCell>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedTeam(team)}
+                title="View details"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedTeam(team);
+                  setShowPermissionsModal(true);
+                }}
+                title="Manage permissions"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDeleteTeam(team.id)}
+                title="Delete team"
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </Button>
+            </div>
+          </TableCell>
+        </TableRow>
+        {hasChildren && isExpanded && filteredChildren.map(child => 
+          renderTeamRow(child, depth + 1)
+        )}
+      </React.Fragment>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
+    );
+  }
+
+  if (selectedTeam && !showPermissionsModal) {
+    return (
+      <TeamDetailView 
+        team={selectedTeam} 
+        onBack={() => setSelectedTeam(null)}
+        onRefresh={fetchTeams}
+      />
     );
   }
 
@@ -215,13 +334,21 @@ const TeamManagement = () => {
                 Team Management
               </CardTitle>
               <CardDescription>
-                Create and manage teams within your organization
+                Manage teams, permissions, and hierarchical structure
               </CardDescription>
             </div>
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Team
-            </Button>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Search teams..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+              <Button onClick={() => setShowCreateModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Team
+              </Button>
+            </div>
           </div>
         </CardHeader>
         
@@ -235,36 +362,11 @@ const TeamManagement = () => {
                   <TableHead>Team Lead</TableHead>
                   <TableHead>Members</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead className="w-20">Actions</TableHead>
+                  <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teams.map((team) => (
-                  <TableRow key={team.id}>
-                    <TableCell className="font-medium">{team.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{team.department_name}</Badge>
-                    </TableCell>
-                    <TableCell>{team.team_lead_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{team.member_count} members</Badge>
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {team.description || 'No description'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteTeam(team.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {teams.map(team => renderTeamRow(team))}
               </TableBody>
             </Table>
           </div>
@@ -277,84 +379,29 @@ const TeamManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Create Team Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create New Team</DialogTitle>
-            <DialogDescription>
-              Set up a new team and assign members.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleCreateTeam} className="space-y-4">
-            <div>
-              <Label htmlFor="team_name">Team Name *</Label>
-              <Input
-                id="team_name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </div>
+      <CreateTeamDialog
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSuccess={() => {
+          setShowCreateModal(false);
+          fetchTeams();
+        }}
+        departments={departments}
+        employees={employees}
+        teams={teams}
+      />
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Brief description of the team's purpose"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="department">Department</Label>
-              <Select value={formData.department_id} onValueChange={(value) => 
-                setFormData(prev => ({ ...prev, department_id: value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="team_lead">Team Lead</Label>
-              <Select value={formData.team_lead_id} onValueChange={(value) => 
-                setFormData(prev => ({ ...prev, team_lead_id: value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a team lead" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.first_name} {emp.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                Create Team
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {selectedTeam && (
+        <TeamPermissionsDialog
+          open={showPermissionsModal}
+          onOpenChange={setShowPermissionsModal}
+          team={selectedTeam}
+          onSuccess={() => {
+            setShowPermissionsModal(false);
+            fetchTeams();
+          }}
+        />
+      )}
     </div>
   );
 };

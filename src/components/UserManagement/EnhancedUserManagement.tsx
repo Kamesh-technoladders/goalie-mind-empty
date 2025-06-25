@@ -7,6 +7,7 @@ import UserManagementDashboard from './UserManagementDashboard';
 import TeamManagement from './TeamManagement';
 import ShiftManagement from './ShiftManagement';
 import UserManagementTree from './UserManagementTree';
+import RolePermissionsManagement from './RolePermissionsManagement';
 
 const EnhancedUserManagement = () => {
   return (
@@ -56,17 +57,7 @@ const EnhancedUserManagement = () => {
             </TabsContent>
 
             <TabsContent value="roles" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Role Management</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    Role management functionality will be implemented in the next phase.
-                    Currently, roles are managed through the organization tree view.
-                  </div>
-                </CardContent>
-              </Card>
+              <RolePermissionsManagement />
             </TabsContent>
 
             <TabsContent value="tree" className="mt-6">

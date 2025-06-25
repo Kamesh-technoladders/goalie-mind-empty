@@ -872,6 +872,47 @@ export type Database = {
           },
         ]
       }
+      hr_default_permissions: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          organization_id: string | null
+          permission_description: string | null
+          permission_key: string
+          permission_name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          permission_description?: string | null
+          permission_key: string
+          permission_name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string | null
+          permission_description?: string | null
+          permission_key?: string
+          permission_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_default_permissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_deleted_job_candidates: {
         Row: {
           applied_date: string
@@ -2851,6 +2892,61 @@ export type Database = {
           },
         ]
       }
+      hr_team_audit_logs: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          created_at: string | null
+          id: string
+          organization_id: string | null
+          performed_at: string | null
+          performed_by: string | null
+          team_id: string | null
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_team_audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_team_audit_logs_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_team_audit_logs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "hr_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_team_members: {
         Row: {
           employee_id: string | null
@@ -2897,15 +2993,77 @@ export type Database = {
           },
         ]
       }
+      hr_team_permissions: {
+        Row: {
+          created_at: string | null
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          organization_id: string | null
+          permission_key: string
+          permission_value: boolean | null
+          team_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          organization_id?: string | null
+          permission_key: string
+          permission_value?: boolean | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          organization_id?: string | null
+          permission_key?: string
+          permission_value?: boolean | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_team_permissions_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_team_permissions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_team_permissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "hr_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_teams: {
         Row: {
           created_at: string | null
           department_id: string | null
           description: string | null
           id: string
+          is_active: boolean | null
+          level: number | null
           name: string
           organization_id: string | null
+          parent_team_id: string | null
           team_lead_id: string | null
+          team_type: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2913,9 +3071,13 @@ export type Database = {
           department_id?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
+          level?: number | null
           name: string
           organization_id?: string | null
+          parent_team_id?: string | null
           team_lead_id?: string | null
+          team_type?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2923,9 +3085,13 @@ export type Database = {
           department_id?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
+          level?: number | null
           name?: string
           organization_id?: string | null
+          parent_team_id?: string | null
           team_lead_id?: string | null
+          team_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2941,6 +3107,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_teams_parent_team_id_fkey"
+            columns: ["parent_team_id"]
+            isOneToOne: false
+            referencedRelation: "hr_teams"
             referencedColumns: ["id"]
           },
           {
