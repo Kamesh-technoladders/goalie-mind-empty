@@ -2,12 +2,13 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCog, Shield, Building, Clock } from "lucide-react";
+import { Users, UserCog, Shield, Building, Clock, Sitemap } from "lucide-react";
 import UserManagementDashboard from './UserManagementDashboard';
 import TeamManagement from './TeamManagement';
 import ShiftManagement from './ShiftManagement';
 import UserManagementTree from './UserManagementTree';
 import RolePermissionsManagement from './RolePermissionsManagement';
+import OrganizationalChart from './OrganizationalChart';
 
 const EnhancedUserManagement = () => {
   return (
@@ -21,10 +22,14 @@ const EnhancedUserManagement = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="users" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Users
+              </TabsTrigger>
+              <TabsTrigger value="org-chart" className="flex items-center gap-2">
+                <Sitemap className="h-4 w-4" />
+                Org Chart
               </TabsTrigger>
               <TabsTrigger value="teams" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
@@ -46,6 +51,10 @@ const EnhancedUserManagement = () => {
 
             <TabsContent value="users" className="mt-6">
               <UserManagementDashboard />
+            </TabsContent>
+
+            <TabsContent value="org-chart" className="mt-6">
+              <OrganizationalChart />
             </TabsContent>
 
             <TabsContent value="teams" className="mt-6">

@@ -1782,6 +1782,7 @@ export type Database = {
           position: string | null
           present_address: Json | null
           profile_picture_url: string | null
+          reporting_manager_id: string | null
           role_id: string | null
           shift_id: string | null
           status: string | null
@@ -1822,6 +1823,7 @@ export type Database = {
           position?: string | null
           present_address?: Json | null
           profile_picture_url?: string | null
+          reporting_manager_id?: string | null
           role_id?: string | null
           shift_id?: string | null
           status?: string | null
@@ -1862,6 +1864,7 @@ export type Database = {
           position?: string | null
           present_address?: Json | null
           profile_picture_url?: string | null
+          reporting_manager_id?: string | null
           role_id?: string | null
           shift_id?: string | null
           status?: string | null
@@ -1890,6 +1893,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "hr_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_employees_reporting_manager_id_fkey"
+            columns: ["reporting_manager_id"]
+            isOneToOne: false
+            referencedRelation: "hr_employees"
             referencedColumns: ["id"]
           },
           {

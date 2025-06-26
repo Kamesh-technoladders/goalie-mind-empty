@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -8,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Mail, 
@@ -30,9 +31,11 @@ import {
   Building,
   Edit,
   Save,
-  X
+  X,
+  Users
 } from "lucide-react";
 import UserPermissionsDialog from './UserPermissionsDialog';
+import ManagerAssignmentDialog from './ManagerAssignmentDialog';
 
 interface UserDetailsModalProps {
   user: {
@@ -46,6 +49,9 @@ interface UserDetailsModalProps {
     last_login?: string;
     role_name?: string;
     department_name?: string;
+    reporting_manager_id?: string;
+    profile_picture_url?: string;
+    position?: string;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -66,8 +72,9 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
   });
   const [roles, setRoles] = useState<Array<{id: string, name: string}>>([]);
   const [departments, setDepartments] = useState<Array<{id: string, name: string}>>([]);
-  const [userActivity, setUserActivity] = useState<any[]>([]);
+  const [reportingManager, setReportingManager] = useState<any>(null);
   const [showPermissions, setShowPermissions] = useState(false);
+  const [showManagerAssignment, setShowManagerAssignment] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -87,20 +94,28 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
 
   const fetchAdditionalData = async () => {
     try {
-      const [rolesResponse, departmentsResponse, activityResponse] = await Promise.all([
+      const [rolesResponse, departmentsResponse] = await Promise.all([
         supabase.from('hr_roles').select('id, name'),
-        supabase.from('hr_departments').select('id, name'),
-        supabase
-          .from('hr_employee_work_times')
-          .select('*')
-          .eq('employee_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10)
+        supabase.from('hr_departments').select('id, name')
       ]);
 
       if (rolesResponse.data) setRoles(rolesResponse.data);
       if (departmentsResponse.data) setDepartments(departmentsResponse.data);
-      if (activityResponse.data) setUserActivity(activityResponse.data);
+
+      // Fetch reporting manager details
+      if (user.reporting_manager_id) {
+        const { data: managerData } = await supabase
+          .from('hr_employees')
+          .select('id, first_name, last_name, email, position, profile_picture_url')
+          .eq('id', user.reporting_manager_id)
+          .single();
+        
+        if (managerData) {
+          setReportingManager(managerData);
+        }
+      } else {
+        setReportingManager(null);
+      }
     } catch (error) {
       console.error('Error fetching additional data:', error);
     }
@@ -154,6 +169,10 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
   return (
@@ -319,6 +338,56 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
             </Card>
           </div>
 
+          {/* Reporting Structure Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Reporting Structure</CardTitle>
+              <CardDescription>
+                Manage reporting relationships and organizational hierarchy
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <Label className="font-medium">Reporting Manager</Label>
+                    {reportingManager ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={reportingManager.profile_picture_url} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(reportingManager.first_name, reportingManager.last_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">
+                          {reportingManager.first_name} {reportingManager.last_name}
+                        </span>
+                        {reportingManager.position && (
+                          <Badge variant="outline" className="text-xs">
+                            {reportingManager.position}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        No reporting manager assigned
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowManagerAssignment(true)}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  {reportingManager ? 'Change Manager' : 'Assign Manager'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="space-y-4">
             <div className="space-y-3">
               <Label className="text-base font-semibold">Role & Permissions</Label>
@@ -348,12 +417,6 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
               </div>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -365,6 +428,20 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: UserDetailsModalP
           user={user}
           onSuccess={() => {
             setShowPermissions(false);
+            onUpdate();
+          }}
+        />
+      )}
+
+      {/* Manager Assignment Dialog */}
+      {user && (
+        <ManagerAssignmentDialog
+          open={showManagerAssignment}
+          onOpenChange={setShowManagerAssignment}
+          employee={user}
+          onSuccess={() => {
+            setShowManagerAssignment(false);
+            fetchAdditionalData();
             onUpdate();
           }}
         />
