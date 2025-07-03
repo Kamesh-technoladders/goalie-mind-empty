@@ -2,7 +2,7 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCog, Shield, Building, Clock, Sitemap } from "lucide-react";
+import { Users, UserCog, Shield, Building, Clock, Grid2x2 } from "lucide-react";
 import UserManagementDashboard from './UserManagementDashboard';
 import TeamManagement from './TeamManagement';
 import ShiftManagement from './ShiftManagement';
@@ -28,7 +28,7 @@ const EnhancedUserManagement = () => {
                 Users
               </TabsTrigger>
               <TabsTrigger value="org-chart" className="flex items-center gap-2">
-                <Sitemap className="h-4 w-4" />
+                <Grid2x2 className="h-4 w-4" />
                 Org Chart
               </TabsTrigger>
               <TabsTrigger value="teams" className="flex items-center gap-2">

@@ -111,17 +111,9 @@ const ManagerAssignmentDialog: React.FC<ManagerAssignmentDialogProps> = ({
     if (!employee) return potentialManagers;
 
     try {
-      // Get all employees who report to the current employee (direct and indirect)
-      const { data: subordinates, error } = await supabase
-        .rpc('get_employee_subordinates', { employee_id: employee.id });
-
-      if (error) {
-        console.error('Error checking subordinates:', error);
-        return potentialManagers; // Return all if check fails
-      }
-
-      const subordinateIds = new Set(subordinates?.map((s: any) => s.id) || []);
-      return potentialManagers.filter(mgr => !subordinateIds.has(mgr.id));
+      // For now, skip the circular reporting check since the function is not yet available
+      // This can be re-enabled once the database functions are properly deployed
+      return potentialManagers;
     } catch (error) {
       console.error('Error filtering circular reporting:', error);
       return potentialManagers;
